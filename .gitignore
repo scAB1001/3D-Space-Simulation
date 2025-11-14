@@ -1,0 +1,4 @@
+_build_/
+bin/
+lib/
+*.pdf
