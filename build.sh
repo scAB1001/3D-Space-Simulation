@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Load necessary modules
-# module load gcc
+module load gcc
 
 # Configuration
-PROJECT_DIR="$HOME/github-projects/uni/comp3811/cw1"
+PROJECT_DIR="$HOME/github-projects/uni/graphics/cw2"
 
 # Get core count for parallel build
 CORES=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || echo 4)

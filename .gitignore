@@ -2,3 +2,6 @@ _build_/
 bin/
 lib/
 *.pdf
+*.obj
+*.mtl
+*.ttf

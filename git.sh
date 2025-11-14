@@ -3,9 +3,9 @@
 # Create symbolic link `ln -s git.sh git` to run as just ./git
 
 git st
-cd ~/github-projects/uni/comp3811/
+cd ~/github-projects/uni/graphics/
 git add .; git ci; git push origin dev
-cd ./cw1/
+cd ./cw2/
 
 # Set vim.basic as default with:
 # sudo update-alternatives --config editor
