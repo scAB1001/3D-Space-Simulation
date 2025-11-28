@@ -15,6 +15,7 @@ TEST_CASE("Rotation matrices", "[mat44]")
 
     SECTION("X-axis rotation - 90 degrees")
     {
+        // Tests 90deg X rotation: (0,1,0) -> (0,0,1)
         float angle = std::numbers::pi_v<float> / 2.0f;
         Mat44f rotX = make_rotation_x(angle);
 
@@ -22,10 +23,11 @@ TEST_CASE("Rotation matrices", "[mat44]")
         Vec4f point{0.0f, 1.0f, 0.0f, 1.0f};
         Vec4f result = rotX * point;
 
-        REQUIRE_THAT( result.x, WithinAbs(0.0f, kEps_) );
-        REQUIRE_THAT( result.y, WithinAbs(0.0f, kEps_) );
-        REQUIRE_THAT( result.z, WithinAbs(1.0f, kEps_) );
-        REQUIRE_THAT( result.w, WithinAbs(1.0f, kEps_) );
+        // Expects (0,0,1,1)
+        REQUIRE_THAT( (result.x), (WithinAbs(0.0f, kEps_)) );
+        REQUIRE_THAT( (result.y), (WithinAbs(0.0f, kEps_)) );
+        REQUIRE_THAT( (result.z), (WithinAbs(1.0f, kEps_)) );
+        REQUIRE_THAT( (result.w), (WithinAbs(1.0f, kEps_)) );
     }
 
     SECTION("X-axis rotation - 180 degrees")
@@ -36,10 +38,10 @@ TEST_CASE("Rotation matrices", "[mat44]")
         Vec4f point{0.0f, 1.0f, 0.0f, 1.0f};
         Vec4f result = rotX * point;
 
-        REQUIRE_THAT( result.x, WithinAbs(0.0f, kEps_) );
-        REQUIRE_THAT( result.y, WithinAbs(-1.0f, kEps_) );
-        REQUIRE_THAT( result.z, WithinAbs(0.0f, kEps_) );
-        REQUIRE_THAT( result.w, WithinAbs(1.0f, kEps_) );
+        REQUIRE_THAT( (result.x), (WithinAbs(0.0f, kEps_)) );
+        REQUIRE_THAT( (result.y), (WithinAbs(-1.0f, kEps_)) );
+        REQUIRE_THAT( (result.z), (WithinAbs(0.0f, kEps_)) );
+        REQUIRE_THAT( (result.w), (WithinAbs(1.0f, kEps_)) );
     }
 
     SECTION("Y-axis rotation - 90 degrees")
@@ -51,10 +53,10 @@ TEST_CASE("Rotation matrices", "[mat44]")
         Vec4f point{0.0f, 0.0f, 1.0f, 1.0f};
         Vec4f result = rotY * point;
 
-        REQUIRE_THAT( result.x, WithinAbs(1.0f, kEps_) );
-        REQUIRE_THAT( result.y, WithinAbs(0.0f, kEps_) );
-        REQUIRE_THAT( result.z, WithinAbs(0.0f, kEps_) );
-        REQUIRE_THAT( result.w, WithinAbs(1.0f, kEps_) );
+        REQUIRE_THAT( (result.x), (WithinAbs(1.0f, kEps_)) );
+        REQUIRE_THAT( (result.y), (WithinAbs(0.0f, kEps_)) );
+        REQUIRE_THAT( (result.z), (WithinAbs(0.0f, kEps_)) );
+        REQUIRE_THAT( (result.w), (WithinAbs(1.0f, kEps_)) );
     }
 
     SECTION("Y-axis rotation - 180 degrees")
@@ -65,10 +67,10 @@ TEST_CASE("Rotation matrices", "[mat44]")
         Vec4f point{1.0f, 0.0f, 0.0f, 1.0f};
         Vec4f result = rotY * point;
 
-        REQUIRE_THAT( result.x, WithinAbs(-1.0f, kEps_) );
-        REQUIRE_THAT( result.y, WithinAbs(0.0f, kEps_) );
-        REQUIRE_THAT( result.z, WithinAbs(0.0f, kEps_) );
-        REQUIRE_THAT( result.w, WithinAbs(1.0f, kEps_) );
+        REQUIRE_THAT( (result.x), (WithinAbs(-1.0f, kEps_)) );
+        REQUIRE_THAT( (result.y), (WithinAbs(0.0f, kEps_)) );
+        REQUIRE_THAT( (result.z), (WithinAbs(0.0f, kEps_)) );
+        REQUIRE_THAT( (result.w), (WithinAbs(1.0f, kEps_)) );
     }
 
     SECTION("Z-axis rotation - 90 degrees")
@@ -80,10 +82,10 @@ TEST_CASE("Rotation matrices", "[mat44]")
         Vec4f point{1.0f, 0.0f, 0.0f, 1.0f};
         Vec4f result = rotZ * point;
 
-        REQUIRE_THAT( result.x, WithinAbs(0.0f, kEps_) );
-        REQUIRE_THAT( result.y, WithinAbs(1.0f, kEps_) );
-        REQUIRE_THAT( result.z, WithinAbs(0.0f, kEps_) );
-        REQUIRE_THAT( result.w, WithinAbs(1.0f, kEps_) );
+        REQUIRE_THAT( (result.x), (WithinAbs(0.0f, kEps_)) );
+        REQUIRE_THAT( (result.y), (WithinAbs(1.0f, kEps_)) );
+        REQUIRE_THAT( (result.z), (WithinAbs(0.0f, kEps_)) );
+        REQUIRE_THAT( (result.w), (WithinAbs(1.0f, kEps_)) );
     }
 
     SECTION("Z-axis rotation - 180 degrees")
@@ -94,14 +96,15 @@ TEST_CASE("Rotation matrices", "[mat44]")
         Vec4f point{1.0f, 1.0f, 0.0f, 1.0f};
         Vec4f result = rotZ * point;
 
-        REQUIRE_THAT( result.x, WithinAbs(-1.0f, kEps_) );
-        REQUIRE_THAT( result.y, WithinAbs(-1.0f, kEps_) );
-        REQUIRE_THAT( result.z, WithinAbs(0.0f, kEps_) );
-        REQUIRE_THAT( result.w, WithinAbs(1.0f, kEps_) );
+        REQUIRE_THAT( (result.x), (WithinAbs(-1.0f, kEps_)) );
+        REQUIRE_THAT( (result.y), (WithinAbs(-1.0f, kEps_)) );
+        REQUIRE_THAT( (result.z), (WithinAbs(0.0f, kEps_)) );
+        REQUIRE_THAT( (result.w), (WithinAbs(1.0f, kEps_)) );
     }
 
     SECTION("Rotation preserves vector length")
     {
+        // Tests rotation preserves vector length (orthogonal matrices)
         float angle = std::numbers::pi_v<float> / 3.0f; // 60 degrees
         Mat44f rotX = make_rotation_x(angle);
         Mat44f rotY = make_rotation_y(angle);
@@ -119,8 +122,9 @@ TEST_CASE("Rotation matrices", "[mat44]")
         float lengthY = std::sqrt(resultY.x * resultY.x + resultY.y * resultY.y + resultY.z * resultY.z);
         float lengthZ = std::sqrt(resultZ.x * resultZ.x + resultZ.y * resultZ.y + resultZ.z * resultZ.z);
 
-        REQUIRE_THAT( lengthX, WithinAbs(originalLength, kEps_) );
-        REQUIRE_THAT( lengthY, WithinAbs(originalLength, kEps_) );
-        REQUIRE_THAT( lengthZ, WithinAbs(originalLength, kEps_) );
+        // Expects originalLength approx newLength
+        REQUIRE_THAT( (lengthX), (WithinAbs(originalLength, kEps_)) );
+        REQUIRE_THAT( (lengthY), (WithinAbs(originalLength, kEps_)) );
+        REQUIRE_THAT( (lengthZ), (WithinAbs(originalLength, kEps_)) );
     }
 }
