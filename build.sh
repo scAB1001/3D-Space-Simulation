@@ -1,112 +1,211 @@
 #!/bin/bash
 
-# Load necessary modules
-module load gcc
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
 
-# Configuration
-PROJECT_DIR="./cw2/"
+print_header() {
+    echo ""
+    echo -e "${CYAN}========================================${NC}"
+    echo -e "${CYAN}  $1${NC}"
+    echo -e "${CYAN}========================================${NC}"
+}
 
-# Get core count for parallel build
-CORES=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || echo 4)
-echo "  > Detected $CORES CPU cores for parallel build."
+print_success() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
 
-# Navigate to project directory
-echo "  > Entering cw2 project directory..."
-cd "$PROJECT_DIR" || exit 1
+print_error() {
+    echo -e "${RED}❌ $1${NC}"
+}
 
-# Parse command line arguments
-TARGET="${1,,}"  # main or vmlibtest
-CONFIG="${2,,}"   # debug or release
+print_info() {
+    echo -e "${BLUE}ℹ️  $1${NC}"
+}
 
-# Validate arguments
-if [[ -z "$TARGET" ]]; then
-    TARGET="main"
-fi
+print_warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}"
+}
 
-if [[ -z "$CONFIG" ]]; then
-    CONFIG="debug"  # default to debug
-fi
+print_indent() {
+    echo -e "    $1"
+}
 
-# Map configurations to premake formats
-case "$CONFIG" in
-    "deb"|"debug")
-        PREMAKE_CONFIG="debug_x64"
-        FILE_CONFIG="debug-x64"
-        ;;
-    "rel"|"release")
-        PREMAKE_CONFIG="release_x64"
-        FILE_CONFIG="release-x64"
-        ;;
-    *)
-        echo "Error: Invalid configuration '$CONFIG'. Use 'debug' or 'release'"
+
+load_modules() {
+    print_info "Loading required modules..."
+    module load gcc
+}
+
+get_core_count() {
+    # This function sets CORES as a global variable
+    CORES=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || echo 4)
+    print_info "Detected ${YELLOW}$CORES${BLUE} CPU cores for parallel build."
+}
+
+configure_dir() {
+    # PROJECT_DIR="$HOME/github-projects/uni/comp3811-labs"
+    # PROJECT_DIR="./comp3811-cw2"
+    # CW_DIR="cw2"
+    PROJECT_DIR="./cw2/"
+
+    # Navigate to project directory
+    print_info "Entering $PROJECT_DIR project directory..."
+    if [ ! -d "$PROJECT_DIR" ]; then
+        print_error "Directory $PROJECT_DIR does not exist!"
         exit 1
-        ;;
-esac
+    fi
+    cd "$PROJECT_DIR" || exit 1
+}
 
-# Map targets to executable names
-case "$TARGET" in
-    "m"|"main")
-        EXECUTABLE="main-$FILE_CONFIG-gcc.exe"
-        ;;
-    "vm"|"vmlibtest")
-        EXECUTABLE="vmlib-test-$FILE_CONFIG-gcc.exe"
-        ;;
-    "mk"|"make")
-        EXECUTABLE="x0x0x0x0x0x"
-        ;;
-    *)
-        echo "Error: Invalid target '$TARGET'. Use 'main', 'vmlibtest', or 'make'"
-        echo "Usage: $0 [main|vmlibtest|make] [debug|release]"
+get_target_config() {
+    local target="$1"
+    local mode="$2"
+
+    print_info "Target: <${YELLOW}${target:-main}${BLUE}>, Mode: <${YELLOW}${mode:-debug}${BLUE}>"
+
+    # Map targets to executable names
+    case "${target,,}" in
+        "m"|"main")
+            EXECUTABLE_NAME="main"
+            ;;
+        "vm"|"vmlibtest")
+            EXECUTABLE_NAME="vmlib-test"
+            ;;
+        "mk"|"make")
+            EXECUTABLE_NAME="make"
+            ;;
+        *)
+            print_error "Invalid target '$target'. Use 'main', 'vmlibtest', or 'make'"
+            echo "Usage: $0 [main|vmlibtest|make] [debug|release]"
+            exit 1
+            ;;
+    esac
+
+    # Build configuration
+    case "${mode,,}" in
+        "rel"|"release"|"bench"|"benchmark")
+            CONFIG="release_x64"
+            FILE_CONFIG="release-x64"
+            BUILD_TYPE="Release"
+            ;;
+        "deb"|"debug"|"")
+            CONFIG="debug_x64"
+            FILE_CONFIG="debug-x64"
+            BUILD_TYPE="Debug"
+            ;;
+        *)
+            print_warning "Unknown mode '$mode'. Using debug mode."
+            CONFIG="debug_x64"
+            FILE_CONFIG="debug-x64"
+            BUILD_TYPE="Debug"
+            ;;
+    esac
+
+    # Set executable path (except for make target)
+    if [[ "$EXECUTABLE_NAME" != "make" ]]; then
+        EXECUTABLE_PATH="./bin/${EXECUTABLE_NAME}-${FILE_CONFIG}-gcc.exe"
+    fi
+}
+
+setup_environment() {
+    print_header "Setting up Environment"
+    get_core_count
+    configure_dir
+    get_target_config "$1" "$2"
+    print_success "Environment setup complete."
+}
+
+build() {
+    print_header "Building cw2 Project"
+    print_info "Generating make files..."
+
+    if ! ./premake5 gmake; then
+        print_error "Failed to generate make files!"
         exit 1
-        ;;
-esac
+    fi
 
-EXECUTABLE_PATH="./bin/$EXECUTABLE"
+    print_info "Building project ($BUILD_TYPE) using $CORES cores..."
+    if ! make -j"$CORES" config="$CONFIG"; then
+        print_error "Build failed!"
+        exit 1
+    else
+        print_success "Build completed successfully."
+    fi
+}
 
-echo "  > Building target: $TARGET"
-echo "  > Configuration: $CONFIG"
-echo "  > Executable: $EXECUTABLE"
+run() {
+    # For "make" target, just exit after successful build
+    if [[ "$EXECUTABLE_NAME" == "make" ]]; then
+        print_success "Build-only mode completed."
+        exit 0
+    fi
 
-# Build process
-echo "  > Generating make files..."
-./premake5 gmake
+    print_header "Running $EXECUTABLE_NAME Executable"
 
-echo "  > Building project ($PREMAKE_CONFIG) using $CORES cores..."
-make -j"$CORES" config="$PREMAKE_CONFIG"
+    if [ ! -f "$EXECUTABLE_PATH" ]; then
+        print_error "Executable not found: $EXECUTABLE_PATH"
+        print_info "Available executables in bin/:"
+        ls -la ./bin/ 2>/dev/null || echo "    (bin directory not found)"
+        exit 1
+    fi
 
-# Check if build was successful
-if [[ $? -ne 0 ]]; then
-    echo "  > Build failed!"
-    exit 1
-fi
+    # CPU governor setup for benchmarking (only on Lenovo with 8 cores AND release builds)
+    if [[ $CORES -eq 8 && "$FILE_CONFIG" == "release-x64" ]]; then
+        print_info "You're on the Lenovo! Setting CPU governor to performance mode..."
+        sudo cpupower frequency-set -g performance
+    fi
 
-# For "make" target, just exit after successful build
-if [[ "$TARGET" == "mk" || "$TARGET" == "make" ]]; then
-    echo "  > Build completed successfully."
-    exit 0
-fi
+    print_info "Running: $EXECUTABLE_PATH"
+    "$EXECUTABLE_PATH"
 
-# Check if executable exists
-if [[ ! -f "$EXECUTABLE_PATH" ]]; then
-    echo "  > Error: Executable not found: <$EXECUTABLE_PATH>"
-    echo "  > Available executables in bin/:"
-    ls -ll ./bin/ 2>/dev/null || echo "    (bin directory not found)"
-    exit 1
-fi
+    # Restore CPU governor if changed
+    if [[ $CORES -eq 8 && "$FILE_CONFIG" == "release-x64" ]]; then
+        print_info "Restoring CPU governor to powersave mode..."
+        sudo cpupower frequency-set -g powersave
+    fi
+}
 
-echo "  > Build successful! Running $EXECUTABLE..."
+# Show usage if no arguments provided
+show_usage() {
+    echo -e "${RED}-----------------------------------------------------------${NC}"
+    echo -e "  ${CYAN}Usage: $0 <target> [mode]${NC}"
+    echo ""
+    echo -e " ${BLUE}Targets:${NC}"
+    echo "   main       - Build and run main executable (default)"
+    echo "   vmlibtest  - Build and run vmlib-test executable"
+    echo "   make       - Build only, don't run"
+    echo ""
+    echo -e " ${BLUE}Modes:${NC}"
+    echo "   debug      - Debug build (default)"
+    echo "   release    - Release build"
+    echo ""
+    echo -e " ${BLUE}Examples:${NC}"
+    echo "   $0 main debug"
+    echo "   $0 vmlibtest release"
+    echo "   $0 main"
+    echo "   $0 make"
+    echo -e "${RED}-----------------------------------------------------------${NC}"
+}
 
-# CPU governor setup for benchmarking (only on Lenovo with 8 cores AND release builds)
-if [[ $CORES -eq 8 && "$CONFIG" == "release" ]]; then
-    echo "  > You're on the Lenovo! Setting CPU governor to performance mode..."
-    sudo cpupower frequency-set -g performance
-fi
+# Main script execution
+main() {
+    # If only ./build.sh is run, show usage
+    if [[ $# -eq 0 ]]; then
+        # setup_environment "main" "debug"
+        show_usage
+        exit 1
+    else
+        setup_environment "$1" "$2"
+    fi
 
-# Execute the built executable
-"$EXECUTABLE_PATH"
+    build
+    run
+}
 
-# Restore CPU governor if changed (only if we set it to performance)
-if [[ $CORES -eq 8 && "$CONFIG" == "release" ]]; then
-    echo "  > Restoring CPU governor to powersave mode..."
-    sudo cpupower frequency-set -g powersave
-fi
+# Run main function with all arguments
+main "$@"
