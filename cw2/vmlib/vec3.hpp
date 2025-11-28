@@ -10,13 +10,13 @@ struct Vec3f
 {
 	float x, y, z;
 
-	constexpr 
+	constexpr
 	float& operator[] (std::size_t aI) noexcept
 	{
 		assert( aI < 3 );
 		return aI[&x]; // This is a bit sketchy.
 	}
-	constexpr 
+	constexpr
 	float operator[] (std::size_t aI) const noexcept
 	{
 		assert( aI < 3 );
@@ -59,9 +59,9 @@ Vec3f operator-( Vec3f aLeft, Vec3f aRight ) noexcept
 constexpr
 Vec3f operator*( float aScalar, Vec3f aVec ) noexcept
 {
-	return Vec3f{ 
-		aScalar * aVec.x, 
-		aScalar * aVec.y, 
+	return Vec3f{
+		aScalar * aVec.x,
+		aScalar * aVec.y,
 		aScalar * aVec.z
 	};
 }
@@ -74,7 +74,7 @@ Vec3f operator*( Vec3f aVec, float aScalar ) noexcept
 constexpr
 Vec3f operator/( Vec3f aVec, float aScalar ) noexcept
 {
-	return Vec3f{ 
+	return Vec3f{
 		aVec.x / aScalar,
 		aVec.y / aScalar,
 		aVec.z / aScalar
@@ -122,10 +122,20 @@ Vec3f& operator/=( Vec3f& aLeft, float aRight ) noexcept
 constexpr
 float dot( Vec3f aLeft, Vec3f aRight ) noexcept
 {
-	return aLeft.x * aRight.x 
+	return aLeft.x * aRight.x
 		+ aLeft.y * aRight.y
 		+ aLeft.z * aRight.z
 	;
+}
+
+inline
+Vec3f cross( Vec3f aLeft, Vec3f aRight ) noexcept
+{
+	return Vec3f{
+		aLeft.y * aRight.z - aLeft.z * aRight.y,
+		aLeft.z * aRight.x - aLeft.x * aRight.z,
+		aLeft.x * aRight.y - aLeft.y * aRight.x
+	};
 }
 
 inline
