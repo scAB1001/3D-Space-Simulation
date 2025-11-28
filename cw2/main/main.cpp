@@ -35,9 +35,17 @@ namespace
 		{
 			bool cameraActive;
 			bool actionZoomIn, actionZoomOut;
+			bool strafeLeft, strafeRight;
+			bool moveUp, moveDown;
+
+			bool scrollZoomMode;
 
 			float phi, theta;
 			float radius;
+
+			// Add camera position for free movement
+			Vec3f position;  // Camera position in world space
+			// Vec3f target;    // Look-at target (if using arcball style)
 
 			float fov;
 
@@ -213,7 +221,10 @@ int main() try
 	state.prog = &prog;
 	state.camControl.radius = 10.f;
 	state.camControl.fov = std::numbers::pi_v<float> / 4.f; // 45 degrees
-
+	// Initialize camera position and target
+	state.camControl.position = {0.f, 0.f, 10.f};			// Start at (0,0,10)
+	// state.camControl.target = {0.f, 0.f, 0.f};				// Look at origin (if using arcball)
+	state.camControl.scrollZoomMode = false; // Initialize scroll zoom mode to false
 	// Animation state
 	auto last = Clock::now();
 	float angle = 0.f;
@@ -321,22 +332,58 @@ int main() try
 		}
 
 		//////////////////////////////////////////////////////////////////////////////////
-		// Update state
-		//TODO: update state
+		//TODO: Update state
 		auto const now = Clock::now();
 		float dt = std::chrono::duration_cast<Secondsf>(now - last).count();
 		last = now;
 
 		angle += dt * std::numbers::pi_v<float> * 0.3f;
 		if (angle >= 2.f * std::numbers::pi_v<float>)
-			angle -= 2.f * std::numbers::pi_v<float>;
+		angle -= 2.f * std::numbers::pi_v<float>;
 
 		// Update camera state
-		if (state.camControl.actionZoomIn)
-			state.camControl.radius -= kMovementPerSecond_ * dt;
-		else if (state.camControl.actionZoomOut)
-			state.camControl.radius += kMovementPerSecond_ * dt;
+		if (state.camControl.cameraActive)
+		{
+			// Adjusting phi rotates the camera rather than moving it.
+			// instead, adjust the camera's position based on its right vector.
+			Vec3f forward = {
+				-std::sin(state.camControl.phi) * std::cos(state.camControl.theta),
+				std::sin(state.camControl.theta),
+				-std::cos(state.camControl.phi) * std::cos(state.camControl.theta)
+			};
 
+			Vec3f right = {
+				std::cos(state.camControl.phi),
+				0.f,
+				-std::sin(state.camControl.phi)
+			};
+
+			Vec3f up = {0.f, 1.f, 0.f};
+
+			// TODO: For zooming in and out
+			if (state.camControl.actionZoomIn)
+				state.camControl.position += forward * kMovementPerSecond_ * dt;
+				// state.camControl.radius -= kMovementPerSecond_ * dt; // Original without .position
+			else if (state.camControl.actionZoomOut)
+				state.camControl.position -= forward * kMovementPerSecond_ * dt;
+				// state.camControl.radius += kMovementPerSecond_ * dt; // Original without .position
+
+			// TODO: For strafing left and right
+			if (state.camControl.strafeLeft)
+				state.camControl.position -= right * kMovementPerSecond_ * dt;
+				// FIXME: Seems to be looking left and right as opposed to moving the camera
+				// state.camControl.phi -= kMovementPerSecond_ * dt * 0.25f;
+			else if (state.camControl.strafeRight)
+				state.camControl.position += right * kMovementPerSecond_ * dt;
+				// state.camControl.phi += kMovementPerSecond_ * dt * 0.25f;
+
+			// TODO: Up/down movement (E/Q if you want to add it)
+			if (state.camControl.moveUp)
+			    state.camControl.position += up * kMovementPerSecond_ * dt;
+			else if (state.camControl.moveDown)
+			    state.camControl.position -= up * kMovementPerSecond_ * dt;
+		}
+		// Clamp radius to prevent getting too close or negative values
 		if (state.camControl.radius <= 0.1f)
 			state.camControl.radius = 0.1f;
 		//////////////////////////////////////////////////////////////////////////////////
@@ -355,9 +402,15 @@ int main() try
 		// 2. World to camera (fps-style camera)
 		Mat44f Rx = make_rotation_x(state.camControl.theta);
 		Mat44f Ry = make_rotation_y(state.camControl.phi);
-		Vec3f camTranslation = {0.f, 0.f, -state.camControl.radius};
-		Mat44f T = make_translation(camTranslation);
-		Mat44f world2camera_fps = Rx * Ry * T;
+		// Vec3f camTranslation = {0.f, 0.f, -state.camControl.radius};
+		// Mat44f T = make_translation(camTranslation);
+		// Mat44f world2camera_fps = Rx * Ry * T;
+
+		// Using camera position for free movement
+		Mat44f R = Rx * Ry;
+		// Create inverse translation (move world relative to camera)
+		Mat44f invT = make_translation(-state.camControl.position);
+		Mat44f world2camera_fps = R * invT;
 
 		// 3. Perspective Projection
 		Mat44f projection = make_perspective_projection(
@@ -436,6 +489,7 @@ namespace
 	{
 		if (auto *state = static_cast<State_ *>(glfwGetWindowUserPointer(aWindow)))
 		{
+			state->camControl.scrollZoomMode = true; // Enable scroll zoom mode
 			// Only zoom if camera control is not active
 			if (!state->camControl.cameraActive)
 			{
@@ -510,6 +564,7 @@ namespace
 			if (GLFW_KEY_SPACE == aKey && GLFW_PRESS == aAction)
 			{
 				state->camControl.cameraActive = !state->camControl.cameraActive;
+				state->camControl.scrollZoomMode = !state->camControl.cameraActive;
 
 				if (state->camControl.cameraActive)
 					glfwSetInputMode(aWindow, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
@@ -520,6 +575,7 @@ namespace
 			// Camera controls if camera is active
 			if (state->camControl.cameraActive)
 			{
+				state->camControl.scrollZoomMode = false; // Disable scroll zoom mode when camera is active
 				if (GLFW_KEY_W == aKey)
 				{
 					if (GLFW_PRESS == aAction)
@@ -533,6 +589,34 @@ namespace
 						state->camControl.actionZoomOut = true;
 					else if (GLFW_RELEASE == aAction)
 						state->camControl.actionZoomOut = false;
+				}
+				else if (GLFW_KEY_A == aKey)
+				{
+					if (GLFW_PRESS == aAction)
+						state->camControl.strafeLeft = true;
+					else if (GLFW_RELEASE == aAction)
+						state->camControl.strafeLeft = false;
+				}
+				else if (GLFW_KEY_D == aKey)
+				{
+					if (GLFW_PRESS == aAction)
+						state->camControl.strafeRight = true;
+					else if (GLFW_RELEASE == aAction)
+						state->camControl.strafeRight = false;
+				}
+				else if (GLFW_KEY_E == aKey)
+				{
+					if (GLFW_PRESS == aAction)
+						state->camControl.moveUp = true;
+					else if (GLFW_RELEASE == aAction)
+						state->camControl.moveUp = false;
+				}
+				else if (GLFW_KEY_Q == aKey)
+				{
+					if (GLFW_PRESS == aAction)
+						state->camControl.moveDown = true;
+					else if (GLFW_RELEASE == aAction)
+						state->camControl.moveDown = false;
 				}
 			}
 		}
