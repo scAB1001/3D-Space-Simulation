@@ -56,36 +56,54 @@ constexpr Mat44f kIdentity44f = { {
 	0.f, 0.f, 0.f, 1.f
 } };
 
+// Moved above operator* method to be used there
+inline
+Mat44f transpose( Mat44f const& aM ) noexcept
+{
+	Mat44f ret;
+	for( std::size_t i = 0; i < 4; ++i )
+	{
+		for( std::size_t j = 0; j < 4; ++j )
+			ret[j,i] = aM[i,j];
+	}
+	return ret;
+}
 // Common operators for Mat44f.
 // Note that you will need to implement these yourself.
 
 constexpr
-Mat44f operator*( Mat44f const& aLeft, Mat44f const& aRight ) noexcept
+Mat44f operator*(Mat44f const& aLeft, Mat44f const& aRight) noexcept
 {
-	//TODO: your implementation goes here
-	//TODO: remove the following when you start your implementation
-	// (void)aLeft;   // Avoid warnings about unused arguments until the function
-	// (void)aRight;  // is properly implemented.
-	// return kIdentity44f;
+	// TODO: your implementation goes here
+	// TODO: remove the following when you start your implementation
+	//  (void)aLeft;   // Avoid warnings about unused arguments until the function
+	//  (void)aRight;  // is properly implemented.
+	//  return kIdentity44f;
 
 	// Q[i,j] = sum(k=0 to 3) L[i,k] * R[k,j]
 	// Does this need to be initialized to zero first?
 	// Does this need to be constexpr?
 	Mat44f result{};
+	Mat44f rightTransposed = transpose(aRight); // Approach 2
 
 	for (std::size_t i = 0; i < 4; ++i)
 	{
 		for (std::size_t j = 0; j < 4; ++j)
 		{
-			// Pre-compute base indices for efficient access
-			const std::size_t rowBase = i * 4;
-			const std::size_t colBase = j;
+			// Approach 1: Manual dot product Left row i and Right column j
+			// std::size_t rowBase = i * 4;
+			// std::size_t colBase = j;
 
-			// Dot product of row i from left and column j from right
-			result[i, j] = aLeft.v[rowBase + 0] * aRight[0, colBase] +
-						   aLeft.v[rowBase + 1] * aRight[1, colBase] +
-						   aLeft.v[rowBase + 2] * aRight[2, colBase] +
-						   aLeft.v[rowBase + 3] * aRight[3, colBase];
+			// result[i, j] = aLeft.v[rowBase + 0] * aRight[0, colBase] +
+			// 			   aLeft.v[rowBase + 1] * aRight[1, colBase] +
+			// 			   aLeft.v[rowBase + 2] * aRight[2, colBase] +
+			// 			   aLeft.v[rowBase + 3] * aRight[3, colBase];
+
+			// Approach 2: Use a transposed aRight to access rows with a single index
+			for (std::size_t k = 0; k < 4; ++k)
+			{
+				result[i, j] += aLeft[i, k] * rightTransposed[j, k];
+			}
 		}
 	}
 
@@ -117,18 +135,6 @@ Vec4f operator*( Mat44f const& aLeft, Vec4f const& aRight ) noexcept
 // Functions:
 
 Mat44f invert( Mat44f const& aM ) noexcept;
-
-inline
-Mat44f transpose( Mat44f const& aM ) noexcept
-{
-	Mat44f ret;
-	for( std::size_t i = 0; i < 4; ++i )
-	{
-		for( std::size_t j = 0; j < 4; ++j )
-			ret[j,i] = aM[i,j];
-	}
-	return ret;
-}
 
 inline
 Mat44f make_rotation_x( float aAngle ) noexcept
