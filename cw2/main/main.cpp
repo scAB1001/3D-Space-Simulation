@@ -18,11 +18,15 @@
 #include "../vmlib/mat33.hpp"
 
 #include "defaults.hpp"
+
+// Added later
+#include "loadobj.hpp"
 #include "cube.hpp" // TODO: Remove if not using cube data
 
 namespace
 {
 	constexpr char const* kWindowTitle = "COMP3811 - CW2";
+	constexpr float kFloatPi = std::numbers::pi_v<float>;
 
 	// TODO: State struct with camctrl_
 	struct State_
@@ -37,7 +41,7 @@ namespace
 			bool mouseLookActive = false;
 
 			// Camera position and orientation
-			Vec3f position = {0.f, 0.f, 10.f}; // Start 5 units back
+			Vec3f position = {0.f, 5.f, 10.f}; // Start 5 units back
 			float yaw = -90.f;				   // Left/right rotation (around Y) (default: looking along -Z)
 			float pitch = 0.f;				   // Up/down rotation (around X)
 
@@ -77,14 +81,6 @@ namespace
 	};
 
 }
-
-// TODO: Vertex struct for shapes
-struct Vertex
-{
-	float position[2];		// 2x4 (float) = 8 bytes
-	unsigned char color[3]; // 3 bytes
-	unsigned char padding;	// For 4-byte alignment (optional but good practice)
-};
 
 int main() try
 {
@@ -235,11 +231,11 @@ int main() try
 
 	//////////////////////////////////////////////////////////////////////////////////
 	// TODO: Setup scene objects e.g. VAOs, VBOs, textures, uniforms, etc.
+	/* Triangle example
 	GLuint vbo; // Init to 0?
 	glGenBuffers(1, &vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-	/* Triangle example
 	static const Vertex allVertices[] = {
 		// Triangle 1
 		{{0.0f, 0.8f}, {255, 255, 0}, 0},
@@ -258,7 +254,7 @@ int main() try
 	glBufferData(GL_ARRAY_BUFFER, sizeof(allVertices), allVertices, GL_STATIC_DRAW);
 	*/
 
-	/* Cube example */
+	/* Cube example
 	size_t vertexCount = std::size(kCubePositions) / 3;
 	std::vector<Vertex> allVertices(vertexCount);
 
@@ -273,12 +269,10 @@ int main() try
 		allVertices[i].color[2] = static_cast<unsigned char>(kCubeColors[i * 3 + 2] * 255.f);
 	}
 	glBufferData(GL_ARRAY_BUFFER, allVertices.size() * sizeof(Vertex), allVertices.data(), GL_STATIC_DRAW);
-	//////////////////////////////////////////////////////////////////////////////////
 
-	//////////////////////////////////////////////////////////////////////////////////
-	GLuint vao;
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
+	GLuint cubeVao;
+	glGenVertexArrays(1, &cubeVao);
+	glBindVertexArray(cubeVao);
 
 	glVertexAttribPointer(
 		0,				// Position attribute 0 in the shader
@@ -297,6 +291,15 @@ int main() try
 		(void *)offsetof(Vertex, color) // Offset to color data in Vertex struct
 	);
 	glEnableVertexAttribArray(1);
+	*/
+	auto cubeMesh = make_cube_with_normals({0.5f, 0.5f, 0.5f}); // Gray cube
+	GLuint cubeVao = create_vao(cubeMesh);
+	std::size_t cubeVertexCount = cubeMesh.positions.size();
+
+	/* PARLAHTI */
+	auto parlahtiMesh = load_wavefront_obj("assets/cw2/parlahti.obj");
+	GLuint parlahtiVao = create_vao(parlahtiMesh);
+	std::size_t parlahtiVertexCount = parlahtiMesh.positions.size();
 
 	// Reset state
 	glBindVertexArray(0);
@@ -340,9 +343,9 @@ int main() try
 		float dt = std::chrono::duration_cast<Secondsf>(now - last).count();
 		last = now;
 
-		angle += dt * std::numbers::pi_v<float> * 0.3f;
-		if (angle >= 2.f * std::numbers::pi_v<float>)
-			angle -= 2.f * std::numbers::pi_v<float>;
+		angle += dt * kFloatPi * 0.3f;
+		if (angle >= 2.f * kFloatPi)
+			angle -= 2.f * kFloatPi;
 
 		/* Update camera state
 		 * Radius controls vertical distance from cameraTarget point (here: origin)
@@ -398,17 +401,21 @@ int main() try
 
 		//////////////////////////////////////////////////////////////////////////////////
 		// TODO: Setup camera pipeline
-		// Pre-computed scales and translations
-		Mat44f ySpin = make_rotation_y(-angle);
-		// Mat44f shrink = make_scaling(0.25f, 0.25f, 0.25f);
+		// 1. Model to World matrices
+		// Cube above terrain, spinning
+		Mat44f yRotateCCW = make_rotation_y(-angle);
+		Mat44f yTranslateAboveTerrain = make_translation({0.f, 2.f, 0.f}); // 2 units above origin
+		Mat44f model2world_cube = yTranslateAboveTerrain * yRotateCCW;
+		Mat33f normalMatrix_cube = mat44_to_mat33(transpose(invert(model2world_cube)));
 
-		// 1. Model to world matrices
-		Mat44f model2world_cube = ySpin;
+		// Parlahti terrain fixed at origin, scaled down
+		Mat44f scaleThreeQuarterSize = make_scaling(0.75f, 0.75f, 0.75f);  // 3/4 scale
+		Mat44f model2world_parlahti = scaleThreeQuarterSize;
 		// Compute the normal matrix and pass it to the shaders as a uniform matrix3
-		Mat33f normalMatrix = mat44_to_mat33(transpose(invert(model2world_cube)));
+		Mat33f normalMatrix_parlahti = mat44_to_mat33(transpose(invert(model2world_parlahti)));
 
 		// 2. FPS Camera matrix - position and orientation based on yaw/pitch
-		// Camera looks along forward vector
+		// Looks along forward vector
 		Vec3f cameraTarget = state.camControl.position + forward;
 
 		// Create view matrix (world to camera)
@@ -419,11 +426,12 @@ int main() try
 
 		// 3. Perspective projection
 		Mat44f projection = make_perspective_projection(
-			std::numbers::pi_v<float> / 4.f,
+			kFloatPi / 4.f,
 			fbwidth / fbheight,
 			0.1f, 100.f);
 
 		// 4. Combined matrices for projection, camera and world
+		Mat44f projCameraWorld_parlahti = projection * world2camera_fps * model2world_parlahti;
 		Mat44f projCameraWorld_cube = projection * world2camera_fps * model2world_cube;
 		//////////////////////////////////////////////////////////////////////////////////
 
@@ -439,10 +447,6 @@ int main() try
 		glDisable(GL_CULL_FACE); // Disable face culling for debugging
 		// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Wireframe mode
 
-		// Use shader program
-		// 1. Set the normal (3x3) matrix passed to the shader
-		glUniformMatrix3fv(1, 1, GL_TRUE, normalMatrix.v);
-
 		// TODO: This directional light must also be
 		// applied to additional objects added in subsequent tasks.
 		/* GL Values for Report
@@ -450,24 +454,29 @@ int main() try
 		* - VENDOR AMD
 		* - VERSION 4.6 (Core Profile) Mesa 25.0.7-0ubuntu0.24.04.2
 		*/
-		// 2. Define light uniforms
+		// 1. Set light uniforms (shared by all objects)
 		Vec3f lightDir = normalize(Vec3f{0.f, 1.f, -1.f});
 		glUniform3fv(2, 1, &lightDir.x);
 		glUniform3f(3, 0.9f, 0.9f, 0.6f);	 // Location 3 (light diffuse)
 		glUniform3f(4, 0.05f, 0.05f, 0.05f); // Location 4 (scene ambient)
 
-		// 3. Set the combined projCameraWorld matrix
-		glUniformMatrix4fv(0, 1, GL_TRUE, projCameraWorld_cube.v);
+		// 2. Set the combined projCameraWorld matrix
+		// DRAW Parlahti Terrain
+		glUniformMatrix3fv(1, 1, GL_TRUE, normalMatrix_parlahti.v);
+		glUniformMatrix4fv(0, 1, GL_TRUE, projCameraWorld_parlahti.v);
+		glBindVertexArray(parlahtiVao);
+		glDrawArrays(GL_TRIANGLES, 0, parlahtiVertexCount);
 
-		// DRAW Cube
+		/* DRAW Cube
+		glUniformMatrix3fv(1, 1, GL_TRUE, normalMatrix_cube.v);
 		glUniformMatrix4fv(
 			0,						// location 0 for uProjCameraWorld
 			1, GL_TRUE,				// 1 matrix, transpose (row-major to column-major)
 			projCameraWorld_cube.v // pointer to matrix data
 		);
-		glBindVertexArray(vao);
-		glDrawArrays(GL_TRIANGLES, 0, 36); //36 for cube, multiples of 3 for triangles
-
+		glBindVertexArray(cubeVao);
+		glDrawArrays(GL_TRIANGLES, 0, cubeVertexCount); // 36 for cube
+		*/
 		// Cleanup the modified global state: Reset VAO and program.
 		glBindVertexArray(0);
 		glUseProgram(0);
@@ -482,7 +491,8 @@ int main() try
 	state.prog = nullptr;
 
 	// Cleanup of OpenGL objects
-	glDeleteVertexArrays(1, &vao);
+	glDeleteVertexArrays(1, &cubeVao);
+	glDeleteVertexArrays(1, &parlahtiVao);
 	// glDeleteBuffers(1, &vbo);
 
 	return 0;
@@ -652,7 +662,7 @@ namespace
 				 * 	with its constraint value whenever it breaches the constraint:
 				 */
 				// TODO: Adjust limit
-				float kRadianLimit = std::numbers::pi_v<float> / 2.1f;
+				float kRadianLimit = kFloatPi / 2.1f;
 				if (state->camControl.pitch > kRadianLimit)
 					state->camControl.pitch = kRadianLimit;
 				if (state->camControl.pitch < -kRadianLimit)
