@@ -398,39 +398,6 @@ int main() try
 
 		//////////////////////////////////////////////////////////////////////////////////
 		// TODO: Setup camera pipeline
-		// // 1. Model to world
-		// Mat44f model2world_cube1 = make_rotation_y(angle);
-		// // Translate the cube to orbit position (3 units to the right)
-		// Mat44f translate_to_orbit = make_translation({3.f, 0.f, 0.f});
-		// // Then rotate it around the origin
-		// Mat44f orbit_rotation = make_rotation_y(angle);
-		// // Combine: orbit rotation first, then translation
-		// Mat44f model2world_cube2 = orbit_rotation * translate_to_orbit;
-
-		// // 2. World to camera (fps-style camera)
-		// Mat44f Rx = make_rotation_x(state.camControl.theta);
-		// Mat44f Ry = make_rotation_y(state.camControl.phi);
-		// // Vec3f camTranslation = {0.f, 0.f, -state.camControl.radius};
-		// // Mat44f T = make_translation(camTranslation);
-		// // Mat44f world2camera_fps = Rx * Ry * T;
-
-		// // Using camera position for free movement
-		// Mat44f R = Rx * Ry;
-		// // Create inverse translation (move world relative to camera)
-		// Mat44f invT = make_translation(-state.camControl.position);
-		// Mat44f world2camera_fps = R * invT;
-
-		// // 3. Perspective Projection
-		// Mat44f projection = make_perspective_projection(
-		// 	state.camControl.fov,
-		// 	fbwidth / fbheight,
-		// 	0.1f, 100.f);
-
-		// 4. Combined final matrix
-		// Mat44f projCameraWorld_cube = projection * world2camera_fps * model2world_cube;
-		// Mat44f projCameraWorld_cube1 = projection * world2camera_fps * model2world_cube1;
-		// Mat44f projCameraWorld_cube2 = projection * world2camera_fps * model2world_cube2;
-
 		// Pre-computed scales and translations
 		Mat44f ySpin = make_rotation_y(-angle);
 		// Mat44f shrink = make_scaling(0.25f, 0.25f, 0.25f);
@@ -468,8 +435,31 @@ int main() try
 		// Next, bind the appropriate program we want to draw with our program.
 		glUseProgram(prog.programId());
 
-		//TODO: Draw frame
-		// Cube 1
+		// TODO: Draw frame
+		glDisable(GL_CULL_FACE); // Disable face culling for debugging
+		// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Wireframe mode
+
+		// Use shader program
+		// 1. Set the normal (3x3) matrix passed to the shader
+		glUniformMatrix3fv(1, 1, GL_TRUE, normalMatrix.v);
+
+		// TODO: This directional light must also be
+		// applied to additional objects added in subsequent tasks.
+		/* GL Values for Report
+		* - RENDERER AMD Radeon 610M (radeonsi, raphael_mendocino, LLVM 20.1.2, DRM 3.61, 6.14.0-36-generic)
+		* - VENDOR AMD
+		* - VERSION 4.6 (Core Profile) Mesa 25.0.7-0ubuntu0.24.04.2
+		*/
+		// 2. Define light uniforms
+		Vec3f lightDir = normalize(Vec3f{0.f, 1.f, -1.f});
+		glUniform3fv(2, 1, &lightDir.x);
+		glUniform3f(3, 0.9f, 0.9f, 0.6f);	 // Location 3 (light diffuse)
+		glUniform3f(4, 0.05f, 0.05f, 0.05f); // Location 4 (scene ambient)
+
+		// 3. Set the combined projCameraWorld matrix
+		glUniformMatrix4fv(0, 1, GL_TRUE, projCameraWorld_cube.v);
+
+		// DRAW Cube
 		glUniformMatrix4fv(
 			0,						// location 0 for uProjCameraWorld
 			1, GL_TRUE,				// 1 matrix, transpose (row-major to column-major)
