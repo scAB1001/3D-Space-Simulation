@@ -15,6 +15,7 @@
 
 #include "../vmlib/vec4.hpp"
 #include "../vmlib/mat44.hpp"
+#include "../vmlib/mat33.hpp"
 
 #include "defaults.hpp"
 #include "cube.hpp" // TODO: Remove if not using cube data
@@ -22,9 +23,6 @@
 namespace
 {
 	constexpr char const* kWindowTitle = "COMP3811 - CW2";
-	// TODO: Constants for camera control
-	constexpr float kMovementPerSecond_ = 5.f;	// units per second
-	constexpr float kMouseSensitivity_ = 0.01f; // radians per pixel
 
 	// TODO: State struct with camctrl_
 	struct State_
@@ -33,29 +31,39 @@ namespace
 
 		struct CamCtrl_
 		{
-			bool cameraActive;
-			bool actionZoomIn, actionZoomOut;
-			bool strafeLeft, strafeRight;
-			bool moveUp, moveDown;
+			// Toggle camera control mode
+			bool cameraActive = false;
+			// Toggle mouse look mode
+			bool mouseLookActive = false;
 
-			bool scrollZoomMode;
+			// Camera position and orientation
+			Vec3f position = {0.f, 0.f, 10.f}; // Start 5 units back
+			float yaw = -90.f;				   // Left/right rotation (around Y) (default: looking along -Z)
+			float pitch = 0.f;				   // Up/down rotation (around X)
 
-			float phi, theta;
-			float radius;
+			// Movement flags
+			bool moveForward = false;
+			bool moveBackward = false;
+			bool moveLeft = false;
+			bool moveRight = false;
+			bool moveUp = false;
+			bool moveDown = false;
 
-			// Add camera position for free movement
-			Vec3f position;  // Camera position in world space
-			// Vec3f target;    // Look-at target (if using arcball style)
+			// Speed control
+			float mouseSensitivity = 0.001f; // TODO: adjustment
+			float baseSpeed = 5.f;			 // units per second
+			float currentSpeed = 5.f;
 
-			float fov;
-
-			float lastX, lastY;
+			// Mouse state
+			float lastX = 0.f;
+			float lastY = 0.f;
+			bool firstMouse = true;
 		} camControl;
 	};
 
 	void glfw_callback_error_( int, char const* );
-	void glfw_callback_scroll_(GLFWwindow *, double, double);
-	void glfw_callback_key_( GLFWwindow*, int, int, int, int );
+	void glfw_callback_key_(GLFWwindow *, int, int, int, int);
+	void glfw_callback_mouse_button_(GLFWwindow *, int, int, int);
 	void glfw_callback_motion_(GLFWwindow *, double, double);
 
 	struct GLFWCleanupHelper
@@ -142,7 +150,7 @@ int main() try
 	// Setup the additional GLFW callbacks
 	glfwSetWindowUserPointer( window, &state );
 	glfwSetKeyCallback( window, &glfw_callback_key_ );
-	glfwSetScrollCallback(window, &glfw_callback_scroll_);
+	glfwSetMouseButtonCallback(window, &glfw_callback_mouse_button_);
 	glfwSetCursorPosCallback(window, &glfw_callback_motion_);
 	//////////////////////////////////////////////////////////////////////////////////
 
@@ -165,11 +173,11 @@ int main() try
 	setup_gl_debug_output();
 #	endif // ~ !NDEBUG
 
+	//////////////////////////////////////////////////////////////////////////////////
+	// TODO: Global GL setup goes here
 	// Global GL state
 	OGL_CHECKPOINT_ALWAYS();
 
-	//////////////////////////////////////////////////////////////////////////////////
-	// TODO: global GL setup goes here
 	// Enable sRGB framebuffer - we want correct gamma correction
 	glEnable(GL_FRAMEBUFFER_SRGB);
 
@@ -192,9 +200,9 @@ int main() try
 	// Clear buffers
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glClearColor(0.2f, 0.2f, 0.2f, 0.0f); // dark gray - values between 0.0 and 1.0
-	//////////////////////////////////////////////////////////////////////////////////
 
 	OGL_CHECKPOINT_ALWAYS();
+	//////////////////////////////////////////////////////////////////////////////////
 
 	// Get actual framebuffer size.
 	// This can be different from the window size, as standard window
@@ -212,19 +220,14 @@ int main() try
 		{ GL_FRAGMENT_SHADER, "assets/cw2/default.frag" }
 	} );
 
+	//////////////////////////////////////////////////////////////////////////////////
+	// TODO: global GL setup goes here
 	// Other initialization & loading
 	OGL_CHECKPOINT_ALWAYS();
 
-	//////////////////////////////////////////////////////////////////////////////////
-	// TODO: global GL setup goes here
 	// Set up initial state
 	state.prog = &prog;
-	state.camControl.radius = 10.f;
-	state.camControl.fov = std::numbers::pi_v<float> / 4.f; // 45 degrees
-	// Initialize camera position and target
-	state.camControl.position = {0.f, 0.f, 10.f};			// Start at (0,0,10)
-	// state.camControl.target = {0.f, 0.f, 0.f};				// Look at origin (if using arcball)
-	state.camControl.scrollZoomMode = false; // Initialize scroll zoom mode to false
+
 	// Animation state
 	auto last = Clock::now();
 	float angle = 0.f;
@@ -298,9 +301,9 @@ int main() try
 	// Reset state
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	//////////////////////////////////////////////////////////////////////////////////
 
 	OGL_CHECKPOINT_ALWAYS();
+	//////////////////////////////////////////////////////////////////////////////////
 
 	// Main loop
 	while( !glfwWindowShouldClose( window ) )
@@ -339,114 +342,141 @@ int main() try
 
 		angle += dt * std::numbers::pi_v<float> * 0.3f;
 		if (angle >= 2.f * std::numbers::pi_v<float>)
-		angle -= 2.f * std::numbers::pi_v<float>;
+			angle -= 2.f * std::numbers::pi_v<float>;
 
-		// Update camera state
+		/* Update camera state
+		 * Radius controls vertical distance from cameraTarget point (here: origin)
+		 * Phi controls horizontal angle around the cameraTarget point
+		 * Theta controls vertical angle from the horizontal plane
+		 */
+
+		// CITE: https://learnopengl.com/Getting-started/Camera
+		Vec3f forward;
+		forward.x = std::cos(state.camControl.yaw) * std::cos(state.camControl.pitch);
+		forward.y = std::sin(state.camControl.pitch);
+		forward.z = std::sin(state.camControl.yaw) * std::cos(state.camControl.pitch);
+		forward = normalize(forward);
+
+		// Calculate right vector (perpendicular to forward and world up)
+		Vec3f worldUp = {0.f, 1.f, 0.f};
+
+		/* Note: that we normalize the resulting right vector.
+		 * If we wouldn't normalize this vector, the resulting cross product may return
+		 *	differently sized vectors based on the cameraFront variable.
+
+		 * If we would not normalize the vector we would move slow or fast
+		 *	based on the camera's orientation instead of at a consistent movement speed.
+		 */
+		Vec3f right = normalize(cross(forward, worldUp));
+
+		// Calculate actual up vector (perpendicular to forward and right)
+		Vec3f up = normalize(cross(right, forward));
+
 		if (state.camControl.cameraActive)
 		{
-			// Adjusting phi rotates the camera rather than moving it.
-			// instead, adjust the camera's position based on its right vector.
-			Vec3f forward = {
-				-std::sin(state.camControl.phi) * std::cos(state.camControl.theta),
-				std::sin(state.camControl.theta),
-				-std::cos(state.camControl.phi) * std::cos(state.camControl.theta)
-			};
+			// Calculate movement speed with modifiers
+			float speed = state.camControl.currentSpeed * dt;
 
-			Vec3f right = {
-				std::cos(state.camControl.phi),
-				0.f,
-				-std::sin(state.camControl.phi)
-			};
+			// Apply movement
+			if (state.camControl.moveForward)
+				state.camControl.position += forward * speed;
 
-			Vec3f up = {0.f, 1.f, 0.f};
+			if (state.camControl.moveBackward)
+				state.camControl.position -= forward * speed;
+			if (state.camControl.moveLeft)
+				state.camControl.position -= right * speed;
+			if (state.camControl.moveRight)
+				state.camControl.position += right * speed;
 
-			// TODO: For zooming in and out
-			if (state.camControl.actionZoomIn)
-				state.camControl.position += forward * kMovementPerSecond_ * dt;
-				// state.camControl.radius -= kMovementPerSecond_ * dt; // Original without .position
-			else if (state.camControl.actionZoomOut)
-				state.camControl.position -= forward * kMovementPerSecond_ * dt;
-				// state.camControl.radius += kMovementPerSecond_ * dt; // Original without .position
-
-			// TODO: For strafing left and right
-			if (state.camControl.strafeLeft)
-				state.camControl.position -= right * kMovementPerSecond_ * dt;
-				// FIXME: Seems to be looking left and right as opposed to moving the camera
-				// state.camControl.phi -= kMovementPerSecond_ * dt * 0.25f;
-			else if (state.camControl.strafeRight)
-				state.camControl.position += right * kMovementPerSecond_ * dt;
-				// state.camControl.phi += kMovementPerSecond_ * dt * 0.25f;
-
-			// TODO: Up/down movement (E/Q if you want to add it)
+			// TODO: Clamp vertical movement? e.g. .y >= 0.1f
 			if (state.camControl.moveUp)
-			    state.camControl.position += up * kMovementPerSecond_ * dt;
-			else if (state.camControl.moveDown)
-			    state.camControl.position -= up * kMovementPerSecond_ * dt;
+				state.camControl.position += up * speed;
+			if (state.camControl.moveDown)
+				state.camControl.position -= up * speed;
 		}
-		// Clamp radius to prevent getting too close or negative values
-		if (state.camControl.radius <= 0.1f)
-			state.camControl.radius = 0.1f;
 		//////////////////////////////////////////////////////////////////////////////////
 
 		//////////////////////////////////////////////////////////////////////////////////
 		// TODO: Setup camera pipeline
-		// 1. Model to world
-		Mat44f model2world_cube1 = make_rotation_y(angle);
-		// Translate the cube to orbit position (3 units to the right)
-		Mat44f translate_to_orbit = make_translation({3.f, 0.f, 0.f});
-		// Then rotate it around the origin
-		Mat44f orbit_rotation = make_rotation_y(angle);
-		// Combine: orbit rotation first, then translation
-		Mat44f model2world_cube2 = orbit_rotation * translate_to_orbit;
+		// // 1. Model to world
+		// Mat44f model2world_cube1 = make_rotation_y(angle);
+		// // Translate the cube to orbit position (3 units to the right)
+		// Mat44f translate_to_orbit = make_translation({3.f, 0.f, 0.f});
+		// // Then rotate it around the origin
+		// Mat44f orbit_rotation = make_rotation_y(angle);
+		// // Combine: orbit rotation first, then translation
+		// Mat44f model2world_cube2 = orbit_rotation * translate_to_orbit;
 
-		// 2. World to camera (fps-style camera)
-		Mat44f Rx = make_rotation_x(state.camControl.theta);
-		Mat44f Ry = make_rotation_y(state.camControl.phi);
-		// Vec3f camTranslation = {0.f, 0.f, -state.camControl.radius};
-		// Mat44f T = make_translation(camTranslation);
-		// Mat44f world2camera_fps = Rx * Ry * T;
+		// // 2. World to camera (fps-style camera)
+		// Mat44f Rx = make_rotation_x(state.camControl.theta);
+		// Mat44f Ry = make_rotation_y(state.camControl.phi);
+		// // Vec3f camTranslation = {0.f, 0.f, -state.camControl.radius};
+		// // Mat44f T = make_translation(camTranslation);
+		// // Mat44f world2camera_fps = Rx * Ry * T;
 
-		// Using camera position for free movement
-		Mat44f R = Rx * Ry;
-		// Create inverse translation (move world relative to camera)
-		Mat44f invT = make_translation(-state.camControl.position);
-		Mat44f world2camera_fps = R * invT;
+		// // Using camera position for free movement
+		// Mat44f R = Rx * Ry;
+		// // Create inverse translation (move world relative to camera)
+		// Mat44f invT = make_translation(-state.camControl.position);
+		// Mat44f world2camera_fps = R * invT;
 
-		// 3. Perspective Projection
+		// // 3. Perspective Projection
+		// Mat44f projection = make_perspective_projection(
+		// 	state.camControl.fov,
+		// 	fbwidth / fbheight,
+		// 	0.1f, 100.f);
+
+		// 4. Combined final matrix
+		// Mat44f projCameraWorld_cube = projection * world2camera_fps * model2world_cube;
+		// Mat44f projCameraWorld_cube1 = projection * world2camera_fps * model2world_cube1;
+		// Mat44f projCameraWorld_cube2 = projection * world2camera_fps * model2world_cube2;
+
+		// Pre-computed scales and translations
+		Mat44f ySpin = make_rotation_y(-angle);
+		// Mat44f shrink = make_scaling(0.25f, 0.25f, 0.25f);
+
+		// 1. Model to world matrices
+		Mat44f model2world_cube = ySpin;
+		// Compute the normal matrix and pass it to the shaders as a uniform matrix3
+		Mat33f normalMatrix = mat44_to_mat33(transpose(invert(model2world_cube)));
+
+		// 2. FPS Camera matrix - position and orientation based on yaw/pitch
+		// Camera looks along forward vector
+		Vec3f cameraTarget = state.camControl.position + forward;
+
+		// Create view matrix (world to camera)
+		Mat44f world2camera_fps = make_look_at(
+			state.camControl.position,
+			cameraTarget,
+			worldUp);
+
+		// 3. Perspective projection
 		Mat44f projection = make_perspective_projection(
-			state.camControl.fov,
+			std::numbers::pi_v<float> / 4.f,
 			fbwidth / fbheight,
 			0.1f, 100.f);
 
-		// 4. Combined final matrix
-		Mat44f projCameraWorld_cube1 = projection * world2camera_fps * model2world_cube1;
-		Mat44f projCameraWorld_cube2 = projection * world2camera_fps * model2world_cube2;
+		// 4. Combined matrices for projection, camera and world
+		Mat44f projCameraWorld_cube = projection * world2camera_fps * model2world_cube;
 		//////////////////////////////////////////////////////////////////////////////////
-		// Draw scene
+
+		//////////////////////////////////////////////////////////////////////////////////
+		// TODO: Draw scene
 		OGL_CHECKPOINT_DEBUG();
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		// Next, bind the appropriate program we want to draw with our program.
 		glUseProgram(prog.programId());
 
-		//TODO: draw frame
+		//TODO: Draw frame
 		// Cube 1
 		glUniformMatrix4fv(
 			0,						// location 0 for uProjCameraWorld
 			1, GL_TRUE,				// 1 matrix, transpose (row-major to column-major)
-			projCameraWorld_cube1.v // pointer to matrix data
+			projCameraWorld_cube.v // pointer to matrix data
 		);
 		glBindVertexArray(vao);
 		glDrawArrays(GL_TRIANGLES, 0, 36); //36 for cube, multiples of 3 for triangles
-
-		// Cube 2
-		glUniformMatrix4fv(
-			0,
-			1, GL_TRUE,
-			projCameraWorld_cube2.v
-		);
-		glBindVertexArray(vao);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		// Cleanup the modified global state: Reset VAO and program.
 		glBindVertexArray(0);
@@ -456,7 +486,6 @@ int main() try
 
 		// Display results
 		glfwSwapBuffers( window );
-		//////////////////////////////////////////////////////////////////////////////////
 	}
 
 	// TODO: additional cleanup
@@ -464,7 +493,7 @@ int main() try
 
 	// Cleanup of OpenGL objects
 	glDeleteVertexArrays(1, &vao);
-	glDeleteBuffers(1, &vbo);
+	// glDeleteBuffers(1, &vbo);
 
 	return 0;
 	//////////////////////////////////////////////////////////////////////////////////////
@@ -483,52 +512,6 @@ namespace
 	void glfw_callback_error_( int aErrNum, char const* aErrDesc )
 	{
 		std::print( stderr, "GLFW error: {} ({})\n", aErrDesc, aErrNum );
-	}
-
-	void glfw_callback_scroll_(GLFWwindow *aWindow, double aX, double aY)
-	{
-		if (auto *state = static_cast<State_ *>(glfwGetWindowUserPointer(aWindow)))
-		{
-			state->camControl.scrollZoomMode = true; // Enable scroll zoom mode
-			// Only zoom if camera control is not active
-			if (!state->camControl.cameraActive)
-			{
-				// Scroll up (aY > 0): zoom in (decrease radius)
-				// Scroll down (aY < 0): zoom out (increase radius)
-				state->camControl.radius -= float(aY) * 0.5f;
-
-				std::print("Camera Distance: {:.1f} units\n", state->camControl.radius);
-
-				// Clamp radius to prevent getting too close or negative values
-				if (state->camControl.radius <= 0.1f)
-					state->camControl.radius = 0.1f;
-
-				// Optional: Add maximum distance limit
-				if (state->camControl.radius > 50.f)
-					state->camControl.radius = 50.f;
-			}
-
-			// If camera control is active, modify FOV
-			else
-			{
-				// Adjust FOV based on scroll
-				// Scroll up (aY > 0): Decrease FOV (zoom in)
-				// Scroll down (aY < 0): Increase FOV (zoom out)
-				state->camControl.fov -= float(aY) * 0.05f; // Adjust sensitivity as needed
-
-				// Clamp FOV to reasonable values (15° to 120°)
-				constexpr float minFov = 15.f * std::numbers::pi_v<float> / 180.f;	// 15° in radians
-				constexpr float maxFov = 120.f * std::numbers::pi_v<float> / 180.f; // 120° in radians
-
-				if (state->camControl.fov < minFov)
-					state->camControl.fov = minFov;
-				if (state->camControl.fov > maxFov)
-					state->camControl.fov = maxFov;
-
-				float fovDegrees = state->camControl.fov * 180.f / std::numbers::pi_v<float>;
-				std::print("FOV: {:.1f}°\n", fovDegrees);
-			}
-		}
 	}
 
 	void glfw_callback_key_( GLFWwindow* aWindow, int aKey, int, int aAction, int )
@@ -560,11 +543,12 @@ namespace
 				}
 			}
 
+			// TODO: Remove later? The user should be able to move by default.
 			// Space toggles camera
 			if (GLFW_KEY_SPACE == aKey && GLFW_PRESS == aAction)
 			{
 				state->camControl.cameraActive = !state->camControl.cameraActive;
-				state->camControl.scrollZoomMode = !state->camControl.cameraActive;
+				std::print("Camera movement: {}\n", state->camControl.cameraActive ? "ENABLED" : "DISABLED");
 
 				if (state->camControl.cameraActive)
 					glfwSetInputMode(aWindow, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
@@ -572,51 +556,70 @@ namespace
 					glfwSetInputMode(aWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			}
 
-			// Camera controls if camera is active
+			// SHIFT+CTRL Speed modifiers
+			if (GLFW_KEY_LEFT_SHIFT == aKey || GLFW_KEY_RIGHT_SHIFT == aKey)
+			{
+				state->camControl.currentSpeed = (GLFW_PRESS == aAction || GLFW_REPEAT == aAction)
+				? state->camControl.baseSpeed * 5.f // 5x faster with Shift
+				: state->camControl.baseSpeed;
+				std::print("Shift pressed\n");
+
+				if (GLFW_RELEASE == aAction)
+					std::print("Shift released\n");
+			}
+			else if (GLFW_KEY_LEFT_CONTROL == aKey || GLFW_KEY_RIGHT_CONTROL == aKey)
+			{
+				state->camControl.currentSpeed = (GLFW_PRESS == aAction || GLFW_REPEAT == aAction)
+				? state->camControl.baseSpeed * 0.2f // 5x slower with Ctrl
+				: state->camControl.baseSpeed;
+				std::print("Ctrl pressed\n");
+
+				if (GLFW_RELEASE == aAction)
+					std::print("Ctrl released\n");
+			}
+
+			// WASD+EQ Movement controls (when camera is enabled)
 			if (state->camControl.cameraActive)
 			{
-				state->camControl.scrollZoomMode = false; // Disable scroll zoom mode when camera is active
+				// If action is PRESS or REPEAT (E.g., the key is held down), set movement flag to true; else false
+				// The REPEAT action allows for multi-key presses to be recognized.
+				// So, moving forwards and left at the same time is possible
 				if (GLFW_KEY_W == aKey)
-				{
-					if (GLFW_PRESS == aAction)
-						state->camControl.actionZoomIn = true;
-					else if (GLFW_RELEASE == aAction)
-						state->camControl.actionZoomIn = false;
-				}
+					state->camControl.moveForward = (GLFW_PRESS == aAction || GLFW_REPEAT == aAction);
 				else if (GLFW_KEY_S == aKey)
-				{
-					if (GLFW_PRESS == aAction)
-						state->camControl.actionZoomOut = true;
-					else if (GLFW_RELEASE == aAction)
-						state->camControl.actionZoomOut = false;
-				}
+					state->camControl.moveBackward = (GLFW_PRESS == aAction || GLFW_REPEAT == aAction);
 				else if (GLFW_KEY_A == aKey)
-				{
-					if (GLFW_PRESS == aAction)
-						state->camControl.strafeLeft = true;
-					else if (GLFW_RELEASE == aAction)
-						state->camControl.strafeLeft = false;
-				}
+					state->camControl.moveLeft = (GLFW_PRESS == aAction || GLFW_REPEAT == aAction);
 				else if (GLFW_KEY_D == aKey)
-				{
-					if (GLFW_PRESS == aAction)
-						state->camControl.strafeRight = true;
-					else if (GLFW_RELEASE == aAction)
-						state->camControl.strafeRight = false;
-				}
+					state->camControl.moveRight = (GLFW_PRESS == aAction || GLFW_REPEAT == aAction);
 				else if (GLFW_KEY_E == aKey)
-				{
-					if (GLFW_PRESS == aAction)
-						state->camControl.moveUp = true;
-					else if (GLFW_RELEASE == aAction)
-						state->camControl.moveUp = false;
-				}
+					state->camControl.moveUp = (GLFW_PRESS == aAction || GLFW_REPEAT == aAction);
 				else if (GLFW_KEY_Q == aKey)
+					state->camControl.moveDown = (GLFW_PRESS == aAction || GLFW_REPEAT == aAction);
+			}
+		}
+	}
+
+	// TODO: Cant this be combined in callback motion?
+	// Mouse button callback to toggle mouse look mode
+	void glfw_callback_mouse_button_(GLFWwindow *aWindow, int aButton, int aAction, int)
+	{
+		if (auto *state = static_cast<State_ *>(glfwGetWindowUserPointer(aWindow)))
+		{
+			if (aButton == GLFW_MOUSE_BUTTON_RIGHT && GLFW_PRESS == aAction)
+			{
+				state->camControl.mouseLookActive = !state->camControl.mouseLookActive;
+
+				if (state->camControl.mouseLookActive)
 				{
-					if (GLFW_PRESS == aAction)
-						state->camControl.moveDown = true;
-					else if (GLFW_RELEASE == aAction)
-						state->camControl.moveDown = false;
+					glfwSetInputMode(aWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+					state->camControl.firstMouse = true;
+					std::print("Mouse look: ENABLED\n");
+				}
+				else
+				{
+					glfwSetInputMode(aWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+					std::print("Mouse look: DISABLED\n");
 				}
 			}
 		}
@@ -626,22 +629,53 @@ namespace
 	{
 		if (auto *state = static_cast<State_ *>(glfwGetWindowUserPointer(aWindow)))
 		{
-			if (state->camControl.cameraActive)
+			if (state->camControl.mouseLookActive)
 			{
-				auto const dx = float(aX - state->camControl.lastX);
-				auto const dy = float(aY - state->camControl.lastY);
+				// Initialize on first mouse movement
+				if (state->camControl.firstMouse)
+				{
+					state->camControl.lastX = float(aX);
+					state->camControl.lastY = float(aY);
+					state->camControl.firstMouse = false; // Toggle off
+				}
 
-				state->camControl.phi += dx * kMouseSensitivity_;
+				// Calculate the mouse's offset since the last frame.
+				float xoffset = float(aX) - state->camControl.lastX;
+				float yoffset = state->camControl.lastY - float(aY); // Reversed for natural mouse
 
-				state->camControl.theta += dy * kMouseSensitivity_;
-				if (state->camControl.theta > std::numbers::pi_v<float> / 2.f)
-					state->camControl.theta = std::numbers::pi_v<float> / 2.f;
-				else if (state->camControl.theta < -std::numbers::pi_v<float> / 2.f)
-					state->camControl.theta = -std::numbers::pi_v<float> / 2.f;
+				state->camControl.lastX = float(aX);
+				state->camControl.lastY = float(aY);
+
+				xoffset *= state->camControl.mouseSensitivity;
+				yoffset *= state->camControl.mouseSensitivity;
+
+				// Add the offset values to the camera's yaw and pitch values.
+				state->camControl.yaw += xoffset;
+				state->camControl.pitch += yoffset;
+
+				/* Constrain pitch to prevent flipping
+				 * The pitch needs to be constrained in such a way that users won't be able to
+				 * 	look higher than 89 degrees (at 90 degrees we get the LookAt flip) and
+				 * 	also not below -89 degrees.
+				 * This ensures the user will be able to look up to the sky or below to his feet but not further.
+				 * The constraints work by replacing the Euler value
+				 * 	with its constraint value whenever it breaches the constraint:
+				 */
+				// TODO: Adjust limit
+				float kRadianLimit = std::numbers::pi_v<float> / 2.1f;
+				if (state->camControl.pitch > kRadianLimit)
+					state->camControl.pitch = kRadianLimit;
+				if (state->camControl.pitch < -kRadianLimit)
+					state->camControl.pitch = -kRadianLimit;
+
+				// TODO: Constrain yaw too?
 			}
-
-			state->camControl.lastX = float(aX);
-			state->camControl.lastY = float(aY);
+			else
+			{
+				// If mouse look is not active, just update last positions
+				state->camControl.lastX = float(aX);
+				state->camControl.lastY = float(aY);
+			}
 		}
 	}
 }
