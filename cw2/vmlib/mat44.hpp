@@ -133,7 +133,6 @@ Vec4f operator*( Mat44f const& aLeft, Vec4f const& aRight ) noexcept
 }
 
 // Functions:
-
 Mat44f invert( Mat44f const& aM ) noexcept;
 
 inline
@@ -272,6 +271,33 @@ Mat44f make_scaling( float aSX, float aSY, float aSZ ) noexcept
 		0.f, aSY, 0.f, 0.f,
 		0.f, 0.f, aSZ, 0.f,
 		0.f, 0.f, 0.f, 1.f
+	}};
+}
+
+inline
+Mat44f make_look_at(Vec3f position, Vec3f target, Vec3f worldUp) noexcept
+{
+	// TODO: CITE LookAt implementation
+	// Reference: https://learnopengl.com/Getting-started/Camera
+	// Reference: https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/lookat-function/framing-lookat-function.html
+
+	// Forward vector: points from camera to what it's looking at
+	Vec3f f = normalize(target - position);
+
+	// Right vector: positive X in camera space
+	Vec3f s = normalize(cross(f, normalize(worldUp)));
+
+	// Real worldUp vector: positive Y in camera space
+	Vec3f u = cross(s, f);
+
+	// View matrix in row-major format
+	// First 3 columns: camera axes in world space
+	// Last column: translation to move camera to origin
+	return Mat44f{{
+		s.x, 	s.y, 	s.z, 	-dot(s, position),
+		u.x, 	u.y, 	u.z, 	-dot(u, position),
+		-f.x, 	-f.y,	 -f.z, 	dot(f, position), // Negative because OpenGL looks down -Z
+		0.f,	0.f, 	0.f, 	1.f
 	}};
 }
 

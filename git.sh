@@ -5,7 +5,7 @@
 
 git st
 # cd ~/github-projects/uni/graphics/
-git add .; git ci; git push origin dev
+git add .; git ci; git push origin andreas
 cd ./cw2/
 
 # Set vim.basic as default with:
