@@ -20,15 +20,16 @@
 #include "defaults.hpp"
 
 // Added later
-#include "loadobj.hpp"
 #include "cube.hpp" // TODO: Remove if not using cube data
+#include "simple_mesh.hpp"
+#include "loadobj.hpp"
+#include "texture.hpp"
 
 namespace
 {
 	constexpr char const* kWindowTitle = "COMP3811 - CW2";
 	constexpr float kFloatPi = std::numbers::pi_v<float>;
 
-	// TODO: State struct with camctrl_
 	struct State_
 	{
 		ShaderProgram* prog;
@@ -36,12 +37,12 @@ namespace
 		struct CamCtrl_
 		{
 			// Toggle camera control mode
-			bool cameraActive = false;
+			bool cameraActive = true; // TODO: Remove camera toggle
 			// Toggle mouse look mode
 			bool mouseLookActive = false;
 
 			// Camera position and orientation
-			Vec3f position = {0.f, 5.f, 10.f}; // Start 5 units back
+			Vec3f position = {0.f, 5.f, 10.f}; // Start position
 			float yaw = -90.f;				   // Left/right rotation (around Y) (default: looking along -Z)
 			float pitch = 0.f;				   // Up/down rotation (around X)
 
@@ -54,7 +55,7 @@ namespace
 			bool moveDown = false;
 
 			// Speed control
-			float mouseSensitivity = 0.001f; // TODO: adjustment
+			float mouseSensitivity = 0.001f; // TODO: May need adjusting
 			float baseSpeed = 5.f;			 // units per second
 			float currentSpeed = 5.f;
 
@@ -139,8 +140,7 @@ int main() try
 	GLFWWindowDeleter windowDeleter{ window };
 
 	//////////////////////////////////////////////////////////////////////////////////
-	// TODO: Additional event handling setup
-	// TODO: Setup the state struct with camctrl_
+	// TODO: Set up event handling_
 	State_ state{};
 
 	// Setup the additional GLFW callbacks
@@ -174,20 +174,20 @@ int main() try
 	// Global GL state
 	OGL_CHECKPOINT_ALWAYS();
 
-	// Enable sRGB framebuffer - we want correct gamma correction
+	// Enable sRGB framebuffer to correct gamma correction
 	glEnable(GL_FRAMEBUFFER_SRGB);
 
-	// Enable face culling - we want to avoid drawing back faces
+	// Enable face culling to avoid drawing back faces
 	glEnable(GL_CULL_FACE);
-	// This is the default, but be explicit
+	// This is the default, but set it explicitly
 	glCullFace(GL_BACK);
 
 	// Define front faces to be counter-clockwise
 	glFrontFace(GL_CCW);
 
-	// Enable depth testing - we want correct occlusion
+	// Enable depth testing for correct occlusion
 	glEnable(GL_DEPTH_TEST);
-	// Use less-than depth test, which is the default but be explicit
+	// This is the default, but set it explicitly
 	glDepthFunc(GL_LESS);
 	// Set clear depth to far plane (1.0) to match depth test
 	// TODO: glad_glDepthRangef(0.f, 1.f);
@@ -211,10 +211,21 @@ int main() try
 
 	// TODO: Setup shader program
 	// Load shader program
-	ShaderProgram prog( {
-		{ GL_VERTEX_SHADER, "assets/cw2/default.vert" },
-		{ GL_FRAGMENT_SHADER, "assets/cw2/default.frag" }
+	ShaderProgram unifiedProg( {
+		{ GL_VERTEX_SHADER, "assets/cw2/shaders/unified.vert" },
+		{ GL_FRAGMENT_SHADER, "assets/cw2/shaders/unified.frag" }
 	} );
+
+	/* Important Note: There's a trick here.
+	 * We're storing texcoords as vec2 in the buffer,
+	 * 	but the shader reads them as vec3 at location 1.
+	 *
+	 * This works because:
+	 * 	Texcoords: vec2(x, y) in buffer -> read as vec3(x, y, ?) in shader
+	 * 	The z-component is ignored for texcoords.
+	 *
+	 * For colors: vec3(r, g, b) in buffer -> read as vec3(r, g, b) in shader
+	 */
 
 	//////////////////////////////////////////////////////////////////////////////////
 	// TODO: global GL setup goes here
@@ -222,7 +233,7 @@ int main() try
 	OGL_CHECKPOINT_ALWAYS();
 
 	// Set up initial state
-	state.prog = &prog;
+	state.prog = &unifiedProg;
 
 	// Animation state
 	auto last = Clock::now();
@@ -231,75 +242,28 @@ int main() try
 
 	//////////////////////////////////////////////////////////////////////////////////
 	// TODO: Setup scene objects e.g. VAOs, VBOs, textures, uniforms, etc.
-	/* Triangle example
-	GLuint vbo; // Init to 0?
-	glGenBuffers(1, &vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-	static const Vertex allVertices[] = {
-		// Triangle 1
-		{{0.0f, 0.8f}, {255, 255, 0}, 0},
-		{{-0.7f, -0.8f}, {255, 0, 255}, 0},
-		{{0.7f, -0.8f}, {0, 255, 255}, 0},
-
-		// Triangle 2
-		{{-0.75f, 0.8f}, {0, 255, 255}, 0},
-		{{-0.8f, -0.8f}, {0, 255, 255}, 0},
-		{{-0.1f, 0.8f}, {0, 0, 0}, 0},
-
-		// Triangle 3
-		{{0.8f, -0.8f}, {0, 255, 255}, 0},
-		{{0.75f, 0.8f}, {0, 255, 255}, 0},
-		{{0.1f, 0.8f}, {0, 0, 0}, 0}};
-	glBufferData(GL_ARRAY_BUFFER, sizeof(allVertices), allVertices, GL_STATIC_DRAW);
-	*/
-
-	/* Cube example
-	size_t vertexCount = std::size(kCubePositions) / 3;
-	std::vector<Vertex> allVertices(vertexCount);
-
-	for (size_t i = 0; i < vertexCount; ++i)
-	{
-		allVertices[i].position[0] = kCubePositions[i * 3 + 0];
-		allVertices[i].position[1] = kCubePositions[i * 3 + 1];
-		allVertices[i].position[2] = kCubePositions[i * 3 + 2];
-
-		allVertices[i].color[0] = static_cast<unsigned char>(kCubeColors[i * 3 + 0] * 255.f);
-		allVertices[i].color[1] = static_cast<unsigned char>(kCubeColors[i * 3 + 1] * 255.f);
-		allVertices[i].color[2] = static_cast<unsigned char>(kCubeColors[i * 3 + 2] * 255.f);
-	}
-	glBufferData(GL_ARRAY_BUFFER, allVertices.size() * sizeof(Vertex), allVertices.data(), GL_STATIC_DRAW);
-
-	GLuint cubeVao;
-	glGenVertexArrays(1, &cubeVao);
-	glBindVertexArray(cubeVao);
-
-	glVertexAttribPointer(
-		0,				// Position attribute 0 in the shader
-		3, GL_FLOAT,	// Three floats per position
-		GL_FALSE,		// Not normalized
-		sizeof(Vertex), // Stride: Size of a single Vertex
-		(void *)0		// Offset to position data in Vertex struct
-	);
-	glEnableVertexAttribArray(0);
-
-	glVertexAttribPointer(
-		1, // Color attribute 1 in the shader
-		3, GL_UNSIGNED_BYTE,
-		GL_TRUE, // Normalize to [0.0, 1.0] in shader as we use unsigned bytes for color
-		sizeof(Vertex),
-		(void *)offsetof(Vertex, color) // Offset to color data in Vertex struct
-	);
-	glEnableVertexAttribArray(1);
-	*/
-	auto cubeMesh = make_cube_with_normals({0.5f, 0.5f, 0.5f}); // Gray cube
-	GLuint cubeVao = create_vao(cubeMesh);
-	std::size_t cubeVertexCount = cubeMesh.positions.size();
-
 	/* PARLAHTI */
 	auto parlahtiMesh = load_wavefront_obj("assets/cw2/parlahti.obj");
+	parlahtiMesh.materialType = 1;                      // Textured material
 	GLuint parlahtiVao = create_vao(parlahtiMesh);
-	std::size_t parlahtiVertexCount = parlahtiMesh.positions.size();
+	std::size_t parlahtiVertexCount = parlahtiMesh.vertexCount();
+	GLuint parlahtiTexture = 0;
+	if (parlahtiMesh.materialType == 1 && parlahtiMesh.hasTexcoords())
+	{
+		std::println("Loading terrain orthophoto for texture...");
+		parlahtiTexture = load_texture_2d("assets/cw2/L4343A-4k.jpeg");
+		// Update texture parameters to REPEAT
+		// glBindTexture(GL_TEXTURE_2D, parlahtiTexture);
+		// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		// glBindTexture(GL_TEXTURE_2D, 0);
+	}
+
+	/* CUBE */
+	auto cubeMesh = make_cube_with_normals({0.8f, 0.2f, 0.2f});
+	cubeMesh.materialType = 0; // Colored
+	GLuint cubeVao = create_vao(cubeMesh);
+	std::size_t cubeVertexCount = cubeMesh.vertexCount();
 
 	// Reset state
 	glBindVertexArray(0);
@@ -391,9 +355,15 @@ int main() try
 			if (state.camControl.moveRight)
 				state.camControl.position += right * speed;
 
-			// TODO: Clamp vertical movement? e.g. .y >= 0.1f
+			// Clamp vertical movement so we don't go below the floor or too high
+			if (state.camControl.position.y < 0.1f)
+				state.camControl.position.y = 0.1f;
+			if (state.camControl.position.y > 50.f)
+				state.camControl.position.y = 50.f;
+
 			if (state.camControl.moveUp)
 				state.camControl.position += up * speed;
+
 			if (state.camControl.moveDown)
 				state.camControl.position -= up * speed;
 		}
@@ -406,77 +376,74 @@ int main() try
 		Mat44f yRotateCCW = make_rotation_y(-angle);
 		Mat44f yTranslateAboveTerrain = make_translation({0.f, 2.f, 0.f}); // 2 units above origin
 		Mat44f model2world_cube = yTranslateAboveTerrain * yRotateCCW;
-		Mat33f normalMatrix_cube = mat44_to_mat33(transpose(invert(model2world_cube)));
+		Mat33f normalMatrix_cube = make_uniform_normal(model2world_cube);
 
 		// Parlahti terrain fixed at origin, scaled down
-		Mat44f scaleThreeQuarterSize = make_scaling(0.75f, 0.75f, 0.75f);  // 3/4 scale
+		Mat44f scaleThreeQuarterSize = make_scaling(0.75f, 0.75f, 0.75f);
 		Mat44f model2world_parlahti = scaleThreeQuarterSize;
 		// Compute the normal matrix and pass it to the shaders as a uniform matrix3
-		Mat33f normalMatrix_parlahti = mat44_to_mat33(transpose(invert(model2world_parlahti)));
+		Mat33f normalMatrix_parlahti = make_uniform_normal(model2world_parlahti);
 
-		// 2. FPS Camera matrix - position and orientation based on yaw/pitch
+		// 2. View matrix - position and orientation based on yaw/pitch
 		// Looks along forward vector
 		Vec3f cameraTarget = state.camControl.position + forward;
-
-		// Create view matrix (world to camera)
-		Mat44f world2camera_fps = make_look_at(
-			state.camControl.position,
-			cameraTarget,
-			worldUp);
+		Mat44f world2camera_fps = make_look_at( state.camControl.position, cameraTarget, worldUp );
 
 		// 3. Perspective projection
-		Mat44f projection = make_perspective_projection(
-			kFloatPi / 4.f,
-			fbwidth / fbheight,
-			0.1f, 100.f);
+		Mat44f projection = make_perspective_projection( kFloatPi / 4.f, fbwidth / fbheight, 0.1f, 100.f );
+		Mat44f projCamera = projection * world2camera_fps;
 
 		// 4. Combined matrices for projection, camera and world
-		Mat44f projCameraWorld_parlahti = projection * world2camera_fps * model2world_parlahti;
-		Mat44f projCameraWorld_cube = projection * world2camera_fps * model2world_cube;
+		Mat44f projCameraWorld_parlahti = projCamera * model2world_parlahti;
+		Mat44f projCameraWorld_cube = projCamera * model2world_cube;
 		//////////////////////////////////////////////////////////////////////////////////
 
 		//////////////////////////////////////////////////////////////////////////////////
-		// TODO: Draw scene
+		// Draw scene
 		OGL_CHECKPOINT_DEBUG();
 
+		// Clear buffers every frame
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glDisable(GL_CULL_FACE); // Disable face culling for debugging
+		// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Enable wireframe mode for debugging
+
 		// Next, bind the appropriate program we want to draw with our program.
-		glUseProgram(prog.programId());
+		glUseProgram(unifiedProg.programId());
 
 		// TODO: Draw frame
-		glDisable(GL_CULL_FACE); // Disable face culling for debugging
-		// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Wireframe mode
-
-		// TODO: This directional light must also be
-		// applied to additional objects added in subsequent tasks.
-		/* GL Values for Report
-		* - RENDERER AMD Radeon 610M (radeonsi, raphael_mendocino, LLVM 20.1.2, DRM 3.61, 6.14.0-36-generic)
-		* - VENDOR AMD
-		* - VERSION 4.6 (Core Profile) Mesa 25.0.7-0ubuntu0.24.04.2
-		*/
-		// 1. Set light uniforms (shared by all objects)
+		// TODO: Apply to all objects added.
+		// Set light uniforms
 		Vec3f lightDir = normalize(Vec3f{0.f, 1.f, -1.f});
 		glUniform3fv(2, 1, &lightDir.x);
 		glUniform3f(3, 0.9f, 0.9f, 0.6f);	 // Location 3 (light diffuse)
 		glUniform3f(4, 0.05f, 0.05f, 0.05f); // Location 4 (scene ambient)
 
-		// 2. Set the combined projCameraWorld matrix
-		// DRAW Parlahti Terrain
-		glUniformMatrix3fv(1, 1, GL_TRUE, normalMatrix_parlahti.v);
+		/* Parlahti Terrain */
+		glUniform1i(10, parlahtiMesh.materialType);
 		glUniformMatrix4fv(0, 1, GL_TRUE, projCameraWorld_parlahti.v);
+		glUniformMatrix3fv(1, 1, GL_TRUE, normalMatrix_parlahti.v);
+
+		// If material is textured, bind the texture
+		if (parlahtiMesh.materialType == 1 && parlahtiTexture != 0)
+		{
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, parlahtiTexture);
+		}
 		glBindVertexArray(parlahtiVao);
 		glDrawArrays(GL_TRIANGLES, 0, parlahtiVertexCount);
 
-		/* DRAW Cube
+		/* Cube Mesh */
+		glUniform1i(10, 0); // uMaterialType = 0
+		glBindTexture(GL_TEXTURE_2D, 0); // No texture
 		glUniformMatrix3fv(1, 1, GL_TRUE, normalMatrix_cube.v);
-		glUniformMatrix4fv(
-			0,						// location 0 for uProjCameraWorld
-			1, GL_TRUE,				// 1 matrix, transpose (row-major to column-major)
-			projCameraWorld_cube.v // pointer to matrix data
-		);
+		glUniformMatrix4fv(0, 1, GL_TRUE, projCameraWorld_cube.v);
 		glBindVertexArray(cubeVao);
 		glDrawArrays(GL_TRIANGLES, 0, cubeVertexCount); // 36 for cube
-		*/
+
+		// Reset mode and state for next frame
+		// glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		// glEnable(GL_CULL_FACE);
+
 		// Cleanup the modified global state: Reset VAO and program.
 		glBindVertexArray(0);
 		glUseProgram(0);
@@ -491,9 +458,10 @@ int main() try
 	state.prog = nullptr;
 
 	// Cleanup of OpenGL objects
-	glDeleteVertexArrays(1, &cubeVao);
 	glDeleteVertexArrays(1, &parlahtiVao);
-	// glDeleteBuffers(1, &vbo);
+	if (parlahtiTexture != 0)
+		glDeleteTextures(1, &parlahtiTexture);
+	glDeleteVertexArrays(1, &cubeVao);
 
 	return 0;
 	//////////////////////////////////////////////////////////////////////////////////////
@@ -543,8 +511,7 @@ namespace
 				}
 			}
 
-			// TODO: Remove later? The user should be able to move by default.
-			// Space toggles camera
+			/* // TODO: Remove later? The user should be able to move by default.
 			if (GLFW_KEY_SPACE == aKey && GLFW_PRESS == aAction)
 			{
 				state->camControl.cameraActive = !state->camControl.cameraActive;
@@ -555,6 +522,7 @@ namespace
 				else
 					glfwSetInputMode(aWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			}
+			*/
 
 			// SHIFT+CTRL Speed modifiers
 			if (GLFW_KEY_LEFT_SHIFT == aKey || GLFW_KEY_RIGHT_SHIFT == aKey)
@@ -582,7 +550,7 @@ namespace
 			if (state->camControl.cameraActive)
 			{
 				// If action is PRESS or REPEAT (E.g., the key is held down), set movement flag to true; else false
-				// The REPEAT action allows for multi-key presses to be recognized.
+				// The REPEAT action allows for multi-key presses to be recognised.
 				// So, moving forwards and left at the same time is possible
 				if (GLFW_KEY_W == aKey)
 					state->camControl.moveForward = (GLFW_PRESS == aAction || GLFW_REPEAT == aAction);
@@ -597,10 +565,19 @@ namespace
 				else if (GLFW_KEY_Q == aKey)
 					state->camControl.moveDown = (GLFW_PRESS == aAction || GLFW_REPEAT == aAction);
 			}
+
+			// TODO: Remove later: Print coordinates for debugging
+			if (GLFW_KEY_C == aKey && GLFW_PRESS == aAction)
+			{
+				std::print("Camera position: ({}, {}, {})\n",
+						   state->camControl.position.x,
+						   state->camControl.position.y,
+						   state->camControl.position.z);
+			}
 		}
 	}
 
-	// TODO: Cant this be combined in callback motion?
+	// TODO: Can this be combined in callback motion?
 	// Mouse button callback to toggle mouse look mode
 	void glfw_callback_mouse_button_(GLFWwindow *aWindow, int aButton, int aAction, int)
 	{
@@ -608,19 +585,21 @@ namespace
 		{
 			if (aButton == GLFW_MOUSE_BUTTON_RIGHT && GLFW_PRESS == aAction)
 			{
+				// Toggle mouse look mode
 				state->camControl.mouseLookActive = !state->camControl.mouseLookActive;
 
 				if (state->camControl.mouseLookActive)
 				{
+					// Enable mouse look mode, hide cursor
 					glfwSetInputMode(aWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 					state->camControl.firstMouse = true;
-					std::print("Mouse look: ENABLED\n");
 				}
 				else
 				{
 					glfwSetInputMode(aWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-					std::print("Mouse look: DISABLED\n");
 				}
+				// Console output
+				std::print("Mouse look: {}\n", state->camControl.mouseLookActive ? "ENABLED" : "DISABLED");
 			}
 		}
 	}
@@ -668,11 +647,15 @@ namespace
 				if (state->camControl.pitch < -kRadianLimit)
 					state->camControl.pitch = -kRadianLimit;
 
-				// TODO: Constrain yaw too?
+				// Constrain yaw to the range [-pi, pi] for numerical stability
+				if (state->camControl.yaw > kFloatPi)
+					state->camControl.yaw -= 2.f * kFloatPi;
+				else if (state->camControl.yaw < -kFloatPi)
+					state->camControl.yaw += 2.f * kFloatPi;
 			}
 			else
 			{
-				// If mouse look is not active, just update last positions
+				// If mouse look is not active, simply update last positions
 				state->camControl.lastX = float(aX);
 				state->camControl.lastY = float(aY);
 			}
