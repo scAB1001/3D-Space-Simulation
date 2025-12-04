@@ -74,36 +74,21 @@ Mat44f transpose( Mat44f const& aM ) noexcept
 constexpr
 Mat44f operator*(Mat44f const& aLeft, Mat44f const& aRight) noexcept
 {
-	// TODO: your implementation goes here
-	// TODO: remove the following when you start your implementation
-	//  (void)aLeft;   // Avoid warnings about unused arguments until the function
-	//  (void)aRight;  // is properly implemented.
-	//  return kIdentity44f;
-
 	// Q[i,j] = sum(k=0 to 3) L[i,k] * R[k,j]
-	// Does this need to be initialized to zero first?
-	// Does this need to be constexpr?
 	Mat44f result{};
-	Mat44f rightTransposed = transpose(aRight); // Approach 2
 
 	for (std::size_t i = 0; i < 4; ++i)
 	{
 		for (std::size_t j = 0; j < 4; ++j)
 		{
-			// Approach 1: Manual dot product Left row i and Right column j
-			// std::size_t rowBase = i * 4;
-			// std::size_t colBase = j;
+			// Manual dot product Left row i and Right column j
+			std::size_t rowBase = i * 4;
+			std::size_t colBase = j;
 
-			// result[i, j] = aLeft.v[rowBase + 0] * aRight[0, colBase] +
-			// 			   aLeft.v[rowBase + 1] * aRight[1, colBase] +
-			// 			   aLeft.v[rowBase + 2] * aRight[2, colBase] +
-			// 			   aLeft.v[rowBase + 3] * aRight[3, colBase];
-
-			// Approach 2: Use a transposed aRight to access rows with a single index
-			for (std::size_t k = 0; k < 4; ++k)
-			{
-				result[i, j] += aLeft[i, k] * rightTransposed[j, k];
-			}
+			result[i, j] = aLeft.v[rowBase + 0] * aRight[0, colBase] +
+						   aLeft.v[rowBase + 1] * aRight[1, colBase] +
+						   aLeft.v[rowBase + 2] * aRight[2, colBase] +
+						   aLeft.v[rowBase + 3] * aRight[3, colBase];
 		}
 	}
 
@@ -138,12 +123,6 @@ Mat44f invert( Mat44f const& aM ) noexcept;
 inline
 Mat44f make_rotation_x( float aAngle ) noexcept
 {
-	//TODO: your implementation goes here
-	//TODO: remove the following when you start your implementation
-	// (void)aAngle; // Avoid warnings about unused arguments until the function
-	//               // is properly implemented.
-	// return kIdentity44f;
-
 	/* Rotation matrix around X-axis using precomputed sin,cos
 	Pr_x =
 		[ 1    0    0   0 ]
@@ -168,12 +147,6 @@ Mat44f make_rotation_x( float aAngle ) noexcept
 inline
 Mat44f make_rotation_y( float aAngle ) noexcept
 {
-	//TODO: your implementation goes here
-	//TODO: remove the following when you start your implementation
-	// (void)aAngle; // Avoid warnings about unused arguments until the function
-	//               // is properly implemented.
-	// return kIdentity44f;
-
 	/* Rotation matrix around Y-axis using precomputed sin,cos
 
 	Pr_y =
@@ -198,12 +171,6 @@ Mat44f make_rotation_y( float aAngle ) noexcept
 inline
 Mat44f make_rotation_z( float aAngle ) noexcept
 {
-	//TODO: your implementation goes here
-	//TODO: remove the following when you start your implementation
-	// (void)aAngle; // Avoid warnings about unused arguments until the function
-	//               // is properly implemented.
-	// return kIdentity44f;
-
 	/* Rotation matrix around Z-axis using precomputed sin,cos
 
 	Pr_z =
@@ -228,12 +195,6 @@ Mat44f make_rotation_z( float aAngle ) noexcept
 inline
 Mat44f make_translation( Vec3f aTranslation ) noexcept
 {
-	//TODO: your implementation goes here
-	//TODO: remove the following when you start your implementation
-	// (void)aTranslation; // Avoid warnings about unused arguments until the function
-	//                     // is properly implemented.
-	// return kIdentity44f;
-
 	/* Translation matrix
 	Pt =
 		[ 1  0  0  tx ]
@@ -252,13 +213,6 @@ Mat44f make_translation( Vec3f aTranslation ) noexcept
 inline
 Mat44f make_scaling( float aSX, float aSY, float aSZ ) noexcept
 {
-	//TODO: your implementation goes here
-	//TODO: remove the following when you start your implementation
-	// (void)aSX;  // Avoid warnings about unused arguments until the function
-	// (void)aSY;  // is properly implemented.
-	// (void)aSZ;
-	// return kIdentity44f;
-
 	/*  Uniform scaling matrix
 	Ps =
 		[ sx   0    0   0 ]
@@ -304,15 +258,7 @@ Mat44f make_look_at(Vec3f position, Vec3f target, Vec3f worldUp) noexcept
 inline
 Mat44f make_perspective_projection( float aFovInRadians, float aAspect, float aNear, float aFar ) noexcept
 {
-	//TODO: your implementation goes here
-	//TODO: remove the following when you start your implementation
-	// (void)aFovInRadians; // Avoid warnings about unused arguments until the function
-	// (void)aAspect;       // is properly implemented.
-	// (void)aNear;
-	// (void)aFar;
-	// return kIdentity44f;
-
-	/*
+	/* TODO: CITE lecture content for matrix but not implementation
 		aspect: aspect ratio (width/height)
 		fov: field of view (angle in degrees, e.g. 60 degrees)
 		f: far distance (e.g. 100)

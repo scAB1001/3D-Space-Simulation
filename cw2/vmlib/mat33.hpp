@@ -84,4 +84,9 @@ Mat33f mat44_to_mat33( Mat44f const& aM )
 	return ret;
 }
 
+inline Mat33f make_uniform_normal(Mat44f const &aM) noexcept
+{
+	return mat44_to_mat33(transpose(invert(aM)));
+}
+
 #endif // MAT33_HPP_61F3107B_CBE4_48DE_9F39_EA959B4BF694
