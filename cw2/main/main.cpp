@@ -57,6 +57,23 @@ namespace
 		float pitch = 0.f;					   // Up/down rotation (around X)
 		float speed = Config::kCameraBaseSpeed;
 
+		// Camera modes
+		enum class Mode
+		{
+			Free,		// User-controlled
+			Follow,		// Fixed distance following vehicle
+			FixedGround // Fixed position on ground
+		} mode = Mode::Free;
+
+		// Follow camera settings
+		float followDistance = 30.0f;
+		Vec3f followOffset = {0.f, 10.f, 15.f}; // Behind and above
+
+		// Fixed ground camera position
+		Vec3f fixedGroundPosition = {-37.45f, 13.687f, -48.04f};
+		float fixedGroundYaw = 1.463f;   // radians
+		float fixedGroundPitch = -0.240f; // radians
+
 		/* Note: that we normalize the resulting right vector.
 		 * If we wouldn't normalize this vector, the resulting cross product may return
 		 *	differently sized vectors based on the cameraFront variable.
@@ -80,7 +97,83 @@ namespace
         Mat44f getViewMatrix() const {
             return make_look_at(position, position + forward, up);
         }
-    };
+
+		// Update camera based on mode and vehicle position
+		void updateForAnimation(const Vec3f &vehiclePos, const Vec3f &vehicleVelocity, float dt)
+		{
+			switch (mode)
+			{
+				case Mode::Follow:
+				{
+					// Calculate desired position behind and above vehicle
+					Vec3f desiredPosition;
+
+					if (length(vehicleVelocity) > 0.1f)
+					{
+						// Follow from behind based on velocity direction
+						Vec3f backDir = normalize(vehicleVelocity) * -followDistance;
+						desiredPosition = vehiclePos + backDir + Vec3f{0.f, followDistance * 0.3f, 0.f};
+					}
+					else
+					{
+						// Default offset if not moving much
+						desiredPosition = vehiclePos + followOffset;
+					}
+
+					// Smooth interpolation to desired position
+					float followSpeed = 2.0f * dt;
+					position = position * (1.0f - followSpeed) + desiredPosition * followSpeed;
+
+					// Look at vehicle (slightly ahead during movement)
+					Vec3f lookTarget = vehiclePos;
+					if (length(vehicleVelocity) > 0.1f)
+					{
+						lookTarget = lookTarget + normalize(vehicleVelocity) * 5.0f;
+					}
+
+					forward = normalize(lookTarget - position);
+					updateVectors();
+					break;
+				}
+
+				case Mode::FixedGround:
+				{
+					// Fixed position, always look at vehicle
+					position = fixedGroundPosition;
+					yaw = fixedGroundYaw;
+					pitch = fixedGroundPitch;
+					forward = normalize(vehiclePos - position);
+					updateVectors();
+					break;
+				}
+
+				case Mode::Free:
+				default:
+					// User controls camera - nothing to do here
+					break;
+			}
+		}
+
+		// Cycle to next camera mode
+		void cycleMode()
+		{
+			switch (mode)
+			{
+				case Mode::Free:
+					mode = Mode::Follow;
+					std::print("Camera mode: FOLLOW (tracking vehicle)\n");
+					break;
+				case Mode::Follow:
+					mode = Mode::FixedGround;
+					std::print("Camera mode: FIXED GROUND\n");
+					break;
+				case Mode::FixedGround:
+					mode = Mode::Free;
+					std::print("Camera mode: FREE (user control)\n");
+					break;
+			}
+		}
+	};
 
     struct InputState {
         bool moveForward = false;
@@ -100,17 +193,31 @@ namespace
 	{
 		bool isAnimating = false;
 		bool isPaused = false;
-		float animationTime = 0.0f; // T in the equation
-		float totalAnimationTime = 0.0f;
-		Vec3f startPosition = {0.f, 2.f, 0.f};	 // Cube's current position
-		Vec3f initialPosition = {0.f, 2.f, 0.f}; // For reset
-		Mat44f initialTransform = kIdentity44f;
+		float animationTime = 0.0f;
+		float totalAnimationTime = 25.0f; // Total duration (25 seconds)
 
-		// Animation parameters
-		float maxHeight = 20.0f;		  // Peak height
-		float horizontalDistance = 50.0f; // How far it travels
-		float animationDuration = 10.0f;  // Total time in seconds
-		float acceleration = 2.0f;		  // Acceleration factor
+		// Start from landing pad 1, go to landing pad 2
+		Vec3f landingPadOffset = {0.f, 1.0f, 0.f}; // On the pad
+		Vec3f startPosition = Config::kLandingPad1Pos + landingPadOffset;
+		Vec3f endPosition = Config::kLandingPad2Pos + landingPadOffset;
+		Vec3f currentPosition = Config::kLandingPad1Pos + landingPadOffset;
+
+		// For proper rotation facing direction
+		Vec3f previousPosition = Config::kLandingPad1Pos + landingPadOffset;
+		Vec3f velocity = {0.f, 0.f, 0.f};
+
+		// Animation curve control
+		float currentSpeed = 0.0f;
+		float maxSpeed = 25.0f;			// units per second
+		float accelerationRate = 1.5f;	// acceleration (units/sec²)
+		float launchPhaseEnd = 0.4f;	// 40% for launch
+		float cruisePhaseEnd = 0.7f;	// 70% for cruise start (30% cruise)
+		// landing phase is the remaining 30%
+
+		// Flight phase for rotation calculation
+		float flightPhase = 0.0f; // 0=launch, 1=cruise, 2=landing
+
+		// float decelerationStart = 0.7f; // when to start slowing down (70% through)
 	};
 
 	struct State_ {
@@ -232,9 +339,13 @@ try
 	 */
 
 	// Load main shader program
+	// ShaderProgram unifiedProg( {
+	// 	{ GL_VERTEX_SHADER, "assets/cw2/shaders/unified.vert" },
+	// 	{ GL_FRAGMENT_SHADER, "assets/cw2/shaders/unified.frag" }
+	// } );
 	ShaderProgram unifiedProg( {
-		{ GL_VERTEX_SHADER, "assets/cw2/shaders/unified.vert" },
-		{ GL_FRAGMENT_SHADER, "assets/cw2/shaders/unified.frag" }
+		{ GL_VERTEX_SHADER, "assets/cw2/shaders/u.vert" },
+		{ GL_FRAGMENT_SHADER, "assets/cw2/shaders/u.frag" }
 	} );
 	state.prog = &unifiedProg;
 
@@ -343,8 +454,10 @@ try
 
 		// Handle camera movement
 		// TODO: Remove cameraActive later. For debugging.
-		if (state.input.mouseLookActive && state.input.cameraActive) {
-            float moveSpeed = state.camera.speed * dt;
+		if (state.input.mouseLookActive && state.input.cameraActive &&
+			state.camera.mode == Camera::Mode::Free)
+		{
+			float moveSpeed = state.camera.speed * dt;
 
             if (state.input.moveForward) state.camera.position += state.camera.forward * moveSpeed;
             if (state.input.moveBackward) state.camera.position -= state.camera.forward * moveSpeed;
@@ -359,20 +472,88 @@ try
 			// Clamp position to within parlahti bounds
 			state.camera.position.x = std::clamp(state.camera.position.x, -Config::kWorldBorder, Config::kWorldBorder);
 			state.camera.position.z = std::clamp(state.camera.position.z, -Config::kWorldBorder, Config::kWorldBorder);
-        }
+		}
 
+		// Update animation state
 		if (state.animation.isAnimating && !state.animation.isPaused)
 		{
 			state.animation.animationTime += dt;
-			state.animation.totalAnimationTime += dt;
+
+			// Store previous position for velocity calculation
+			state.animation.previousPosition = state.animation.currentPosition;
+
+			// Calculate normalized time
+			float normalizedT = state.animation.animationTime / state.animation.totalAnimationTime;
+
+			// Calculate flight phase for debugging
+			if (normalizedT < state.animation.launchPhaseEnd)
+			{
+				state.animation.flightPhase = 0.0f; // Launch
+			}
+			else if (normalizedT < state.animation.cruisePhaseEnd)
+			{
+				state.animation.flightPhase = 1.0f; // Cruise
+			}
+			else
+			{
+				state.animation.flightPhase = 2.0f; // Landing
+			}
+
+			// Calculate speed based on phase
+			state.animation.currentSpeed = calculate_rocket_speed(
+				normalizedT,
+				state.animation.currentSpeed,
+				state.animation.accelerationRate,
+				state.animation.maxSpeed);
+
+			// Calculate new position with continuous trajectory
+			state.animation.currentPosition = calculate_rocket_position(
+				state.animation.animationTime,
+				state.animation.totalAnimationTime,
+				state.animation.startPosition,
+				state.animation.endPosition,
+				state.animation.currentSpeed,
+				state.animation.accelerationRate,
+				state.animation.maxSpeed);
+
+			// Calculate velocity (more accurate with finite differences)
+			if (dt > 0.001f)
+			{
+				state.animation.velocity = (state.animation.currentPosition -
+											state.animation.previousPosition) /
+										   dt;
+			}
+
+			// Update camera based on current mode
+			state.camera.updateForAnimation(state.animation.currentPosition,
+											state.animation.velocity, dt);
+
+			// Debug output at phase transitions
+			static float lastPhase = -1.0f;
+			if (state.animation.flightPhase != lastPhase)
+			{
+				const char *phaseNames[] = {"LAUNCH", "CRUISE", "LANDING"};
+				std::print("[Flight] Entering {} phase at {:.1f}s | Altitude: {:.1f} | Speed: {:.1f}\n",
+						   phaseNames[int(state.animation.flightPhase)],
+						   state.animation.animationTime,
+						   state.animation.currentPosition.y - Config::kSeaLevel,
+						   state.animation.currentSpeed);
+				lastPhase = state.animation.flightPhase;
+			}
 
 			// Check if animation is complete
-			if (state.animation.animationTime >= state.animation.animationDuration)
+			if (state.animation.animationTime >= state.animation.totalAnimationTime)
 			{
 				state.animation.isAnimating = false;
-				std::print("Animation COMPLETED\n");
+				state.animation.currentPosition = state.animation.endPosition; // Ensure exact landing
+				state.animation.velocity = {0.f, 0.f, 0.f};
+				state.animation.currentSpeed = 0.0f;
+				std::print("Animation COMPLETE - Vehicle successfully landed at Pad 2\n");
 			}
 		}
+
+		// Update camera state
+		state.camera.updateVectors();
 
 		// ------------- Setup camera pipeline -------------
 		// TODO: Modularise this later
@@ -401,53 +582,43 @@ try
 		Mat33f normalMatrix_arrow_from_meshes = make_uniform_normal(model2world_arrow_from_meshes);
 
 		/* CUBE */
-		// Calculate cube position (space vehicle)
+		// Calculate cube transform
 		Mat44f cubeTransform;
-		if (state.animation.isAnimating)
+		if (state.animation.isAnimating ||
+			(state.animation.animationTime >= state.animation.totalAnimationTime &&
+			 state.animation.animationTime > 0.0f))
 		{
-			// Animated position
-			Vec3f cubePos = calculateSpaceVehiclePosition(
-				state.animation.animationTime,
-				state.animation.animationDuration,
-				state.animation.startPosition,
-				state.animation.maxHeight,
-				state.animation.horizontalDistance,
-				state.animation.acceleration);
+			// Animated or completed animation
+			Mat44f rotation;
 
-			// Calculate velocity for rotation (simplified)
-			Vec3f velocity = cubePos - state.animation.startPosition;
+			if (state.animation.isAnimating)
+			{
+				// Calculate rotation based on current flight phase
+				float normalizedT = state.animation.animationTime / state.animation.totalAnimationTime;
 
-			// Get rotation
-			Mat44f rotation = calculateSpaceVehicleRotation(
-				state.animation.animationTime,
-				state.animation.animationDuration,
-				velocity);
+				rotation = calculate_rocket_rotation(
+					state.animation.currentPosition,
+					state.animation.previousPosition,
+					state.animation.velocity,
+					normalizedT);
+			}
+			else
+			{
+				// Completed animation - upright on landing pad
+				rotation = kIdentity44f; // Perfectly vertical
+			}
 
 			// Combine translation and rotation
-			cubeTransform = make_translation(cubePos) * rotation;
-
-			// Update camera to follow vehicle (optional)
-			if (state.animation.animationTime > 0.5f) // After initial delay
-			{
-				// Smooth camera follow
-				Vec3f cameraOffset = {0.f, 5.f, -10.f};	  // Behind and above
-				Mat44f invRotation = transpose(rotation); // Inverse rotation for camera offset
-
-				// Transform camera offset by vehicle rotation
-				Vec4f transformedOffset = invRotation * Vec4f{cameraOffset.x, cameraOffset.y, cameraOffset.z, 0.f};
-
-				// Update camera position to follow vehicle
-				state.camera.position = cubePos + Vec3f{transformedOffset.x, transformedOffset.y, transformedOffset.z};
-
-				// Make camera look at vehicle
-				state.camera.forward = normalize(cubePos - state.camera.position);
-				state.camera.updateVectors();
-			}
+			cubeTransform = make_translation(state.animation.currentPosition) *
+							make_scaling(0.5f, 0.5f, 0.5f) *
+							rotation;
 		}
 		else
 		{
-			// Static position
-			cubeTransform = make_rotation_y(angle) * make_translation(state.animation.initialPosition);
+			// Static position at start (pre-launch)
+			cubeTransform = make_translation(state.animation.startPosition) *
+							make_scaling(0.5f, 0.5f, 0.5f) *
+							make_rotation_y(angle * 0.3f); // Gentle idle rotation
 		}
 
 		// Mat44f model2world_cube = make_rotation_y(angle) * make_translation(Vec3f{0.f, 2.f, 0.f});
@@ -480,6 +651,9 @@ try
 		);
 
 		// ----- Render Landing Pads (INSTANCED DRAWING) -----
+		// Mat33f normalMatrix = make_uniform_normal(kIdentity44f);
+		// LandingPad::renderAllInstanced(projView, normalMatrix);
+
 		for (const auto &pad : landingPads)
 		{
 			Mat44f projCameraWorld_pad = projView * pad.transform;
@@ -589,17 +763,11 @@ namespace
 
 			case GLFW_KEY_R:
 				if (aAction == GLFW_PRESS && state->prog)
+				{
 					try
 					{
 						state->prog->reload();
 						std::print(stderr, "Shaders reloaded and recompiled.\n");
-
-						// Reset animation
-						state->animation.isAnimating = false;
-						state->animation.isPaused = false;
-						state->animation.animationTime = 0.0f;
-						state->animation.totalAnimationTime = 0.0f;
-						std::print("Animation RESET\n");
 					}
 					catch (std::exception const &eErr)
 					{
@@ -607,6 +775,24 @@ namespace
 						std::print(stderr, "{}\n", eErr.what());
 						std::print(stderr, "Keeping old shader.\n");
 					}
+
+					// RESET animation
+					state->animation.isAnimating = false;
+					state->animation.isPaused = false;
+					state->animation.animationTime = 0.0f;
+					state->animation.currentPosition = state->animation.startPosition;
+					state->animation.previousPosition = state->animation.startPosition;
+					state->animation.velocity = {0.f, 0.f, 0.f};
+					state->animation.currentSpeed = 0.0f;
+					state->animation.flightPhase = 0.0f;
+
+					// Reset camera to Free mode but do not change it's initial position
+					state->camera.mode = Camera::Mode::Free;
+					state->camera.updateVectors();
+
+					std::print("Animation RESET - Vehicle returned to launch pad\n");
+					std::print("Camera mode reset to FREE\n");
+				}
 				break;
 
 			case GLFW_KEY_W: state->input.moveForward = isPressed; break;
@@ -645,7 +831,7 @@ namespace
 				}
 				break;
 
-			case GLFW_KEY_C: // TODO: Remove later. For debugging.
+			case GLFW_KEY_P: // TODO: Remove later. For debugging.
 				if (aAction == GLFW_PRESS)
 				{
 					// Position
@@ -671,23 +857,89 @@ namespace
 				}
 				break;
 
+			case GLFW_KEY_C:
+				if (aAction == GLFW_PRESS)
+				{
+					state->camera.cycleMode();
+
+					// If switching to follow mode during animation, set up follow position
+					if (state->camera.mode == Camera::Mode::Follow &&
+						state->animation.isAnimating)
+					{
+						// Position camera behind vehicle
+						Vec3f backDir = {0.f, 0.f, -1.f};
+						if (length(state->animation.velocity) > 0.1f)
+						{
+							backDir = normalize(state->animation.velocity) * -1.0f;
+						}
+						state->camera.position = state->animation.currentPosition +
+												 backDir * state->camera.followDistance +
+												 Vec3f{0.f, state->camera.followDistance * 0.3f, 0.f};
+						state->camera.forward = normalize(state->animation.currentPosition -
+														  state->camera.position);
+						state->camera.updateVectors();
+					}
+					// If switching to fixed ground mode
+					else if (state->camera.mode == Camera::Mode::FixedGround)
+					{
+						state->camera.position = state->camera.fixedGroundPosition;
+						if (state->animation.isAnimating ||
+							state->animation.animationTime > 0.0f)
+						{
+							state->camera.forward = normalize(state->animation.currentPosition -
+															  state->camera.position);
+						}
+						else
+						{
+							state->camera.position = Config::kInitialCameraPos;
+							state->camera.yaw = Config::kInitialCameraYaw;
+							state->camera.pitch = 0.f;
+							// state->camera.forward = normalize(state->animation.startPosition -
+							// 								  state->camera.position);
+						}
+						state->camera.updateVectors();
+					}
+				}
+				break;
+
 			case GLFW_KEY_F:
 				if (aAction == GLFW_PRESS)
 				{
 					if (!state->animation.isAnimating)
 					{
-						// Start animation
+						// START animation
 						state->animation.isAnimating = true;
 						state->animation.isPaused = false;
 						state->animation.animationTime = 0.0f;
-						state->animation.startPosition = state->animation.initialPosition;
-						std::print("Animation STARTED\n");
+						state->animation.currentSpeed = 0.0f;
+						state->animation.currentPosition = state->animation.startPosition;
+						state->animation.previousPosition = state->animation.startPosition;
+
+						std::print("Animation STARTED - Launching from Pad 1 to Pad 2\n");
+						std::print("  Start: ({:.2f}, {:.2f}, {:.2f})\n",
+								   state->animation.startPosition.x,
+								   state->animation.startPosition.y,
+								   state->animation.startPosition.z);
+						std::print("  End: ({:.2f}, {:.2f}, {:.2f})\n",
+								   state->animation.endPosition.x,
+								   state->animation.endPosition.y,
+								   state->animation.endPosition.z);
+						std::print("  Duration: {:.2f} seconds\n", state->animation.totalAnimationTime);
 					}
 					else
 					{
-						// Toggle pause
+						// TOGGLE pause
 						state->animation.isPaused = !state->animation.isPaused;
 						std::print("Animation {}PAUSED\n", state->animation.isPaused ? "" : "UN");
+
+						if (state->animation.isPaused)
+						{
+							std::print("  Current position: ({:.2f}, {:.2f}, {:.2f})\n",
+									   state->animation.currentPosition.x,
+									   state->animation.currentPosition.y,
+									   state->animation.currentPosition.z);
+							std::print("  Speed: {:.2f} units/sec\n", state->animation.currentSpeed);
+						}
 					}
 				}
 				break;

@@ -3,7 +3,7 @@
 # Run chmod +x git.sh once to make this executable
 # Create symbolic link `ln -s git.sh git` to run as just ./git
 
-git st
+git pull origin andreas; git st
 # cd ~/github-projects/uni/graphics/
 git add .; git ci; git push origin andreas
 cd ./cw2/
