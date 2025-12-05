@@ -1,107 +1,10 @@
 #include "simple_mesh.hpp"
+#include <print>
 
-/*
-SimpleMeshData concatenate( SimpleMeshData aM, SimpleMeshData const& aN )
-{
-    aM.positions.insert( aM.positions.end(), aN.positions.begin(), aN.positions.end() );
-    aM.normals.insert( aM.normals.end(), aN.normals.begin(), aN.normals.end() );
-    aM.texcoords.insert( aM.texcoords.end(), aN.texcoords.begin(), aN.texcoords.end() );
-    return aM;
-}
-
-SimpleMeshData concatenate_many(std::initializer_list<std::reference_wrapper<const SimpleMeshData>> meshes)
-{
-    // Calculate total size
-    // std::size_t totalPositions = 0;
-    // std::size_t totalColors = 0;
-
-    // for (const auto &mesh_ref : meshes)
-    // {
-    // 	const auto &mesh = mesh_ref.get();
-    // 	totalPositions += mesh.positions.size();
-    // 	totalColors += mesh.colors.size();
-    // }
-
-    // Pre-allocate memory
-    SimpleMeshData result;
-    // result.positions.reserve(totalPositions);
-    // result.colors.reserve(totalColors);
-
-    // // Copy data from all meshes using references to avoid copies
-    // for (const auto &mesh_ref : meshes)
-    // {
-    // 	const auto &mesh = mesh_ref.get();
-    // 	result.positions.insert(result.positions.end(), mesh.positions.begin(), mesh.positions.end());
-    // 	result.colors.insert(result.colors.end(), mesh.colors.begin(), mesh.colors.end());
-    // }
-
-    return result;
-}
-*/
-
-SimpleMeshData make_cube_with_normals(Vec3f color)
+// Mesh creation functions
+SimpleMeshData make_colored_cube(Vec3f color)
 {
     SimpleMeshData cube;
-
-    // Positions and normals for all 36 vertices (6 faces × 2 triangles × 3 vertices)
-    const Vec3f positions[] = {
-        // Front face
-        {-1.0f, -1.0f,  1.0f}, { 1.0f, -1.0f,  1.0f}, { 1.0f,  1.0f,  1.0f},
-        { 1.0f,  1.0f,  1.0f}, {-1.0f,  1.0f,  1.0f}, {-1.0f, -1.0f,  1.0f},
-        // Back face
-        {-1.0f, -1.0f, -1.0f}, {-1.0f,  1.0f, -1.0f}, { 1.0f,  1.0f, -1.0f},
-        { 1.0f,  1.0f, -1.0f}, { 1.0f, -1.0f, -1.0f}, {-1.0f, -1.0f, -1.0f},
-        // Left face
-        {-1.0f,  1.0f,  1.0f}, {-1.0f,  1.0f, -1.0f}, {-1.0f, -1.0f, -1.0f},
-        {-1.0f, -1.0f, -1.0f}, {-1.0f, -1.0f,  1.0f}, {-1.0f,  1.0f,  1.0f},
-        // Right face
-        { 1.0f,  1.0f,  1.0f}, { 1.0f, -1.0f,  1.0f}, { 1.0f, -1.0f, -1.0f},
-        { 1.0f, -1.0f, -1.0f}, { 1.0f,  1.0f, -1.0f}, { 1.0f,  1.0f,  1.0f},
-        // Top face
-        {-1.0f,  1.0f, -1.0f}, {-1.0f,  1.0f,  1.0f}, { 1.0f,  1.0f,  1.0f},
-        { 1.0f,  1.0f,  1.0f}, { 1.0f,  1.0f, -1.0f}, {-1.0f,  1.0f, -1.0f},
-        // Bottom face
-        {-1.0f, -1.0f, -1.0f}, { 1.0f, -1.0f, -1.0f}, { 1.0f, -1.0f,  1.0f},
-        { 1.0f, -1.0f,  1.0f}, {-1.0f, -1.0f,  1.0f}, {-1.0f, -1.0f, -1.0f}
-    };
-
-    const Vec3f normals[] = {
-        // Front face
-        {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f},
-        {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f},
-        // Back face
-        {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f, -1.0f},
-        {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f, -1.0f},
-        // Left face
-        {-1.0f, 0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f},
-        {-1.0f, 0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f},
-        // Right face
-        {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f},
-        {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f},
-        // Top face
-        {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
-        {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
-        // Bottom face
-        {0.0f, -1.0f, 0.0f}, {0.0f, -1.0f, 0.0f}, {0.0f, -1.0f, 0.0f},
-        {0.0f, -1.0f, 0.0f}, {0.0f, -1.0f, 0.0f}, {0.0f, -1.0f, 0.0f}
-    };
-
-    // Add to mesh
-    color = {0.5f, 0.5f, 0.5f};
-    for (int i = 0; i < 36; ++i)
-    {
-        cube.positions.push_back(positions[i]);
-        cube.normals.push_back(normals[i]);
-        cube.colors.push_back(color);
-    }
-
-    return cube;
-}
-
-
-ColoredMeshData make_colored_cube(Vec3f color)
-{
-    ColoredMeshData cube;
 
     // Positions
     const Vec3f positions[] = {
@@ -157,379 +60,738 @@ ColoredMeshData make_colored_cube(Vec3f color)
     return cube;
 }
 
-TexturedMeshData make_textured_plane()
+SimpleMeshData make_indexed_cube(Vec3f color)
 {
-    return TexturedMeshData{
-        // Positions
-        {
-            {-1.f, -1.f, 3.f},
-            {+1.f, -1.f, 3.f},
-            {+1.f, -1.f, -3.f},
-            {-1.f, -1.f, 3.f},
-            {+1.f, -1.f, -3.f},
-            {-1.f, -1.f, -3.f}},
-        // Texture coordinates
-        {
-            {0.f, 0.f}, {1.f, 0.f}, {1.f, 3.f}, {0.f, 0.f}, {1.f, 3.f}, {0.f, 3.f}},
-        // Normals (all pointing up)
-        {
-            {0.f, 1.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 1.f, 0.f}}};
+    SimpleMeshData cube;
+
+    // 8 unique vertices
+    cube.positions = {
+        // Front face
+        {-1.0f, -1.0f, 1.0f}, // 0
+        {1.0f, -1.0f, 1.0f},  // 1
+        {1.0f, 1.0f, 1.0f},   // 2
+        {-1.0f, 1.0f, 1.0f},  // 3
+        // Back face
+        {-1.0f, -1.0f, -1.0f}, // 4
+        {1.0f, -1.0f, -1.0f},  // 5
+        {1.0f, 1.0f, -1.0f},   // 6
+        {-1.0f, 1.0f, -1.0f}   // 7
+    };
+
+    // 6 faces * 2 triangles * 3 indices = 36 indices
+    cube.indices = {
+        // Front
+        0, 1, 2, 2, 3, 0,
+        // Back
+        5, 4, 7, 7, 6, 5,
+        // Left
+        4, 0, 3, 3, 7, 4,
+        // Right
+        1, 5, 6, 6, 2, 1,
+        // Top
+        3, 2, 6, 6, 7, 3,
+        // Bottom
+        4, 5, 1, 1, 0, 4};
+
+    // Colors and normals
+    cube.colors.resize(8, color);
+    cube.calculate_normals();
+
+    return cube;
 }
 
-GLuint create_vao(SimpleMeshData const& mesh)
+// Concatenation functions
+SimpleMeshData concatenate(SimpleMeshData aM, SimpleMeshData const &aN)
 {
-    // TODO: Create create_vbo method
-    assert(mesh.vertexCount() > 0);
-    assert(mesh.hasNormals()); // We need normals for lighting
+    // ---------- Check material type compatibility ----------
+    if (aM.materialType != aN.materialType)
+    {
+        std::print(stderr, "ERROR [concatenate]: Cannot mix material types {} and {}\n",
+                   aM.materialType, aN.materialType);
+        return aM; // Return original mesh unchanged
+    }
 
-    GLuint vao, vboPositions, vboNormals, vboColors, vboTexCoords;
+    // Check attribute consistency
+    if (aM.hasTexcoords() != aN.hasTexcoords())
+    {
+        std::print(stderr, "ERROR [concatenate]: Texcoord presence mismatch\n");
+        return aM;
+    }
 
-    // Generate buffers
+    if (aM.hasColors() != aN.hasColors())
+    {
+        std::print(stderr, "ERROR [concatenate]: Color presence mismatch\n");
+        return aM;
+    }
+
+    // ---------- Handle indexed meshes ----------
+    if (aM.hasIndices() || aN.hasIndices())
+    {
+        // For indexed meshes, we need to adjust indices
+        std::size_t offset = aM.positions.size();
+
+        // Concatenate positions, normals (ALWAYS)
+        aM.positions.insert(aM.positions.end(), aN.positions.begin(), aN.positions.end());
+        aM.normals.insert(aM.normals.end(), aN.normals.begin(), aN.normals.end());
+
+        // Concatenate colors or texcoords based on material type
+        if (aM.materialType == 0 && aM.hasColors() && aN.hasColors())
+        {
+            // Colored mode: concatenate colors
+            aM.colors.insert(aM.colors.end(), aN.colors.begin(), aN.colors.end());
+        }
+        else if (aM.materialType == 1 && aM.hasTexcoords() && aN.hasTexcoords())
+        {
+            // Textured mode: concatenate texcoords
+            aM.texcoords.insert(aM.texcoords.end(), aN.texcoords.begin(), aN.texcoords.end());
+        }
+
+        // Concatenate indices with offset
+        if (aN.hasIndices())
+        {
+            if (!aM.hasIndices())
+            {
+                // If aM wasn't indexed but aN is, create indices for aM first
+                for (std::size_t i = 0; i < offset; ++i) // FIXED: Use offset, not aM.positions.size() - offset
+                    aM.indices.push_back(static_cast<unsigned int>(i));
+            }
+
+            // Add aN's indices with offset
+            for (auto index : aN.indices)
+                aM.indices.push_back(static_cast<unsigned int>(index + offset));
+        }
+        else if (aM.hasIndices())
+        {
+            // aM is indexed but aN isn't - create indices for aN
+            for (std::size_t i = 0; i < aN.positions.size(); ++i)
+                aM.indices.push_back(static_cast<unsigned int>(offset + i));
+        }
+    }
+    else
+    {
+        // Non-indexed concatenation
+        // std::size_t offset = aM.positions.size();
+
+        // Concatenate positions and normals
+        aM.positions.insert(aM.positions.end(), aN.positions.begin(), aN.positions.end());
+        aM.normals.insert(aM.normals.end(), aN.normals.begin(), aN.normals.end());
+
+        // Concatenate colors or texcoords based on material type
+        if (aM.materialType == 0 && aM.hasColors() && aN.hasColors())
+        {
+            aM.colors.insert(aM.colors.end(), aN.colors.begin(), aN.colors.end());
+        }
+        else if (aM.materialType == 1 && aM.hasTexcoords() && aN.hasTexcoords())
+        {
+            aM.texcoords.insert(aM.texcoords.end(), aN.texcoords.begin(), aN.texcoords.end());
+        }
+    }
+
+    return aM;
+
+    /*
+    // Handle indexed meshes
+    if (aM.hasIndices() || aN.hasIndices())
+    {
+        // For indexed meshes, we need to adjust indices
+        std::size_t offset = aM.positions.size();
+
+        // Concatenate positions, colors, normals, texcoords
+        aM.positions.insert(aM.positions.end(), aN.positions.begin(), aN.positions.end());
+        aM.colors.insert(aM.colors.end(), aN.colors.begin(), aN.colors.end());
+        aM.normals.insert(aM.normals.end(), aN.normals.begin(), aN.normals.end());
+        aM.texcoords.insert(aM.texcoords.end(), aN.texcoords.begin(), aN.texcoords.end());
+
+        // Concatenate indices with offset
+        if (aN.hasIndices())
+        {
+            if (!aM.hasIndices())
+            {
+                // If aM wasn't indexed but aN is, we need to create indices for aM first
+                for (std::size_t i = 0; i < aM.positions.size() - offset; ++i)
+                    aM.indices.push_back(i);
+            }
+
+            // Add aN's indices with offset
+            for (auto index : aN.indices)
+                aM.indices.push_back(static_cast<unsigned int>(index + offset));
+        }
+    }
+    else
+    {
+        // Original non-indexed concatenation
+        aM.positions.insert(aM.positions.end(), aN.positions.begin(), aN.positions.end());
+        aM.normals.insert(aM.normals.end(), aN.normals.begin(), aN.normals.end());
+        aM.texcoords.insert(aM.texcoords.end(), aN.texcoords.begin(), aN.texcoords.end());
+
+        // For non-indexed meshes, also concatenate colors
+        if (!aM.colors.empty() && !aN.colors.empty())
+            aM.colors.insert(aM.colors.end(), aN.colors.begin(), aN.colors.end());
+    }
+
+    return aM;
+    */
+}
+
+SimpleMeshData concatenate_many(std::initializer_list<std::reference_wrapper<const SimpleMeshData>> meshes)
+{
+    if (meshes.size() == 0)
+    {
+        std::print(stderr, "ERROR [concatenate_many]: Empty mesh list\n");
+        return SimpleMeshData();
+    }
+
+    // ---------- VALIDATION ----------
+    const SimpleMeshData &firstMesh = meshes.begin()->get();
+    int expectedMaterialType = firstMesh.materialType;
+    bool expectColors = firstMesh.hasColors();
+    bool expectTexcoords = firstMesh.hasTexcoords();
+
+    // Verify all meshes have consistent attributes
+    for (const auto &mesh_ref : meshes)
+    {
+        const auto &mesh = mesh_ref.get();
+
+        if (mesh.materialType != expectedMaterialType)
+        {
+            std::print(stderr, "ERROR [concatenate_many]: Mixed material types ({} != {})\n",
+                       mesh.materialType, expectedMaterialType);
+            return SimpleMeshData();
+        }
+
+        if (mesh.hasColors() != expectColors)
+        {
+            std::print(stderr, "ERROR [concatenate_many]: Inconsistent color presence\n");
+            return SimpleMeshData();
+        }
+
+        if (mesh.hasTexcoords() != expectTexcoords)
+        {
+            std::print(stderr, "ERROR [concatenate_many]: Inconsistent texcoord presence\n");
+            return SimpleMeshData();
+        }
+
+        if (!mesh.hasNormals())
+        {
+            std::print(stderr, "ERROR [concatenate_many]: Mesh missing normals\n");
+            return SimpleMeshData();
+        }
+    }
+
+    // ---------- CALCULATE SIZES ----------
+    std::size_t totalPositions = 0;
+    std::size_t totalColors = 0;
+    std::size_t totalNormals = 0;
+    std::size_t totalTexcoords = 0;
+    std::size_t totalIndices = 0;
+
+    bool hasIndices = false;
+
+    for (const auto &mesh_ref : meshes)
+    {
+        const auto &mesh = mesh_ref.get();
+        totalPositions += mesh.positions.size();
+        totalNormals += mesh.normals.size();
+
+        if (expectColors)
+            totalColors += mesh.colors.size();
+        if (expectTexcoords)
+            totalTexcoords += mesh.texcoords.size();
+
+        totalIndices += mesh.indices.size();
+
+        if (mesh.hasIndices())
+            hasIndices = true;
+    }
+
+    // ---------- PRE-ALLOCATE ----------
+    SimpleMeshData result;
+    result.materialType = expectedMaterialType;
+    result.positions.reserve(totalPositions);
+    result.normals.reserve(totalNormals);
+
+    if (expectColors)
+        result.colors.reserve(totalColors);
+    if (expectTexcoords)
+        result.texcoords.reserve(totalTexcoords);
+
+    if (hasIndices)
+        result.indices.reserve(totalIndices);
+
+    // ---------- CONCATENATE ----------
+    std::size_t vertexOffset = 0;
+
+    for (const auto &mesh_ref : meshes)
+    {
+        const auto &mesh = mesh_ref.get();
+
+        // Concatenate vertex data
+        result.positions.insert(result.positions.end(),
+                                mesh.positions.begin(), mesh.positions.end());
+        result.normals.insert(result.normals.end(),
+                              mesh.normals.begin(), mesh.normals.end());
+
+        if (expectColors && mesh.hasColors())
+        {
+            result.colors.insert(result.colors.end(),
+                                 mesh.colors.begin(), mesh.colors.end());
+        }
+
+        if (expectTexcoords && mesh.hasTexcoords())
+        {
+            result.texcoords.insert(result.texcoords.end(),
+                                    mesh.texcoords.begin(), mesh.texcoords.end());
+        }
+
+        // Concatenate indices with offset
+        if (mesh.hasIndices())
+        {
+            for (auto index : mesh.indices)
+                result.indices.push_back(static_cast<unsigned int>(index + vertexOffset));
+        }
+        else if (hasIndices)
+        {
+            // If result will be indexed but this mesh isn't, create indices for it
+            for (std::size_t i = 0; i < mesh.positions.size(); ++i)
+                result.indices.push_back(static_cast<unsigned int>(vertexOffset + i));
+        }
+
+        vertexOffset += mesh.positions.size();
+    }
+
+    // ---------- POST-VALIDATION ----------
+    // Ensure all arrays have correct sizes
+    if (result.positions.size() != result.normals.size())
+    {
+        std::print(stderr, "ERROR [concatenate_many]: Position/Normal count mismatch after concatenation\n");
+        return SimpleMeshData();
+    }
+
+    if (expectColors && result.colors.size() != result.positions.size())
+    {
+        std::print(stderr, "ERROR [concatenate_many]: Color count mismatch after concatenation\n");
+        return SimpleMeshData();
+    }
+
+    if (expectTexcoords && result.texcoords.size() != result.positions.size())
+    {
+        std::print(stderr, "ERROR [concatenate_many]: Texcoord count mismatch after concatenation\n");
+        return SimpleMeshData();
+    }
+
+    return result;
+
+    /*
+    // Calculate total sizes
+    std::size_t totalPositions = 0;
+    std::size_t totalColors = 0;
+    std::size_t totalNormals = 0;
+    std::size_t totalTexcoords = 0;
+    std::size_t totalIndices = 0;
+
+    bool hasIndices = false;
+
+    // TODO: VERIFY MESH DATA
+
+    for (const auto &mesh_ref : meshes)
+    {
+        const auto &mesh = mesh_ref.get();
+        totalPositions += mesh.positions.size();
+        totalColors += mesh.colors.size();
+        totalNormals += mesh.normals.size();
+        totalTexcoords += mesh.texcoords.size();
+        totalIndices += mesh.indices.size();
+
+        if (mesh.hasIndices())
+            hasIndices = true;
+    }
+
+    // Pre-allocate memory
+    SimpleMeshData result;
+    result.positions.reserve(totalPositions);
+    result.colors.reserve(totalColors);
+    result.normals.reserve(totalNormals);
+    result.texcoords.reserve(totalTexcoords);
+
+    if (hasIndices)
+        result.indices.reserve(totalIndices);
+
+    // Concatenate data with index adjustment
+    std::size_t vertexOffset = 0;
+
+    for (const auto &mesh_ref : meshes)
+    {
+        const auto &mesh = mesh_ref.get();
+
+        // Concatenate vertex data
+        result.positions.insert(result.positions.end(), mesh.positions.begin(), mesh.positions.end());
+
+        if (!mesh.colors.empty())
+            result.colors.insert(result.colors.end(), mesh.colors.begin(), mesh.colors.end());
+
+        if (!mesh.normals.empty())
+            result.normals.insert(result.normals.end(), mesh.normals.begin(), mesh.normals.end());
+        if (!mesh.texcoords.empty())
+            result.texcoords.insert(result.texcoords.end(), mesh.texcoords.begin(), mesh.texcoords.end());
+
+        // Concatenate indices with offset
+        if (mesh.hasIndices())
+        {
+            for (auto index : mesh.indices)
+                result.indices.push_back(static_cast<unsigned int>(index + vertexOffset));
+        }
+        else if (hasIndices)
+        {
+            // If result will be indexed but this mesh isn't, create indices for it
+            for (std::size_t i = 0; i < mesh.positions.size(); ++i)
+                result.indices.push_back(static_cast<unsigned int>(vertexOffset + i));
+        }
+
+        vertexOffset += mesh.positions.size();
+    }
+
+    return result;
+    */
+}
+
+// Buffer and Attribute Object creation functions
+GLuint create_bo(GLenum target, const void *data, std::size_t dataSize, GLint attribIndex, GLint attribSize, GLenum usage)
+{
+    // ------- Parameter Validation -------
+    // Check for valid buffer target
+    if (target != GL_ARRAY_BUFFER && target != GL_ELEMENT_ARRAY_BUFFER)
+    {
+        std::print(stderr, "ERROR [create_bo]: Invalid buffer target {}\n", target);
+        return 0;
+    }
+
+    // Check for zero data size (allowed for dynamic buffers)
+    if (dataSize == 0)
+    {
+        std::print(stderr, "WARNING [create_bo]: Zero data size (may be intentional for dynamic buffer)\n");
+    }
+
+    // Check for null data with non-zero size
+    if (!data && dataSize > 0)
+    {
+        std::print(stderr, "ERROR [create_bo]: Null data pointer with non-zero size {}\n", dataSize);
+        return 0;
+    }
+
+    // Validate vertex attribute parameters for array buffers
+    if (target == GL_ARRAY_BUFFER)
+    {
+        // Check if attribute setup requested
+        if (attribIndex != -1 || attribSize != -1)
+        {
+            // Both parameters must be provided
+            if (attribIndex == -1 || attribSize == -1)
+            {
+                std::print(stderr, "ERROR [create_bo]: Must provide both attribIndex and attribSize for ARRAY_BUFFER\n");
+                return 0;
+            }
+
+            // Validate attribute index range
+            GLint maxAttribs;
+            glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxAttribs);
+            if (attribIndex < 0 || attribIndex >= maxAttribs)
+            {
+                std::print(stderr, "ERROR [create_bo]: Invalid vertex attribute index {} (max: {})\n", attribIndex, maxAttribs - 1);
+                return 0;
+            }
+
+            // Validate attribute size
+            if (attribSize < 1 || attribSize > 4)
+            {
+                std::print(stderr, "ERROR [create_bo]: Invalid vertex attribute size {} (must be 1-4)\n", attribSize);
+                return 0;
+            }
+        }
+    }
+    else // GL_ELEMENT_ARRAY_BUFFER
+    {
+        // EBO should not have vertex attribute parameters
+        if (attribIndex != -1 || attribSize != -1)
+        {
+            std::print(stderr, "WARNING [create_bo]: attribIndex/attribSize ignored for ELEMENT_ARRAY_BUFFER\n");
+        }
+    }
+
+    // ------- Buffer Creation -------
+    GLuint bo = 0;
+    glGenBuffers(1, &bo);
+
+    if (bo == 0)
+    {
+        std::print(stderr, "ERROR [create_bo]: Failed to generate buffer object\n");
+        return 0;
+    }
+
+    // Bind and upload data
+    glBindBuffer(target, bo);
+    glBufferData(target, dataSize, data, usage);
+
+    // ------- Vertex Attribute Setup (only for ARRAY_BUFFER) -------
+    if (target == GL_ARRAY_BUFFER && attribIndex != -1)
+    {
+        // Note: We use location 3 for normals to match unified shader
+        // unified.vert: layout(location = 3) in vec3 iNormal;
+
+        glVertexAttribPointer(attribIndex, attribSize, GL_FLOAT, GL_FALSE, 0, nullptr);
+        glEnableVertexAttribArray(attribIndex);
+
+        // TODO: Remove later. Debug output
+        // if (dataSize > 0)
+        // {
+        //     std::print("Created VBO {}: location={}, size={}, bytes={}\n", bo, attribIndex, attribSize, dataSize);
+        // }
+    }
+    else if (target == GL_ELEMENT_ARRAY_BUFFER && dataSize > 0)
+    {
+        // TODO: Remove later. Debug output
+        // std::print("Created EBO {}: {} indices ({} bytes)\n", bo, dataSize / sizeof(unsigned int), dataSize);
+    }
+
+    // ------- Error Checking -------
+
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR)
+    {
+        std::print(stderr, "ERROR [create_bo]: OpenGL error {}\n", error);
+        glDeleteBuffers(1, &bo);
+        return 0;
+    }
+
+    return bo;
+}
+
+GLuint create_vao(SimpleMeshData const &mesh)
+{
+    // ------- Mesh validation -------
+    if (mesh.vertexCount() == 0)
+    {
+        std::print(stderr, "ERROR: create_vao called with empty mesh\n");
+        return 0;
+    }
+
+    if (!mesh.hasNormals())
+    {
+        std::print(stderr, "ERROR: Mesh must have normals for lighting\n");
+        return 0;
+    }
+
+    // ------- DEBUG -------
+    // std::print("Creating VAO for mesh:\n");
+    // std::print("  materialType: {}\n", mesh.materialType);
+    // std::print("  Positions: {} vertices\n", mesh.positions.size());
+    // std::print("  Normals: {} entries\n", mesh.normals.size());
+    // std::print("  Has texcoords: {} ({} entries)\n",
+    //            mesh.hasTexcoords(), mesh.texcoords.size());
+    // std::print("  Has colors: {} ({} entries)\n",
+    //            mesh.hasColors(), mesh.colors.size());
+
+    // if (!mesh.colors.empty())
+    // {
+    //     std::print("  First color: ({:.3f}, {:.3f}, {:.3f})\n",
+    //                mesh.colors[0].x, mesh.colors[0].y, mesh.colors[0].z);
+    // }
+
+    // if (mesh.hasIndices())
+    // {
+    //     std::print("  Indices: {} entries\n", mesh.indices.size());
+    // }
+
+    // ------- Array Size validation -------
+    // Validate array sizes match
+    if (mesh.hasColors() && mesh.colors.size() != mesh.positions.size())
+    {
+        std::print(stderr, "ERROR: Color array size mismatch: {} != {}\n",
+                   mesh.colors.size(), mesh.positions.size());
+        return 0;
+    }
+
+    if (mesh.hasTexcoords() && mesh.texcoords.size() != mesh.positions.size())
+    {
+        std::print(stderr, "ERROR: Texcoord array size mismatch: {} != {}\n",
+                   mesh.texcoords.size(), mesh.positions.size());
+        return 0;
+    }
+
+    if (mesh.normals.size() != mesh.positions.size())
+    {
+        std::print(stderr, "ERROR: Normal array size mismatch: {} != {}\n",
+                   mesh.normals.size(), mesh.positions.size());
+        return 0;
+    }
+
+    // ------- Material validation -------
+    // Validate material type requirements
+    if (mesh.materialType == 0 && !mesh.hasColors())
+    {
+        std::print(stderr, "ERROR: Colored mesh (materialType=0) must have colors\n");
+        return 0;
+    }
+
+    if (mesh.materialType == 1 && !mesh.hasTexcoords())
+    {
+        std::print(stderr, "WARNING: Textured mesh (materialType=1) has no texcoords\n");
+        // Not fatal, but unexpected
+    }
+
+    // ------- VAO Creation -------
+    GLuint vao;
     glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vboPositions);
-    glGenBuffers(1, &vboNormals);
-
-    if (mesh.hasColors())
-    {
-        glGenBuffers(1, &vboColors);
-    }
-    if (mesh.hasTexcoords())
-    {
-        glGenBuffers(1, &vboTexCoords);
+    if (vao == 0) {
+        std::print(stderr, "ERROR: Failed to generate vertex array object\n");
+        return 0;
     }
 
-    // Bind VAO
     glBindVertexArray(vao);
 
-    // Positions (location = 0)
-    glBindBuffer(GL_ARRAY_BUFFER, vboPositions);
-    glBufferData(GL_ARRAY_BUFFER,
-                 mesh.positions.size() * sizeof(Vec3f),
-                 mesh.positions.data(),
-                 GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glEnableVertexAttribArray(0);
+    // Store buffer IDs for cleanup if needed
+    std::vector<GLuint> buffers;
 
-    // Normals (location = 3)
-    glBindBuffer(GL_ARRAY_BUFFER, vboNormals);
-    glBufferData(GL_ARRAY_BUFFER,
-                 mesh.normals.size() * sizeof(Vec3f),
-                 mesh.normals.data(),
-                 GL_STATIC_DRAW);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glEnableVertexAttribArray(3);
-
-    // Colors or Texcoords (both use location = 1)
-    if (mesh.hasTexcoords())
+    try
     {
-        // Textured mesh - use texcoords
-        glBindBuffer(GL_ARRAY_BUFFER, vboTexCoords);
-        glBufferData(GL_ARRAY_BUFFER,
-                     mesh.texcoords.size() * sizeof(Vec2f),
-                     mesh.texcoords.data(),
-                     GL_STATIC_DRAW);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-        glEnableVertexAttribArray(1);
+        // Create position VBO
+        GLuint posVbo = create_bo(GL_ARRAY_BUFFER,
+                                  mesh.positions.data(),
+                                  mesh.positions.size() * sizeof(Vec3f),
+                                  0, 3); // location=0, size=3
+
+        if (posVbo == 0)
+            throw std::runtime_error("Failed to create position VBO");
+        buffers.push_back(posVbo);
+
+        // Create normal VBO
+        GLuint normVbo = create_bo(GL_ARRAY_BUFFER,
+                                   mesh.normals.data(),
+                                   mesh.normals.size() * sizeof(Vec3f),
+                                   3, 3); // location=3, size=3
+
+        if (normVbo == 0)
+            throw std::runtime_error("Failed to create normal VBO");
+        buffers.push_back(normVbo);
+
+        // Create color/texcoord VBO
+        if (mesh.materialType == 1 && mesh.hasTexcoords())
+        {
+            GLuint texVbo = create_bo(GL_ARRAY_BUFFER,
+                                      mesh.texcoords.data(),
+                                      mesh.texcoords.size() * sizeof(Vec2f),
+                                      1, 2); // location=1, size=2
+
+            if (texVbo == 0)
+                throw std::runtime_error("Failed to create texcoord VBO");
+            buffers.push_back(texVbo);
+        }
+        else if (mesh.materialType == 0)
+        {
+            // Colored mesh - colors are REQUIRED for colored mode
+            if (!mesh.hasColors())
+            {
+                throw std::runtime_error("Colored mesh has no colors");
+            }
+
+            GLuint colVbo = create_bo(GL_ARRAY_BUFFER,
+                                      mesh.colors.data(),
+                                      mesh.colors.size() * sizeof(Vec3f),
+                                      1, 3);
+            if (colVbo == 0)
+                throw std::runtime_error("Failed to create color VBO");
+            buffers.push_back(colVbo);
+        }
+        else
+        {
+            // Invalid material type or missing data
+            throw std::runtime_error("Invalid material configuration");
+        }
+
+        // Create element buffer if indexed
+        if (mesh.hasIndices())
+        {
+            // Validate indices
+            for (size_t i = 0; i < mesh.indices.size(); ++i)
+            {
+                if (mesh.indices[i] >= mesh.positions.size())
+                {
+                    std::print(stderr, "ERROR: Index out of bounds: {} >= {}\n",
+                                mesh.indices[i], mesh.positions.size());
+                    throw std::runtime_error("Invalid index in mesh");
+                }
+            }
+
+            // CRITICAL FIX: Check index count is multiple of 3 (triangles)
+            if (mesh.indices.size() % 3 != 0)
+            {
+                std::print(stderr, "ERROR: Index count {} is not multiple of 3\n",
+                           mesh.indices.size());
+                throw std::runtime_error("Invalid triangle count");
+            }
+
+            // No vertex attrib parameters for EBO
+            GLuint ebo = create_bo(GL_ELEMENT_ARRAY_BUFFER,
+                                   mesh.indices.data(),
+                                   mesh.indices.size() * sizeof(unsigned int));
+
+            if (ebo == 0)
+                throw std::runtime_error("Failed to create element buffer");
+            buffers.push_back(ebo);
+        }
+
+        // Unbind VAO (saves all state including bound EBO)
+        glBindVertexArray(0);
+
+        // TODO: Remove later. Debug output
+        // std::print("Created VAO {} with {} vertices", vao, mesh.vertexCount());
+        // if (mesh.hasIndices())
+        // {
+        //     std::print(", {} indices\n", mesh.indexCount());
+        // }
+        // else
+        // {
+        //     std::print("\n");
+        // }
+
+        return vao;
     }
-    else if (mesh.hasColors())
+    catch (const std::exception &e)
     {
-        // Colored mesh - use colors
-        glBindBuffer(GL_ARRAY_BUFFER, vboColors);
-        glBufferData(GL_ARRAY_BUFFER,
-                     mesh.colors.size() * sizeof(Vec3f),
-                     mesh.colors.data(),
-                     GL_STATIC_DRAW);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-        glEnableVertexAttribArray(1);
+        // Cleanup on error
+        std::print(stderr, "ERROR creating VAO: {}\n", e.what());
+
+        if (vao != 0)
+            glDeleteVertexArrays(1, &vao);
+
+        if (!buffers.empty())
+            glDeleteBuffers(buffers.size(), buffers.data());
+
+        glBindVertexArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+        return 0;
     }
-    // If neither colors nor texcoords exist, location 1 remains disabled
-
-    // Unbind
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     return vao;
-}
-
-/*
-GLuint create_vao_textured(TexturedMeshData const& mesh)
-{
-    GLuint vao, vboPositions, vboTexCoords, vboNormals;
-
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vboPositions);
-    glGenBuffers(1, &vboTexCoords);
-    glGenBuffers(1, &vboNormals);
-
-    glBindVertexArray(vao);
-
-    // Positions (location = 0)
-    glBindBuffer(GL_ARRAY_BUFFER, vboPositions);
-    glBufferData(GL_ARRAY_BUFFER,
-                 mesh.positions.size() * sizeof(Vec3f),
-                 mesh.positions.data(),
-                 GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glEnableVertexAttribArray(0);
-
-    // Texture coordinates (location = 1)
-    glBindBuffer(GL_ARRAY_BUFFER, vboTexCoords);
-    glBufferData(GL_ARRAY_BUFFER,
-                 mesh.texcoords.size() * sizeof(Vec2f),
-                 mesh.texcoords.data(),
-                 GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glEnableVertexAttribArray(1);
-
-    // Normals (location = 2)
-    glBindBuffer(GL_ARRAY_BUFFER, vboNormals);
-    glBufferData(GL_ARRAY_BUFFER,
-                 mesh.normals.size() * sizeof(Vec3f),
-                 mesh.normals.data(),
-                 GL_STATIC_DRAW);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glEnableVertexAttribArray(2);
-
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    return vao;
-}
-
-GLuint create_vao_colored(ColoredMeshData const& mesh)
-{
-    GLuint vao, vboPositions, vboColors, vboNormals;
-
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vboPositions);
-    glGenBuffers(1, &vboColors);
-    glGenBuffers(1, &vboNormals);
-
-    glBindVertexArray(vao);
-
-    // Positions (location = 0)
-    glBindBuffer(GL_ARRAY_BUFFER, vboPositions);
-    glBufferData(GL_ARRAY_BUFFER,
-                 mesh.positions.size() * sizeof(Vec3f),
-                 mesh.positions.data(),
-                 GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glEnableVertexAttribArray(0);
-
-    // Colors (location = 1)
-    glBindBuffer(GL_ARRAY_BUFFER, vboColors);
-    glBufferData(GL_ARRAY_BUFFER,
-                 mesh.colors.size() * sizeof(Vec3f),
-                 mesh.colors.data(),
-                 GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glEnableVertexAttribArray(1);
-
-    // Normals (location = 2)
-    glBindBuffer(GL_ARRAY_BUFFER, vboNormals);
-    glBufferData(GL_ARRAY_BUFFER,
-                 mesh.normals.size() * sizeof(Vec3f),
-                 mesh.normals.data(),
-                 GL_STATIC_DRAW);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glEnableVertexAttribArray(2);
-
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    return vao;
-}
-
-GLuint create_vao_color(SimpleMeshDataColor const &aMeshData)
-{
-	// Create VAO and VBOs
-	GLuint vao, vboPositions, vboColors, vboNormals;
-
-	// Generate buffers
-	glGenVertexArrays(1, &vao);
-	glGenBuffers(1, &vboPositions);
-	glGenBuffers(1, &vboColors);
-	glGenBuffers(1, &vboNormals);
-
-	// Bind VAO
-	glBindVertexArray(vao);
-
-	// Positions VBO
-	glBindBuffer(GL_ARRAY_BUFFER, vboPositions);
-	glBufferData(GL_ARRAY_BUFFER,
-				 aMeshData.positions.size() * sizeof(Vec3f),
-				 aMeshData.positions.data(),
-				 GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-	glEnableVertexAttribArray(0);
-
-	// Colors VBO
-	glBindBuffer(GL_ARRAY_BUFFER, vboColors);
-	glBufferData(GL_ARRAY_BUFFER,
-				 aMeshData.colors.size() * sizeof(Vec3f),
-				 aMeshData.colors.data(),
-				 GL_STATIC_DRAW);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-	glEnableVertexAttribArray(1);
-
-	// TODO: Include normals VBO
-	glBindBuffer(GL_ARRAY_BUFFER, vboNormals);
-	glBufferData(GL_ARRAY_BUFFER,
-				 aMeshData.normals.size() * sizeof(Vec3f),
-				 aMeshData.normals.data(),
-				 GL_STATIC_DRAW);
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-	glEnableVertexAttribArray(2);
-
-	// Unbind
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	return vao;
-}
-
-GLuint create_vao(SimpleMeshData const &aMeshData)
-{
-	// Create VAO and VBOs
-	GLuint vao, vboPositions, vboNormals, vboTexCoords;
-
-	// Generate buffers
-	glGenVertexArrays(1, &vao);
-	glGenBuffers(1, &vboPositions);
-	glGenBuffers(1, &vboNormals);
-	glGenBuffers(1, &vboTexCoords);
-
-	// Bind VAO
-	glBindVertexArray(vao);
-
-	// Positions VBO
-	glBindBuffer(GL_ARRAY_BUFFER, vboPositions);
-	glBufferData(GL_ARRAY_BUFFER,
-				 aMeshData.positions.size() * sizeof(Vec3f),
-				 aMeshData.positions.data(),
-				 GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-	glEnableVertexAttribArray(0);
-
-	// Texcoords VBO
-	glBindBuffer(GL_ARRAY_BUFFER, vboTexCoords);
-	glBufferData(GL_ARRAY_BUFFER,
-		aMeshData.texcoords.size() * sizeof(Vec3f),
-		aMeshData.texcoords.data(),
-		GL_STATIC_DRAW);
-
-	// 2D Vectors for texcoords
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void *)0);
-	glEnableVertexAttribArray(1);
-
-	// Normals VBO
-	glBindBuffer(GL_ARRAY_BUFFER, vboNormals);
-	glBufferData(GL_ARRAY_BUFFER,
-		aMeshData.normals.size() * sizeof(Vec3f),
-		aMeshData.normals.data(),
-		GL_STATIC_DRAW);
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-	glEnableVertexAttribArray(2);
-
-	// Unbind
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	return vao;
 }
 
 GLuint create_vao_from_meshes(std::initializer_list<std::reference_wrapper<const SimpleMeshData>> meshes)
 {
-	GLuint vao, vboPositions, vboColors, vboNormals;
+    // TODO: Remove later. Debug output
+    // std::print("create_vao_from_meshes: combining {} meshes\n", meshes.size());
 
-	// std::size_t totalVertices = 0;
-	// std::vector<std::size_t> meshSizes;
-	// meshSizes.reserve(meshes.size());
+    // Use concatenate_many to merge meshes
+    SimpleMeshData combinedMesh = concatenate_many(meshes);
 
-	// // Calculate total size
-	// for (const auto &mesh_ref : meshes)
-	// {
-	// 	const auto &mesh = mesh_ref.get();
-	// 	std::size_t size = mesh.positions.size();
+    if (combinedMesh.positions.empty())
+    {
+        std::print(stderr, "ERROR: concatenate_many returned empty mesh\n");
+        return 0;
+    }
 
-	// 	// Ensure all arrays have same size
-	// 	assert(mesh.colors.size() == size && mesh.normals.size() == size);
+    // TODO: Remove later. Debug output
+    // std::print("Combined mesh: {} vertices, materialType={}\n", combinedMesh.vertexCount(), combinedMesh.materialType);
 
-	// 	meshSizes.push_back(size);
-	// 	totalVertices += size;
-	// }
-
-	// // Generate buffers
-	// glGenVertexArrays(1, &vao);
-	// glGenBuffers(1, &vboPositions);
-	// glGenBuffers(1, &vboColors);
-	// glGenBuffers(1, &vboNormals);
-
-	// glBindVertexArray(vao);
-
-	// // Pre-compute total byte size
-	// const std::size_t totalBytes = totalVertices * sizeof(Vec3f);
-
-	// // POSITIONS BUFFER
-	// glBindBuffer(GL_ARRAY_BUFFER, vboPositions);
-	// glBufferData(GL_ARRAY_BUFFER, totalBytes, nullptr, GL_STATIC_DRAW);
-
-	// // COLORS BUFFER
-	// glBindBuffer(GL_ARRAY_BUFFER, vboColors);
-	// glBufferData(GL_ARRAY_BUFFER, totalBytes, nullptr, GL_STATIC_DRAW);
-
-	// // NORMALS BUFFER
-	// glBindBuffer(GL_ARRAY_BUFFER, vboNormals);
-	// glBufferData(GL_ARRAY_BUFFER, totalBytes, nullptr, GL_STATIC_DRAW);
-
-	// // Upload data from all meshes
-	// std::size_t vertexOffset = 0;
-	// for (const auto &mesh_ref : meshes)
-	// {
-	// 	const auto &mesh = mesh_ref.get();
-	// 	std::size_t meshVertexCount = mesh.positions.size();
-
-	// 	if (meshVertexCount > 0)
-	// 	{
-	// 		const std::size_t byteOffset = vertexOffset * sizeof(Vec3f);
-	// 		const std::size_t byteSize = meshVertexCount * sizeof(Vec3f);
-
-	// 		// Upload positions
-	// 		glBindBuffer(GL_ARRAY_BUFFER, vboPositions);
-	// 		glBufferSubData(GL_ARRAY_BUFFER, byteOffset, byteSize, mesh.positions.data());
-
-	// 		// Upload colors
-	// 		glBindBuffer(GL_ARRAY_BUFFER, vboColors);
-	// 		glBufferSubData(GL_ARRAY_BUFFER, byteOffset, byteSize, mesh.colors.data());
-
-	// 		// Upload normals
-	// 		glBindBuffer(GL_ARRAY_BUFFER, vboNormals);
-	// 		glBufferSubData(GL_ARRAY_BUFFER, byteOffset, byteSize, mesh.normals.data());
-	// 	}
-
-	// 	vertexOffset += meshVertexCount;
-	// }
-
-	// // SETUP VERTEX ATTRIBUTES
-	// // Position attribute (location = 0)
-	// glBindBuffer(GL_ARRAY_BUFFER, vboPositions);
-	// glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-	// glEnableVertexAttribArray(0);
-
-	// // Color attribute (location = 1)
-	// glBindBuffer(GL_ARRAY_BUFFER, vboColors);
-	// glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-	// glEnableVertexAttribArray(1);
-
-	// // Normal attribute (location = 2)
-	// glBindBuffer(GL_ARRAY_BUFFER, vboNormals);
-	// glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-	// glEnableVertexAttribArray(2);
-
-	// // Unbind
-	// glBindVertexArray(0);
-	// glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	return vao;
+    return create_vao(combinedMesh);
 }
-*/

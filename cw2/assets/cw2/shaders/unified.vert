@@ -27,19 +27,21 @@ void main()
     // Pass attributes based on material type
     v2fMaterialType = uMaterialType;
 
-    if (uMaterialType == 0) {
+    if (uMaterialType == 0)
+    {
         // Colored object
         v2fColor = iColor;
         v2fTexCoord = vec2(0.0);
-    } else if (uMaterialType == 1) {
-        // Textured object
-        // Textured object - iColor actually contains texcoords!
+    }
+    else if (uMaterialType == 1)
+    {
+        // Textured object - iColor contains texcoords
         // We need to reinterpret the bytes
         v2fTexCoord = vec2(iColor.x, iColor.y); // Use only first 2 components
         v2fColor = vec3(1.0); // White base for textures
-        // v2fTexCoord = iTexCoord;
-        // v2fColor = vec3(1.0); // White base for textures
-    } else {
+    }
+    else
+    {
         // Fallback
         v2fColor = vec3(1.0, 0.0, 1.0); // Magenta for debugging
         v2fTexCoord = vec2(0.0);

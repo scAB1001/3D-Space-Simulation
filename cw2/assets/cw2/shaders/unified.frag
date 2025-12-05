@@ -22,17 +22,22 @@ void main()
     vec3 finalColor;
 
     // Determine base color based on material type
-    if (v2fMaterialType == 0) {
-        // Colored object - use vertex color
+    if (v2fMaterialType == 0)
+    {   // Colored object - use vertex color
+
         finalColor = v2fColor;
-    } else if (v2fMaterialType == 1) {
-        // Textured object - sample texture
+    }
+    else if (v2fMaterialType == 1)
+    {   // Textured object - sample texture
+
         finalColor = texture(uTexture, v2fTexCoord).rgb;
 
         // Debug: visualize texture coordinates
         // finalColor = vec3(v2fTexCoord, 0.0);
-    } else {
-        // Debug: magenta for invalid material type
+    }
+    else
+    {   // Debug: magenta for invalid material type
+
         finalColor = vec3(1.0, 0.0, 1.0);
     }
 
