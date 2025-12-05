@@ -96,10 +96,28 @@ namespace
         bool firstMouse = true;
     };
 
-    struct State_ {
+	struct AnimationState
+	{
+		bool isAnimating = false;
+		bool isPaused = false;
+		float animationTime = 0.0f; // T in the equation
+		float totalAnimationTime = 0.0f;
+		Vec3f startPosition = {0.f, 2.f, 0.f};	 // Cube's current position
+		Vec3f initialPosition = {0.f, 2.f, 0.f}; // For reset
+		Mat44f initialTransform = kIdentity44f;
+
+		// Animation parameters
+		float maxHeight = 20.0f;		  // Peak height
+		float horizontalDistance = 50.0f; // How far it travels
+		float animationDuration = 10.0f;  // Total time in seconds
+		float acceleration = 2.0f;		  // Acceleration factor
+	};
+
+	struct State_ {
         ShaderProgram* prog = nullptr;
         Camera camera;
         InputState input;
+		AnimationState animation;
     };
 
 	// GLFW Callbacks Declarations
@@ -343,6 +361,19 @@ try
 			state.camera.position.z = std::clamp(state.camera.position.z, -Config::kWorldBorder, Config::kWorldBorder);
         }
 
+		if (state.animation.isAnimating && !state.animation.isPaused)
+		{
+			state.animation.animationTime += dt;
+			state.animation.totalAnimationTime += dt;
+
+			// Check if animation is complete
+			if (state.animation.animationTime >= state.animation.animationDuration)
+			{
+				state.animation.isAnimating = false;
+				std::print("Animation COMPLETED\n");
+			}
+		}
+
 		// ------------- Setup camera pipeline -------------
 		// TODO: Modularise this later
 		// Projection matrix
@@ -370,9 +401,60 @@ try
 		Mat33f normalMatrix_arrow_from_meshes = make_uniform_normal(model2world_arrow_from_meshes);
 
 		/* CUBE */
-		Mat44f model2world_cube = make_rotation_y(angle) * make_translation(Vec3f{0.f, 2.f, 0.f});
-		Mat44f projCameraWorld_cube = make_proj_camera_world(projView, model2world_cube);
-		Mat33f normalMatrix_cube = make_uniform_normal(model2world_cube);
+		// Calculate cube position (space vehicle)
+		Mat44f cubeTransform;
+		if (state.animation.isAnimating)
+		{
+			// Animated position
+			Vec3f cubePos = calculateSpaceVehiclePosition(
+				state.animation.animationTime,
+				state.animation.animationDuration,
+				state.animation.startPosition,
+				state.animation.maxHeight,
+				state.animation.horizontalDistance,
+				state.animation.acceleration);
+
+			// Calculate velocity for rotation (simplified)
+			Vec3f velocity = cubePos - state.animation.startPosition;
+
+			// Get rotation
+			Mat44f rotation = calculateSpaceVehicleRotation(
+				state.animation.animationTime,
+				state.animation.animationDuration,
+				velocity);
+
+			// Combine translation and rotation
+			cubeTransform = make_translation(cubePos) * rotation;
+
+			// Update camera to follow vehicle (optional)
+			if (state.animation.animationTime > 0.5f) // After initial delay
+			{
+				// Smooth camera follow
+				Vec3f cameraOffset = {0.f, 5.f, -10.f};	  // Behind and above
+				Mat44f invRotation = transpose(rotation); // Inverse rotation for camera offset
+
+				// Transform camera offset by vehicle rotation
+				Vec4f transformedOffset = invRotation * Vec4f{cameraOffset.x, cameraOffset.y, cameraOffset.z, 0.f};
+
+				// Update camera position to follow vehicle
+				state.camera.position = cubePos + Vec3f{transformedOffset.x, transformedOffset.y, transformedOffset.z};
+
+				// Make camera look at vehicle
+				state.camera.forward = normalize(cubePos - state.camera.position);
+				state.camera.updateVectors();
+			}
+		}
+		else
+		{
+			// Static position
+			cubeTransform = make_rotation_y(angle) * make_translation(state.animation.initialPosition);
+		}
+
+		// Mat44f model2world_cube = make_rotation_y(angle) * make_translation(Vec3f{0.f, 2.f, 0.f});
+		// Mat44f projCameraWorld_cube = make_proj_camera_world(projView, model2world_cube);
+		// Mat33f normalMatrix_cube = make_uniform_normal(model2world_cube);
+		Mat44f projCameraWorld_cube = make_proj_camera_world(projView, cubeTransform);
+		Mat33f normalMatrix_cube = make_uniform_normal(cubeTransform);
 
 		// TODO: Draw scene
 		OGL_CHECKPOINT_DEBUG();
@@ -511,6 +593,13 @@ namespace
 					{
 						state->prog->reload();
 						std::print(stderr, "Shaders reloaded and recompiled.\n");
+
+						// Reset animation
+						state->animation.isAnimating = false;
+						state->animation.isPaused = false;
+						state->animation.animationTime = 0.0f;
+						state->animation.totalAnimationTime = 0.0f;
+						std::print("Animation RESET\n");
 					}
 					catch (std::exception const &eErr)
 					{
@@ -579,6 +668,27 @@ namespace
 					std::print("Camera yaw: {} degrees, pitch: {} degrees\n",
 							   yawDeg,
 							   pitchDeg);
+				}
+				break;
+
+			case GLFW_KEY_F:
+				if (aAction == GLFW_PRESS)
+				{
+					if (!state->animation.isAnimating)
+					{
+						// Start animation
+						state->animation.isAnimating = true;
+						state->animation.isPaused = false;
+						state->animation.animationTime = 0.0f;
+						state->animation.startPosition = state->animation.initialPosition;
+						std::print("Animation STARTED\n");
+					}
+					else
+					{
+						// Toggle pause
+						state->animation.isPaused = !state->animation.isPaused;
+						std::print("Animation {}PAUSED\n", state->animation.isPaused ? "" : "UN");
+					}
 				}
 				break;
 

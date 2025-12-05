@@ -294,5 +294,25 @@ Mat44f make_proj_camera_world(const Mat44f &projectView, const Mat44f &model2wor
 {
 	return projectView * model2world;
 }
+inline
+Mat44f calculateSpaceVehicleRotation(float t, float totalTime, const Vec3f& velocity) noexcept
+{
+    // Calculate rotation based on movement direction
+    // Tilt forward based on vertical velocity, roll based on horizontal turning
+
+    float normalizedT = t / totalTime;
+
+    // Base forward tilt (pitch) increases as we accelerate
+    float pitch = -0.3f * normalizedT;  // Tilt forward
+
+    // Roll based on turning (derivative of z movement)
+    float roll = std::sin(normalizedT * 4.0f * 3.14159f) * 0.2f;
+
+    // Yaw (turning left/right)
+    float yaw = normalizedT * 0.5f;  // Gradual turn
+
+    // Combine rotations: order matters!
+    return make_rotation_y(yaw) * make_rotation_x(pitch) * make_rotation_z(roll);
+}
 
 #endif // MAT44_HPP_E7187A26_469E_48AD_A3D2_63150F05A4CA

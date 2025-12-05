@@ -154,4 +154,37 @@ Vec3f normalize( Vec3f aVec ) noexcept
 	return aVec / l;
 }
 
+inline
+Vec3f calculateSpaceVehiclePosition(float t, float totalTime,
+                                   const Vec3f& startPos,
+                                   float maxHeight, float horizontalDist,
+                                   float acceleration) noexcept
+{
+    // Normalized time (0 to 1)
+    float normalizedT = t / totalTime;
+
+    // Apply acceleration: slow start, faster later
+    // Using ease-in cubic: t^3
+    float easedT = normalizedT * normalizedT * normalizedT;
+
+    // Horizontal movement (XZ plane) - curved path
+    // Parabolic curve: x = t * distance, z = sin(t * 2π) * curveAmplitude
+    float x = startPos.x + easedT * horizontalDist;
+    float z = startPos.z + std::sin(easedT * 2.0f * 3.14159f) * (horizontalDist * 0.3f);
+
+    // Vertical movement (Y) - parabolic trajectory with acceleration
+    // Height follows a quadratic curve: y = -4h(t-0.5)^2 + h
+    // Adjusted with acceleration factor
+    float verticalT = easedT;
+    float height = -4.0f * maxHeight * (verticalT - 0.5f) * (verticalT - 0.5f) + maxHeight;
+
+    // Apply acceleration to height (starts slower)
+    height *= std::min(1.0f, acceleration * normalizedT);
+
+    // Ensure we don't go below starting height
+    height = std::max(height, startPos.y);
+
+    return Vec3f{x, startPos.y + height, z};
+}
+
 #endif // VEC3_HPP_5710DADF_17EF_453C_A9C8_4A73DC66B1CD
