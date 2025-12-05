@@ -17,8 +17,9 @@ void LandingPad::initialize()
         "assets/cw2/landingpad.obj",
         materials);
 
-    std::println("Loaded landing pad with {} vertices", meshData.positions.size());
-    std::println("Landing pad has {} materials", materials.size());
+    // TODO: Remove later. Debug output
+    // std::println("Loaded landing pad with {} vertices", meshData.positions.size());
+    // std::println("Landing pad has {} materials", materials.size());
 
     // Create VAO once
     sharedVao = create_vao(meshData);
@@ -35,8 +36,7 @@ void LandingPad::cleanup()
     initialized = false;
 }
 
-LandingPad::LandingPad(Vec3f position, float scale)
-    : position(position)
+LandingPad::LandingPad(Vec3f position, float scale) : position(position)
 {
     if (!initialized)
         initialize();

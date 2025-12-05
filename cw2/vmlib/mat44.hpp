@@ -289,4 +289,10 @@ Mat44f make_perspective_projection( float aFovInRadians, float aAspect, float aN
 	}};
 }
 
+inline
+Mat44f make_proj_camera_world(const Mat44f &projectView, const Mat44f &model2world) noexcept
+{
+	return projectView * model2world;
+}
+
 #endif // MAT44_HPP_E7187A26_469E_48AD_A3D2_63150F05A4CA
