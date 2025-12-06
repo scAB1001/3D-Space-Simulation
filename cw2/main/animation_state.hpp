@@ -68,14 +68,20 @@ struct AnimationState
 
     // Constructor - precomputes trajectory constants
     AnimationState(const Vec3f &start, const Vec3f &end)
-        : startPosition(start), endPosition(end), currentPosition(start), previousPosition(start)
+        : startPosition(start)
+        , endPosition(end)
+        , currentPosition(start)
+        , previousPosition(start)
     {
         precomputeTrajectory();
     }
 
     // Default constructor (for initialization)
     AnimationState()
-        : startPosition(Config::kLandingPad1Pos + kLandingPadOffset), endPosition(Config::kLandingPad2Pos + kLandingPadOffset), currentPosition(Config::kLandingPad1Pos + kLandingPadOffset), previousPosition(Config::kLandingPad1Pos + kLandingPadOffset)
+        : startPosition(Config::World::kLandingPad1Pos + kLandingPadOffset)
+        , endPosition(Config::World::kLandingPad2Pos + kLandingPadOffset)
+        , currentPosition(Config::World::kLandingPad1Pos + kLandingPadOffset)
+        , previousPosition(Config::World::kLandingPad1Pos + kLandingPadOffset)
     {
         precomputeTrajectory();
     }

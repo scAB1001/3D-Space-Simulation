@@ -17,16 +17,23 @@
 #include "../vmlib/mat44.hpp"
 #include "../vmlib/mat33.hpp"
 
+// Definitions
 #include "defaults.hpp"
 #include "config.hpp"
+#include "camera.hpp"
+#include "input_state.hpp"
+#include "animation_state.hpp"
+#include "renderer.hpp"
+
+// Shapes
+#include "simple_mesh.hpp"
 #include "cone.hpp"
 #include "cylinder.hpp"
-#include "simple_mesh.hpp"
+
+// Utilities
+#include "landing_pad.hpp"
 #include "texture.hpp"
 #include "loadobj.hpp"
-#include "landing_pad.hpp"
-#include "renderer.hpp"
-#include "animation_state.hpp"
 #include "test.hpp"
 
 // TODO: LIST
@@ -38,167 +45,6 @@
 namespace
 {
 	constexpr char const *kWindowTitle = "COMP3811 - CW2";
-
-	// Camera struct to hold camera state and methods
-	struct Camera {
-		/* Update camera state
-		 * Radius controls vertical distance from cameraTarget point (here: origin)
-		 * Phi controls horizontal angle around the cameraTarget point
-		 * Theta controls vertical angle from the horizontal plane
-		 */
-
-		// CITE: https://learnopengl.com/Getting-started/Camera
-		Vec3f position = Config::kInitialCameraPos;
-        Vec3f forward = {0.f, 0.f, -1.f};
-		Vec3f right = {1.f, 0.f, 0.f};
-		Vec3f worldUp = {0.f, 1.f, 0.f};
-		Vec3f up = {0.f, 1.f, 0.f};
-
-		float yaw = Config::kInitialCameraYaw; // Left/right rotation (around Y)
-		float pitch = 0.f;					   // Up/down rotation (around X)
-		float speed = Config::kCameraBaseSpeed;
-
-		// Camera modes
-		enum class Mode
-		{
-			Free,		// User-controlled
-			Follow,		// Fixed distance following vehicle
-			FixedGround // Fixed position on ground
-		} mode = Mode::Free;
-
-		// Follow camera settings
-		float followDistance = 30.0f;
-		Vec3f followOffset = {0.f, 10.f, 15.f}; // Behind and above
-
-		// Fixed ground camera position
-		Vec3f fixedGroundPosition = {-37.45f, 13.687f, -48.04f};
-		float fixedGroundYaw = 1.463f;   // radians
-		float fixedGroundPitch = -0.240f; // radians
-
-		/* Note: that we normalize the resulting right vector.
-		 * If we wouldn't normalize this vector, the resulting cross product may return
-		 *	differently sized vectors based on the cameraFront variable.
-
-		 * If we would not normalize the vector we would move slow or fast
-		 *	based on the camera's orientation instead of at a consistent movement speed.
-		 */
-		void updateVectors() {
-            forward.x = std::cos(yaw) * std::cos(pitch);
-            forward.y = std::sin(pitch);
-            forward.z = std::sin(yaw) * std::cos(pitch);
-            forward = normalize(forward);
-
-			// Recalculate right and up vectors
-            right = normalize(cross(forward, worldUp));
-
-			// Calculate actual up vector (perpendicular to forward and right)
-            up = normalize(cross(right, forward));
-        }
-
-        Mat44f getViewMatrix() const {
-            return make_look_at(position, position + forward, up);
-        }
-
-		// Update camera based on mode and vehicle position
-		void updateForAnimation(const Vec3f &vehiclePos, const Vec3f &vehicleVelocity, float dt)
-		{
-			switch (mode)
-			{
-				case Mode::Follow:
-				{
-					// Calculate desired position behind and above vehicle
-					Vec3f desiredPosition;
-
-					if (length(vehicleVelocity) > 0.1f)
-					{
-						// Follow from behind based on velocity direction
-						Vec3f backDir = normalize(vehicleVelocity) * -followDistance;
-						desiredPosition = vehiclePos + backDir + Vec3f{0.f, followDistance * 0.3f, 0.f};
-					}
-					else
-					{
-						// Default offset if not moving much
-						desiredPosition = vehiclePos + followOffset;
-					}
-
-					// Smooth interpolation to desired position
-					float followSpeed = 2.0f * dt;
-					position = position * (1.0f - followSpeed) + desiredPosition * followSpeed;
-
-					// Look at vehicle (slightly ahead during movement)
-					Vec3f lookTarget = vehiclePos;
-					if (length(vehicleVelocity) > 0.1f)
-					{
-						lookTarget = lookTarget + normalize(vehicleVelocity) * 5.0f;
-					}
-
-					forward = normalize(lookTarget - position);
-					updateVectors();
-					break;
-				}
-
-				case Mode::FixedGround:
-				{
-					// Fixed position, always look at vehicle
-					position = fixedGroundPosition;
-					yaw = fixedGroundYaw;
-					pitch = fixedGroundPitch;
-					forward = normalize(vehiclePos - position);
-					updateVectors();
-					break;
-				}
-
-				case Mode::Free:
-				default:
-					// User controls camera - nothing to do here
-					break;
-			}
-		}
-
-		// Cycle to next camera mode
-		void cycleMode()
-		{
-			switch (mode)
-			{
-				case Mode::Free:
-					mode = Mode::Follow;
-					std::print("Camera mode: FOLLOW (tracking vehicle)\n");
-					break;
-				case Mode::Follow:
-					mode = Mode::FixedGround;
-					std::print("Camera mode: FIXED GROUND\n");
-					break;
-				case Mode::FixedGround:
-					mode = Mode::Free;
-					std::print("Camera mode: FREE (user control)\n");
-					break;
-			}
-		}
-	};
-
-    struct InputState {
-        bool moveForward = false;
-        bool moveBackward = false;
-        bool moveLeft = false;
-        bool moveRight = false;
-        bool moveUp = false;
-        bool moveDown = false;
-        bool mouseLookActive = false;
-		// bool cameraActive = true; // TODO: Remove later. For debugging.
-        float lastMouseX = 0.f;
-        float lastMouseY = 0.f;
-        bool firstMouse = true;
-
-		void toggleMouseLook()
-		{
-			mouseLookActive = !mouseLookActive;
-
-			// TODO: Remove later. For debugging.
-			if (mouseLookActive)
-				std::print("Mouse look {}\n", mouseLookActive ? "ENABLED" : "DISABLED");
-		}
-    };
-
 
 	struct State_ {
         ShaderProgram* prog = nullptr;
@@ -351,8 +197,8 @@ try
 
 	// Create landing pads (instances)
 	std::vector<LandingPad> landingPads = {
-		LandingPad(Config::kLandingPad1Pos, Config::kLandingPadScale),
-		LandingPad(Config::kLandingPad2Pos, Config::kLandingPadScale)
+		LandingPad(Config::World::kLandingPad1Pos, Config::World::kLandingPadScale),
+		LandingPad(Config::World::kLandingPad2Pos, Config::World::kLandingPadScale)
 	};
 
 	/* CUBE */
@@ -434,23 +280,18 @@ try
 
 		// Handle camera movement
 		// TODO: Remove cameraActive later. For debugging.
-		if (state.input.mouseLookActive && state.camera.mode == Camera::Mode::Free)
+		if (state.input.mouseLookActive && state.camera.getMode() == Camera::Mode::Free)
 		{
-			float moveSpeed = state.camera.speed * dt;
+			if (state.input.moveForward) state.camera.moveForward(dt);
+			if (state.input.moveBackward) state.camera.moveBackward(dt);
+			if (state.input.moveLeft) state.camera.moveLeft(dt);
+			if (state.input.moveRight) state.camera.moveRight(dt);
+			if (state.input.moveUp) state.camera.moveUp(dt);
+			if (state.input.moveDown) state.camera.moveDown(dt);
 
-            if (state.input.moveForward) state.camera.position += state.camera.forward * moveSpeed;
-            if (state.input.moveBackward) state.camera.position -= state.camera.forward * moveSpeed;
-            if (state.input.moveLeft) state.camera.position -= state.camera.right * moveSpeed;
-            if (state.input.moveRight) state.camera.position += state.camera.right * moveSpeed;
-            if (state.input.moveUp) state.camera.position += state.camera.up * moveSpeed;
-            if (state.input.moveDown) state.camera.position -= state.camera.up * moveSpeed;
-
-            // Clamp vertical movement only
-            state.camera.position.y = std::clamp(state.camera.position.y, Config::kSeaLevel + 0.5f, 50.f);
-
-			// Clamp position to within parlahti bounds
-			state.camera.position.x = std::clamp(state.camera.position.x, -Config::kWorldBorder, Config::kWorldBorder);
-			state.camera.position.z = std::clamp(state.camera.position.z, -Config::kWorldBorder, Config::kWorldBorder);
+			// Clamp position
+			state.camera.clampVertical(Config::World::kMinCameraHeight, Config::World::kMaxCameraHeight);
+			state.camera.clampToWorldBounds();
 		}
 
 		// Update animation state
@@ -574,7 +415,7 @@ try
 		// ------------- Setup camera pipeline -------------
 		// TODO: Modularise this later
 		// Projection matrix
-		Mat44f projection = make_perspective_projection(Config::kFOV, aspectRatio, Config::kNearPlane, Config::kFarPlane);
+		Mat44f projection = make_perspective_projection(Config::Rendering::kFOV, aspectRatio, Config::Rendering::kNearPlane, Config::Rendering::kFarPlane);
 
 		// View matrix
 		Mat44f view = state.camera.getViewMatrix();
@@ -655,9 +496,9 @@ try
 
 		// ------ Set lighting uniforms (shared by all objects) ------
 		setLightingUniforms(
-			Config::kLightDir,
-			Config::kLightDiffuse,
-			Config::kSceneAmbient
+			Config::Rendering::kLightDir,
+			Config::Rendering::kLightDiffuse,
+			Config::Rendering::kSceneAmbient
 		);
 
 		// ----- Render Terrain -----
@@ -774,7 +615,11 @@ namespace
 		{
 			case GLFW_KEY_ESCAPE:
 				if (aAction == GLFW_PRESS)
+				{
+					// TODO: Remove later. For debugging.
+					std::print("Exiting...");
 					glfwSetWindowShouldClose(aWindow, GLFW_TRUE);
+				}
 				break;
 
 			case GLFW_KEY_R:
@@ -796,7 +641,7 @@ namespace
 					state->animation.reset();
 
 					// Reset camera to Free mode but do not change it's initial position
-					state->camera.mode = Camera::Mode::Free;
+					state->camera.setMode(Camera::Mode::Free);
 					state->camera.updateVectors();
 
 					std::print("Animation RESET - Vehicle returned to launch pad\n");
@@ -813,7 +658,9 @@ namespace
 
 			case GLFW_KEY_LEFT_SHIFT:
 			case GLFW_KEY_RIGHT_SHIFT:
-				state->camera.speed = isPressed ? Config::kCameraBaseSpeed * 5.f : Config::kCameraBaseSpeed;
+				state->input.shiftPressed = isPressed;
+				state->camera.setSpeed(isPressed ? Config::Camera::kBaseSpeed * Config::Camera::kSpeedFastMultiplier : Config::Camera::kBaseSpeed);
+
 				// TODO: Remove later. For debugging.
 				// std::print("Shift pressed\n");
 
@@ -823,7 +670,8 @@ namespace
 
 			case GLFW_KEY_LEFT_CONTROL:
             case GLFW_KEY_RIGHT_CONTROL:
-                state->camera.speed = isPressed ? Config::kCameraBaseSpeed * 0.2f : Config::kCameraBaseSpeed;
+				state->input.controlPressed = isPressed;
+				state->camera.setSpeed(isPressed ? Config::Camera::kBaseSpeed * Config::Camera::kSpeedSlowMultiplier : Config::Camera::kBaseSpeed);
 
 				// TODO: Remove later. For debugging.
 				// std::print("Ctrl pressed\n");
@@ -846,25 +694,25 @@ namespace
 				if (aAction == GLFW_PRESS)
 				{
 					// Position
+					Vec3f pos = state->camera.getPosition();
 					std::print("Camera position: ({}, {}, {})\n",
-							   state->camera.position.x,
-							   state->camera.position.y,
-							   state->camera.position.z);
+							   pos.x,
+							   pos.y,
+							   pos.z);
+
 					// Orientation
-					std::print("Camera yaw: {} radians, pitch: {} radians\n",
-							   state->camera.yaw,
-							   state->camera.pitch);
+					float yaw = state->camera.getYaw();
+					float pitch = state->camera.getPitch();
+					std::print("Camera yaw: {} radians, pitch: {} radians\n", yaw, pitch);
 
 					// Convert to degrees for easier understanding
-					float yawDeg = state->camera.yaw * (180.f / Config::kFloatPi);
-					float pitchDeg = state->camera.pitch * (180.f / Config::kFloatPi);
+					float yawDeg = yaw * (180.f / Config::kFloatPi);
+					float pitchDeg = pitch * (180.f / Config::kFloatPi);
 
 					// 2 decimal places
 					yawDeg = std::round(yawDeg * 100.f) / 100.f;
 					pitchDeg = std::round(pitchDeg * 100.f) / 100.f;
-					std::print("Camera yaw: {} degrees, pitch: {} degrees\n",
-							   yawDeg,
-							   pitchDeg);
+					std::print("Camera yaw: {} degrees, pitch: {} degrees\n", yawDeg, pitchDeg);
 				}
 				break;
 
@@ -872,43 +720,33 @@ namespace
 				if (aAction == GLFW_PRESS)
 				{
 					state->camera.cycleMode();
+					auto mode = state->camera.getMode();
 
 					// If switching to follow mode during animation, set up follow position
-					if (state->camera.mode == Camera::Mode::Follow &&
+					if (mode == Camera::Mode::Follow &&
 						state->animation.isAnimating)
 					{
+						// state->camera.forward = normalize(state->animation.currentPosition -
+						// 								  state->camera.position);
 						// Position camera behind vehicle
 						Vec3f backDir = {0.f, 0.f, -1.f};
 						if (length(state->animation.velocity) > 0.1f)
 						{
 							backDir = normalize(state->animation.velocity) * -1.0f;
 						}
-						state->camera.position = state->animation.currentPosition +
-												 backDir * state->camera.followDistance +
-												 Vec3f{0.f, state->camera.followDistance * 0.3f, 0.f};
-						state->camera.forward = normalize(state->animation.currentPosition -
-														  state->camera.position);
-						state->camera.updateVectors();
+
+						state->camera.followMode(state->animation.currentPosition, backDir);
 					}
 					// If switching to fixed ground mode
-					else if (state->camera.mode == Camera::Mode::FixedGround)
+					else if (mode == Camera::Mode::FixedGround)
 					{
-						state->camera.position = state->camera.fixedGroundPosition;
 						if (state->animation.isAnimating ||
 							state->animation.animationTime > 0.0f)
-						{
-							state->camera.forward = normalize(state->animation.currentPosition -
-															  state->camera.position);
-						}
-						else
-						{
-							state->camera.position = Config::kInitialCameraPos;
-							state->camera.yaw = Config::kInitialCameraYaw;
-							state->camera.pitch = 0.f;
-							// state->camera.forward = normalize(state->animation.startPosition -
-							// 								  state->camera.position);
-						}
-						state->camera.updateVectors();
+							{
+								// state->camera.forward = normalize(state->animation.currentPosition -
+								// 								  state->camera.getPosition());
+							}
+						state->camera.fixedGroundMode();
 					}
 				}
 				break;
@@ -958,9 +796,9 @@ namespace
 				if (aAction == GLFW_PRESS)
 				{
 					// Reset camera to initial position and orientation
-					state->camera.position = Vec3f{-72.799965, -0.96877396, 10.692477};
-					state->camera.yaw = 1.2900052f;
-					state->camera.pitch = -0.06900009f;
+					state->camera.setPosition(Vec3f{-72.799965, -0.96877396, 10.692477});
+					state->camera.setYaw(1.2900052f);
+					state->camera.setPitch(-0.06900009f);
 				}
 				break;
 
@@ -970,11 +808,11 @@ namespace
 					// Jump between the two landing pads
 					static size_t currentPadIndex = 1;
 					Vec2f orientation{-2.43f, -0.088f};
-					Vec3f landingPadPos = (currentPadIndex == 1) ? Config::kLandingPad1Pos : Config::kLandingPad2Pos;
+					Vec3f landingPadPos = (currentPadIndex == 1) ? Config::World::kLandingPad1Pos : Config::World::kLandingPad2Pos;
 
-					state->camera.position = landingPadPos + Vec3f{0.f, 0.5f, 0.f};
-					state->camera.yaw = orientation.x;
-					state->camera.pitch = orientation.y;
+					state->camera.setPosition(landingPadPos + Vec3f{0.f, 0.5f, 0.f});
+					state->camera.setYaw(orientation.x);
+					state->camera.setPitch(orientation.y);
 
 					std::print("Jumped to Landing Pad {} at position: ({}, {}, {})\n",
 							   currentPadIndex,
@@ -998,11 +836,23 @@ namespace
 
 		if (aButton == GLFW_MOUSE_BUTTON_RIGHT && aAction == GLFW_PRESS)
 		{
-			// Toggle mouse look mode, hide cursor
-			state->input.toggleMouseLook();
+			// Get current mouse position BEFORE toggling
+			double mouseX, mouseY;
+			glfwGetCursorPos(aWindow, &mouseX, &mouseY);
 
+			// Toggle mouse look with current position
+			state->input.toggleMouseLook(static_cast<float>(mouseX),
+										 static_cast<float>(mouseY));
+
+			// Toggle mouse look mode, hide cursor
 			glfwSetInputMode(aWindow, GLFW_CURSOR,
 				state->input.mouseLookActive ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+
+			// TODO: Remove later. For debugging.
+			if (state->input.mouseLookActive)
+				std::print("Mouse look ENABLED at position ({}, {})\n", mouseX, mouseY);
+			else
+				std::print("Mouse look DISABLED\n");
 		}
 	}
 
@@ -1014,10 +864,20 @@ namespace
 		// Handle mouse movement for camera orientation
 		if (state->input.firstMouse)
 		{
+			// On first motion after activation, use the stored position
+			// NOT current cursor position to avoid jump
+			state->input.firstMouse = false;
+
+			// Don't apply rotation on this first frame
 			state->input.lastMouseX = static_cast<float>(aX);
 			state->input.lastMouseY = static_cast<float>(aY);
-			state->input.firstMouse = false;
+
+			return;
 		}
+
+		// TODO: When mouse look is deactivated and reactivated, there's a jump.
+		// This is because lastMouseX/Y are not updated until the next motion event.
+		// A possible solution is to update lastMouseX/Y when mouse look is activated.
 
 		// Calculate the mouse's offset since the last frame.
 		float xOffset = static_cast<float>(aX) - state->input.lastMouseX;
@@ -1026,23 +886,15 @@ namespace
 		state->input.lastMouseX = static_cast<float>(aX);
 		state->input.lastMouseY = static_cast<float>(aY);
 
-		// Apply sensitivity
-		xOffset *= Config::kCameraSensitivity;
-		yOffset *= Config::kCameraSensitivity;
+		// Apply sensitivity	
+		xOffset *= Config::Camera::kSensitivity;
+		yOffset *= Config::Camera::kSensitivity;
 
-		// Update yaw and pitch
-		state->camera.yaw += xOffset;
-		state->camera.pitch += yOffset;
-
-		// Constrain pitch to avoid gimbal lock ~89 degrees or pi/2.1 radians
-		constexpr float maxPitch = Config::kFloatPi / 2.1f;
-		state->camera.pitch = std::clamp(state->camera.pitch, -maxPitch, maxPitch);
-
-		// Normalize yaw to the range [-pi, pi] for numerical stability
-		if (state->camera.yaw > Config::kFloatPi)
-			state->camera.yaw -= 2.f * Config::kFloatPi;
-		if (state->camera.yaw < -Config::kFloatPi)
-			state->camera.yaw += 2.f * Config::kFloatPi;
+		// Rotate camera if there's significant movement (avoid micro-jitter)
+		if (std::abs(xOffset) > Config::Camera::kDeadZone || std::abs(yOffset) > Config::Camera::kDeadZone)
+		{
+			state->camera.rotate(xOffset, yOffset);
+		}
 	}
 
 }

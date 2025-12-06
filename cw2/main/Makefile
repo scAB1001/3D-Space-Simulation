@@ -74,6 +74,7 @@ endif
 GENERATED :=
 OBJECTS :=
 
+GENERATED += $(OBJDIR)/camera.o
 GENERATED += $(OBJDIR)/cone.o
 GENERATED += $(OBJDIR)/cylinder.o
 GENERATED += $(OBJDIR)/landing_pad.o
@@ -83,6 +84,7 @@ GENERATED += $(OBJDIR)/renderer.o
 GENERATED += $(OBJDIR)/simple_mesh.o
 GENERATED += $(OBJDIR)/test.o
 GENERATED += $(OBJDIR)/texture.o
+OBJECTS += $(OBJDIR)/camera.o
 OBJECTS += $(OBJDIR)/cone.o
 OBJECTS += $(OBJDIR)/cylinder.o
 OBJECTS += $(OBJDIR)/landing_pad.o
@@ -155,6 +157,9 @@ endif
 # File Rules
 # #############################################
 
+$(OBJDIR)/camera.o: camera.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/cone.o: cone.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
