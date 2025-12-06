@@ -617,7 +617,7 @@ namespace
 				if (aAction == GLFW_PRESS)
 				{
 					// TODO: Remove later. For debugging.
-					std::print("Exiting...");
+					std::println("Exiting...");
 					glfwSetWindowShouldClose(aWindow, GLFW_TRUE);
 				}
 				break;
@@ -836,23 +836,26 @@ namespace
 
 		if (aButton == GLFW_MOUSE_BUTTON_RIGHT && aAction == GLFW_PRESS)
 		{
-			// Get current mouse position BEFORE toggling
-			double mouseX, mouseY;
-			glfwGetCursorPos(aWindow, &mouseX, &mouseY);
+			if (!state->input.mouseLookActive)
+			{
+				// Activating mouse look
+				double mouseX, mouseY;
+				glfwGetCursorPos(aWindow, &mouseX, &mouseY);
 
-			// Toggle mouse look with current position
-			state->input.toggleMouseLook(static_cast<float>(mouseX),
-										 static_cast<float>(mouseY));
+				state->input.activateMouseLook(static_cast<float>(mouseX),
+											   static_cast<float>(mouseY));
 
-			// Toggle mouse look mode, hide cursor
-			glfwSetInputMode(aWindow, GLFW_CURSOR,
-				state->input.mouseLookActive ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
-
-			// TODO: Remove later. For debugging.
-			if (state->input.mouseLookActive)
-				std::print("Mouse look ENABLED at position ({}, {})\n", mouseX, mouseY);
+				// Hide cursor and capture it
+				glfwSetInputMode(aWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+				std::print("Mouse look ENABLED\n");
+			}
 			else
+			{
+				// Deactivating mouse look and showing cursor
+				state->input.deactivateMouseLook();
+				glfwSetInputMode(aWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 				std::print("Mouse look DISABLED\n");
+			}
 		}
 	}
 
@@ -864,29 +867,20 @@ namespace
 		// Handle mouse movement for camera orientation
 		if (state->input.firstMouse)
 		{
-			// On first motion after activation, use the stored position
-			// NOT current cursor position to avoid jump
+			// Use initial mouse position and don't apply rotation on this first frame
+			state->input.updateMousePosition(static_cast<float>(aX), static_cast<float>(aY));
 			state->input.firstMouse = false;
-
-			// Don't apply rotation on this first frame
-			state->input.lastMouseX = static_cast<float>(aX);
-			state->input.lastMouseY = static_cast<float>(aY);
-
 			return;
 		}
-
-		// TODO: When mouse look is deactivated and reactivated, there's a jump.
-		// This is because lastMouseX/Y are not updated until the next motion event.
-		// A possible solution is to update lastMouseX/Y when mouse look is activated.
 
 		// Calculate the mouse's offset since the last frame.
 		float xOffset = static_cast<float>(aX) - state->input.lastMouseX;
 		float yOffset = state->input.lastMouseY - static_cast<float>(aY); // Reversed
 
-		state->input.lastMouseX = static_cast<float>(aX);
-		state->input.lastMouseY = static_cast<float>(aY);
+		// Update last positions
+		state->input.updateMousePosition(static_cast<float>(aX), static_cast<float>(aY));
 
-		// Apply sensitivity	
+		// Apply sensitivity
 		xOffset *= Config::Camera::kSensitivity;
 		yOffset *= Config::Camera::kSensitivity;
 

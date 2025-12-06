@@ -56,39 +56,24 @@ struct InputState
         controlPressed = false;
     }
 
-    // Toggle mouse look with current position update
-    void toggleMouseLook(float currentMouseX, float currentMouseY) noexcept
-    {
-        if (!mouseLookActive)
-        {
-            // Activating - store current position
-            lastMouseX = currentMouseX;
-            lastMouseY = currentMouseY;
-            firstMouse = true;
-        }
-        else
-        {
-            // Deactivating - reset mouse state
-            resetMouse();
-        }
-        mouseLookActive = !mouseLookActive;
-    }
-
-    // Toggle (for when there is no current position)
-    void toggleMouseLook() noexcept
-    {
-        mouseLookActive = !mouseLookActive;
-        if (!mouseLookActive)
-        {
-            resetMouse();
-        }
-    }
-
     void updateMousePosition(float currentX, float currentY) noexcept
     {
         lastMouseX = currentX;
         lastMouseY = currentY;
-        firstMouse = true; // Reset to capture next motion properly
+    }
+
+    void activateMouseLook(float currentX, float currentY) noexcept
+    {
+        mouseLookActive = true;
+        lastMouseX = currentX;
+        lastMouseY = currentY;
+        firstMouse = true;
+    }
+
+    void deactivateMouseLook() noexcept
+    {
+        mouseLookActive = false;
+        resetMouse();
     }
 
     // Check if any movement key is pressed
