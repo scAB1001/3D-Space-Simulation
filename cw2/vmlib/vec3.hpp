@@ -1,6 +1,5 @@
 #ifndef VEC3_HPP_5710DADF_17EF_453C_A9C8_4A73DC66B1CD
 #define VEC3_HPP_5710DADF_17EF_453C_A9C8_4A73DC66B1CD
-// SOLUTION_TAGS: gl-(ex-[^12]|cw-2|resit)
 
 #include <cmath>
 #include <cassert>
@@ -152,6 +151,26 @@ Vec3f normalize( Vec3f aVec ) noexcept
 {
 	auto const l = length( aVec );
 	return aVec / l;
+}
+
+inline
+Vec3f calculate_bezier_position(float t,
+								const Vec3f &p0,
+								const Vec3f &p1,
+								const Vec3f &p2,
+								const Vec3f &p3) noexcept
+{
+	// Cubic Bezier curve: B(t) = (1-t)³P₀ + 3(1-t)²tP₁ + 3(1-t)t²P₂ + t³P₃
+	float u = 1.0f - t;
+	float uu = u * u;
+	float uuu = uu * u;
+	float tt = t * t;
+	float ttt = tt * t;
+
+	return uuu * p0 +
+		   3.0f * uu * t * p1 +
+		   3.0f * u * tt * p2 +
+		   ttt * p3;
 }
 
 #endif // VEC3_HPP_5710DADF_17EF_453C_A9C8_4A73DC66B1CD

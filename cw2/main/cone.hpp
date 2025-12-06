@@ -2,7 +2,6 @@
 #define CONE_HPP_CB812C27_5E45_4ED9_9A7F_D66774954C29
 
 #include <vector>
-
 #include <cstdlib>
 
 #include "simple_mesh.hpp"
@@ -15,7 +14,7 @@ SimpleMeshData make_cone(
     std::size_t aSubdivs = 16,
     Vec3f aColor = {1.f, 1.f, 1.f},
     Mat44f aPreTransform = kIdentity44f);
-    
+
 SimpleMeshData make_batched_indexed_cone(
     bool aCapped = true,
     std::size_t aSubdivs = 16,

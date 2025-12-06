@@ -26,6 +26,7 @@
 #include "loadobj.hpp"
 #include "landing_pad.hpp"
 #include "renderer.hpp"
+#include "animation_state.hpp"
 #include "test.hpp"
 
 // TODO: LIST
@@ -183,42 +184,21 @@ namespace
         bool moveUp = false;
         bool moveDown = false;
         bool mouseLookActive = false;
-		bool cameraActive = true; // TODO: Remove later. For debugging.
+		// bool cameraActive = true; // TODO: Remove later. For debugging.
         float lastMouseX = 0.f;
         float lastMouseY = 0.f;
         bool firstMouse = true;
+
+		void toggleMouseLook()
+		{
+			mouseLookActive = !mouseLookActive;
+
+			// TODO: Remove later. For debugging.
+			if (mouseLookActive)
+				std::print("Mouse look {}\n", mouseLookActive ? "ENABLED" : "DISABLED");
+		}
     };
 
-	struct AnimationState
-	{
-		bool isAnimating = false;
-		bool isPaused = false;
-		float animationTime = 0.0f;
-		float totalAnimationTime = 25.0f; // Total duration (25 seconds)
-
-		// Start from landing pad 1, go to landing pad 2
-		Vec3f landingPadOffset = {0.f, 1.0f, 0.f}; // On the pad
-		Vec3f startPosition = Config::kLandingPad1Pos + landingPadOffset;
-		Vec3f endPosition = Config::kLandingPad2Pos + landingPadOffset;
-		Vec3f currentPosition = Config::kLandingPad1Pos + landingPadOffset;
-
-		// For proper rotation facing direction
-		Vec3f previousPosition = Config::kLandingPad1Pos + landingPadOffset;
-		Vec3f velocity = {0.f, 0.f, 0.f};
-
-		// Animation curve control
-		float currentSpeed = 0.0f;
-		float maxSpeed = 25.0f;			// units per second
-		float accelerationRate = 1.5f;	// acceleration (units/sec²)
-		float launchPhaseEnd = 0.4f;	// 40% for launch
-		float cruisePhaseEnd = 0.7f;	// 70% for cruise start (30% cruise)
-		// landing phase is the remaining 30%
-
-		// Flight phase for rotation calculation
-		float flightPhase = 0.0f; // 0=launch, 1=cruise, 2=landing
-
-		// float decelerationStart = 0.7f; // when to start slowing down (70% through)
-	};
 
 	struct State_ {
         ShaderProgram* prog = nullptr;
@@ -454,8 +434,7 @@ try
 
 		// Handle camera movement
 		// TODO: Remove cameraActive later. For debugging.
-		if (state.input.mouseLookActive && state.input.cameraActive &&
-			state.camera.mode == Camera::Mode::Free)
+		if (state.input.mouseLookActive && state.camera.mode == Camera::Mode::Free)
 		{
 			float moveSpeed = state.camera.speed * dt;
 
@@ -482,41 +461,72 @@ try
 			// Store previous position for velocity calculation
 			state.animation.previousPosition = state.animation.currentPosition;
 
-			// Calculate normalized time
-			float normalizedT = state.animation.animationTime / state.animation.totalAnimationTime;
+			// Calculate normalized time and current phase
+			float normalizedT = state.animation.getNormalizedTime();
+			AnimationState::Phase currentPhase = state.animation.getCurrentPhase(normalizedT);
+			float phaseProgress = 0.0f;
 
-			// Calculate flight phase for debugging
-			if (normalizedT < state.animation.launchPhaseEnd)
+			// Update phase if it changed
+			static AnimationState::Phase lastPhase = AnimationState::Phase::Launch;
+			if (currentPhase != state.animation.phase)
 			{
-				state.animation.flightPhase = 0.0f; // Launch
-			}
-			else if (normalizedT < state.animation.cruisePhaseEnd)
-			{
-				state.animation.flightPhase = 1.0f; // Cruise
-			}
-			else
-			{
-				state.animation.flightPhase = 2.0f; // Landing
+				lastPhase = state.animation.phase;
+				state.animation.phase = currentPhase;
+
+				// Log phase transition
+				std::print("[Flight] Transition: {} -> {} at {:.2f}s\n",
+						   state.animation.getPhaseNameSpecific(lastPhase),
+						   state.animation.getPhaseNameSpecific(currentPhase),
+						   state.animation.animationTime);
 			}
 
-			// Calculate speed based on phase
+			// Get progress within current phase
+			phaseProgress = state.animation.getPhaseProgress();
+
+			// Calculate speed based on current phase
 			state.animation.currentSpeed = calculate_rocket_speed(
-				normalizedT,
+				state.animation.phase,
+				phaseProgress,
 				state.animation.currentSpeed,
-				state.animation.accelerationRate,
-				state.animation.maxSpeed);
+				state.animation.kAccelerationRate,
+				state.animation.kMaxSpeed);
 
-			// Calculate new position with continuous trajectory
+			// Calculate new position
 			state.animation.currentPosition = calculate_rocket_position(
 				state.animation.animationTime,
-				state.animation.totalAnimationTime,
+				state.animation.kTotalAnimationTime,
 				state.animation.startPosition,
 				state.animation.endPosition,
 				state.animation.currentSpeed,
-				state.animation.accelerationRate,
-				state.animation.maxSpeed);
+				state.animation.kAccelerationRate,
+				state.animation.kMaxSpeed,
+				state.animation // Pass the entire state for precomputed values
+			);
 
-			// Calculate velocity (more accurate with finite differences)
+			// Track maximum height reached
+			float currentHeight = state.animation.currentPosition.y - state.animation.startPosition.y;
+			if (currentHeight > state.animation.maxHeightReached)
+			{
+				state.animation.maxHeightReached = currentHeight;
+
+				// Debug output for height monitoring
+				if (state.animation.maxHeightReached > state.animation.kMaxAllowedHeight * 0.9f)
+				{
+					std::print("[Height] {}: {:.1f} units (Max: {:.1f})\n",
+							   state.animation.getPhaseName(),
+							   currentHeight,
+							   state.animation.maxHeightReached);
+				}
+			}
+
+			// Enforce height limit (safety clamp)
+			if (currentHeight > AnimationState::kMaxAllowedHeight)
+			{
+				state.animation.currentPosition.y = state.animation.startPosition.y +
+													AnimationState::kMaxAllowedHeight;
+			}
+
+			// Calculate velocity
 			if (dt > 0.001f)
 			{
 				state.animation.velocity = (state.animation.currentPosition -
@@ -528,27 +538,33 @@ try
 			state.camera.updateForAnimation(state.animation.currentPosition,
 											state.animation.velocity, dt);
 
-			// Debug output at phase transitions
-			static float lastPhase = -1.0f;
-			if (state.animation.flightPhase != lastPhase)
+			// Periodic debug output
+			static float lastDebugTime = 0.0f;
+			if (state.animation.animationTime - lastDebugTime > 2.0f)
 			{
-				const char *phaseNames[] = {"LAUNCH", "CRUISE", "LANDING"};
-				std::print("[Flight] Entering {} phase at {:.1f}s | Altitude: {:.1f} | Speed: {:.1f}\n",
-						   phaseNames[int(state.animation.flightPhase)],
+				std::print("[Flight] {} | Time: {:.2f}s | Altitude: {:.2f} | Speed: {:.2f} | Phase Progress: {:.2f}%\n",
+						   state.animation.getPhaseName(),
 						   state.animation.animationTime,
-						   state.animation.currentPosition.y - Config::kSeaLevel,
-						   state.animation.currentSpeed);
-				lastPhase = state.animation.flightPhase;
+						   currentHeight,
+						   state.animation.currentSpeed,
+						   phaseProgress * 100.0f);
+				lastDebugTime = state.animation.animationTime;
 			}
 
 			// Check if animation is complete
-			if (state.animation.animationTime >= state.animation.totalAnimationTime)
+			if (state.animation.animationTime >= state.animation.kTotalAnimationTime)
 			{
 				state.animation.isAnimating = false;
-				state.animation.currentPosition = state.animation.endPosition; // Ensure exact landing
-				state.animation.velocity = {0.f, 0.f, 0.f};
+				state.animation.currentPosition = state.animation.endPosition;
+				state.animation.velocity = Config::kZeroVec3;
 				state.animation.currentSpeed = 0.0f;
-				std::print("Animation COMPLETE - Vehicle successfully landed at Pad 2\n");
+
+				std::print("Animation COMPLETE\n");
+				std::print("  Final phase: {}\n", state.animation.getPhaseName());
+				std::print("  Max height: {:.1f} units (Limit: {:.1f})\n",
+						   state.animation.maxHeightReached,
+						   AnimationState::kMaxAllowedHeight);
+				std::print("  Successfully landed at Pad 2\n");
 			}
 		}
 
@@ -585,7 +601,7 @@ try
 		// Calculate cube transform
 		Mat44f cubeTransform;
 		if (state.animation.isAnimating ||
-			(state.animation.animationTime >= state.animation.totalAnimationTime &&
+			(state.animation.animationTime >= state.animation.kTotalAnimationTime &&
 			 state.animation.animationTime > 0.0f))
 		{
 			// Animated or completed animation
@@ -594,13 +610,16 @@ try
 			if (state.animation.isAnimating)
 			{
 				// Calculate rotation based on current flight phase
-				float normalizedT = state.animation.animationTime / state.animation.totalAnimationTime;
+				float phaseProgress = state.animation.getPhaseProgress();
 
 				rotation = calculate_rocket_rotation(
 					state.animation.currentPosition,
 					state.animation.previousPosition,
 					state.animation.velocity,
-					normalizedT);
+					state.animation.phase,
+					phaseProgress,
+					state.animation // Pass state for precomputed values
+				);
 			}
 			else
 			{
@@ -651,9 +670,6 @@ try
 		);
 
 		// ----- Render Landing Pads (INSTANCED DRAWING) -----
-		// Mat33f normalMatrix = make_uniform_normal(kIdentity44f);
-		// LandingPad::renderAllInstanced(projView, normalMatrix);
-
 		for (const auto &pad : landingPads)
 		{
 			Mat44f projCameraWorld_pad = projView * pad.transform;
@@ -776,22 +792,15 @@ namespace
 						std::print(stderr, "Keeping old shader.\n");
 					}
 
-					// RESET animation
-					state->animation.isAnimating = false;
-					state->animation.isPaused = false;
-					state->animation.animationTime = 0.0f;
-					state->animation.currentPosition = state->animation.startPosition;
-					state->animation.previousPosition = state->animation.startPosition;
-					state->animation.velocity = {0.f, 0.f, 0.f};
-					state->animation.currentSpeed = 0.0f;
-					state->animation.flightPhase = 0.0f;
+					// Reset animation
+					state->animation.reset();
 
 					// Reset camera to Free mode but do not change it's initial position
 					state->camera.mode = Camera::Mode::Free;
 					state->camera.updateVectors();
 
 					std::print("Animation RESET - Vehicle returned to launch pad\n");
-					std::print("Camera mode reset to FREE\n");
+					std::print("Camera mode RESET to FREE\n");
 				}
 				break;
 
@@ -823,15 +832,17 @@ namespace
 				// 	std::print("Ctrl released\n");
 				break;
 
-			case GLFW_KEY_SPACE: // TODO: Remove later. For debugging.
-				if (aAction == GLFW_PRESS)
-				{
-					state->input.cameraActive = !state->input.cameraActive;
-					std::print("Camera movement: {}\n", state->input.cameraActive ? "ENABLED" : "DISABLED");
-				}
-				break;
+			// TODO: Remove later. For debugging.
+			// case GLFW_KEY_SPACE:
+			// 	if (aAction == GLFW_PRESS)
+			// 	{
+			// 		state->input.cameraActive = !state->input.cameraActive;
+			// 		std::print("Camera movement: {}\n", state->input.cameraActive ? "ENABLED" : "DISABLED");
+			// 	}
+			// 	break;
 
-			case GLFW_KEY_P: // TODO: Remove later. For debugging.
+			// TODO: Remove later. For debugging.
+			case GLFW_KEY_P:
 				if (aAction == GLFW_PRESS)
 				{
 					// Position
@@ -908,43 +919,42 @@ namespace
 					if (!state->animation.isAnimating)
 					{
 						// START animation
-						state->animation.isAnimating = true;
-						state->animation.isPaused = false;
-						state->animation.animationTime = 0.0f;
-						state->animation.currentSpeed = 0.0f;
-						state->animation.currentPosition = state->animation.startPosition;
-						state->animation.previousPosition = state->animation.startPosition;
+						state->animation.start();
 
-						std::print("Animation STARTED - Launching from Pad 1 to Pad 2\n");
-						std::print("  Start: ({:.2f}, {:.2f}, {:.2f})\n",
-								   state->animation.startPosition.x,
-								   state->animation.startPosition.y,
-								   state->animation.startPosition.z);
-						std::print("  End: ({:.2f}, {:.2f}, {:.2f})\n",
-								   state->animation.endPosition.x,
-								   state->animation.endPosition.y,
-								   state->animation.endPosition.z);
-						std::print("  Duration: {:.2f} seconds\n", state->animation.totalAnimationTime);
+						// TODO: Remove later. For debugging.
+						std::print("\nAnimation STARTED\n");
+						std::println("-----------------------------");
+						std::print("  Phase: {}\n", state->animation.getPhaseName());
+						std::print("  Start "); state->animation.printCoordinates(state->animation.startPosition);
+						std::print("  End "); state->animation.printCoordinates(state->animation.endPosition);
+						std::print("  Duration: {:.2f} seconds\n", state->animation.kTotalAnimationTime);
+						std::print("  Max speed: {:.1f} units/s\n", AnimationState::kMaxSpeed);
+						std::print("  Max height allowed: {:.2f} units\n", AnimationState::kMaxAllowedHeight);
 					}
 					else
 					{
 						// TOGGLE pause
-						state->animation.isPaused = !state->animation.isPaused;
-						std::print("Animation {}PAUSED\n", state->animation.isPaused ? "" : "UN");
+						state->animation.togglePause();
 
+						// TODO: Remove later. For debugging.
+						std::print("\nAnimation {}PAUSED\n", state->animation.isPaused ? "" : "UN");
+						std::println("-----------------------------");
+						std::print("  Phase: {}\n", state->animation.getPhaseName());
+
+						// TODO: Remove later. For debugging.
 						if (state->animation.isPaused)
 						{
-							std::print("  Current position: ({:.2f}, {:.2f}, {:.2f})\n",
-									   state->animation.currentPosition.x,
-									   state->animation.currentPosition.y,
-									   state->animation.currentPosition.z);
+							std::print("  Current "); state->animation.printCoordinates(state->animation.currentPosition);
 							std::print("  Speed: {:.2f} units/sec\n", state->animation.currentSpeed);
+							std::print("  Max height so far: {:.2f} units\n", state->animation.maxHeightReached);
+
 						}
 					}
 				}
 				break;
 
-			case GLFW_KEY_G:
+			// TODO: Remove later. For debugging.
+			case GLFW_KEY_G: // Goes to landing pad 1 position at sea level
 				if (aAction == GLFW_PRESS)
 				{
 					// Reset camera to initial position and orientation
@@ -989,16 +999,10 @@ namespace
 		if (aButton == GLFW_MOUSE_BUTTON_RIGHT && aAction == GLFW_PRESS)
 		{
 			// Toggle mouse look mode, hide cursor
-			state->input.mouseLookActive = !state->input.mouseLookActive;
+			state->input.toggleMouseLook();
+
 			glfwSetInputMode(aWindow, GLFW_CURSOR,
 				state->input.mouseLookActive ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
-
-			if (state->input.mouseLookActive)
-			{
-				state->input.firstMouse = true;
-				// TODO: Remove later. For debugging.
-				// std::print("Mouse Look: {}\n", state->input.mouseLookActive ? "ENABLED" : "DISABLED");
-			}
 		}
 	}
 

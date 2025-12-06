@@ -1,5 +1,5 @@
 #include "cone.hpp"
-
+#include "../vmlib/mat44.hpp" // Include here
 #include <numbers>
 
 SimpleMeshData make_cone(bool aCapped, std::size_t aSubdivs, Vec3f aColor, Mat44f aPreTransform)

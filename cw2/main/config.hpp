@@ -16,6 +16,7 @@ namespace Config
     constexpr float kFarPlane = 100.f;
     constexpr float kFOV = kFloatPi / 4.f;
     constexpr float kWorldBorder = 99.9f;
+    constexpr Vec3f kZeroVec3 = {0.f, 0.f, 0.f};
 
     // Landing pad positions
     constexpr float kSeaLevel = -0.968f;
