@@ -42,9 +42,12 @@ public:
     void updateVectors() noexcept;
     Mat44f getViewMatrix() const noexcept;
     void updateForAnimation(const Vec3f &vehiclePos, const Vec3f &vehicleVelocity, float dt) noexcept;
+
     void cycleMode() noexcept;
-    void followMode(const Vec3f &curPos, const Vec3f &backDir) noexcept;
-    void fixedGroundMode() noexcept;
+
+    // Special mode initializations
+    void setupFollowMode(const Vec3f &vehiclePos, const Vec3f &vehicleForward);
+    void setupFixedGroundMode(const Vec3f &vehiclePos);
 
     // Movement
     void moveForward(float dt) noexcept;
@@ -87,14 +90,17 @@ private:
     struct FollowSettings
     {
         float distance = 30.0f;
-        Vec3f offset = {0.f, 10.f, 15.f}; // Behind and above
+        Vec3f sideOffset = {10.f, 5.f, 0.f}; // Parallel to side: (right, up, forward)
+        bool useRightSide = true;            // Switch between left/right side
+
     } followSettings;
 
     struct FixedGroundSettings
     {
+        // Note: yaw and pitch are not fixed - they always look at vehicle
         Vec3f position = {-37.45f, 13.687f, -48.04f};
-        float yaw = 1.463f;    // radians
-        float pitch = -0.240f; // radians
+        // float yaw = 1.463f;    // radians
+        // float pitch = -0.240f; // radians
     } fixedGroundSettings;
 
     // Helper methods
@@ -102,4 +108,4 @@ private:
     void normalizeYaw() noexcept;
 };
 
-#endif // CAMERA_HPP
+#endif // CAMERA_HPP -72.28,12.27 19.0,14.25

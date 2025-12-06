@@ -278,8 +278,7 @@ try
 		// Update camera state
 		state.camera.updateVectors();
 
-		// Handle camera movement
-		// TODO: Remove cameraActive later. For debugging.
+		// Handle camera movement in free mode only
 		if (state.input.mouseLookActive && state.camera.getMode() == Camera::Mode::Free)
 		{
 			if (state.input.moveForward) state.camera.moveForward(dt);
@@ -295,6 +294,42 @@ try
 		}
 
 		// Update animation state
+		if (state.animation.isAnimating && !state.animation.isPaused)
+		{
+			state.animation.update(dt);
+
+			// Update camera based on current mode
+			state.camera.updateForAnimation(state.animation.currentPosition,
+											state.animation.velocity, dt);
+
+			// Periodic debug output
+			static float lastDebugTime = 0.0f;
+			if (state.animation.animationTime - lastDebugTime > 2.0f)
+			{
+				std::print("[Flight] {} | Time: {:.2f}s | Altitude: {:.2f} | Speed: {:.2f} | Coords: ({},{},{})\n",
+						   state.animation.getPhaseName(),
+						   state.animation.animationTime,
+						   state.animation.currentPosition.y - state.animation.startPosition.y,
+						   state.animation.currentSpeed,
+						   state.animation.currentPosition.x,
+						   state.animation.currentPosition.y,
+						   state.animation.currentPosition.z);
+				lastDebugTime = state.animation.animationTime;
+			}
+
+			// Check if animation is complete
+			if (state.animation.animationTime >= state.animation.kTotalAnimationTime)
+			{
+				state.animation.isAnimating = false;
+				state.animation.currentPosition = state.animation.endPosition;
+				state.animation.velocity = Config::kZeroVec3;
+				state.animation.currentSpeed = 0.0f;
+
+				std::print("Animation COMPLETE\n");
+			}
+		}
+
+		/* Update animation state
 		if (state.animation.isAnimating && !state.animation.isPaused)
 		{
 			state.animation.animationTime += dt;
@@ -407,7 +442,7 @@ try
 						   AnimationState::kMaxAllowedHeight);
 				std::print("  Successfully landed at Pad 2\n");
 			}
-		}
+		}*/
 
 		// Update camera state
 		state.camera.updateVectors();
@@ -440,6 +475,26 @@ try
 
 		/* CUBE */
 		// Calculate cube transform
+		Mat44f cubeTransform;
+		if (state.animation.isAnimating ||
+			(state.animation.animationTime >= state.animation.kTotalAnimationTime &&
+			 state.animation.animationTime > 0.0f))
+		{
+			Mat44f rotation = calculate_rocket_rotation(state.animation);
+
+			// Combine translation and rotation
+			cubeTransform = make_translation(state.animation.currentPosition) *
+							make_scaling(0.5f, 0.5f, 0.5f) *
+							rotation;
+		}
+		else
+		{
+			// Static position at start (pre-launch)
+			cubeTransform = make_translation(state.animation.startPosition) *
+							make_scaling(0.5f, 0.5f, 0.5f) *
+							make_rotation_y(angle * 0.3f);
+		}
+		/*
 		Mat44f cubeTransform;
 		if (state.animation.isAnimating ||
 			(state.animation.animationTime >= state.animation.kTotalAnimationTime &&
@@ -479,7 +534,7 @@ try
 			cubeTransform = make_translation(state.animation.startPosition) *
 							make_scaling(0.5f, 0.5f, 0.5f) *
 							make_rotation_y(angle * 0.3f); // Gentle idle rotation
-		}
+		}*/
 
 		// Mat44f model2world_cube = make_rotation_y(angle) * make_translation(Vec3f{0.f, 2.f, 0.f});
 		// Mat44f projCameraWorld_cube = make_proj_camera_world(projView, model2world_cube);
@@ -720,33 +775,48 @@ namespace
 				if (aAction == GLFW_PRESS)
 				{
 					state->camera.cycleMode();
-					auto mode = state->camera.getMode();
+					auto newMode = state->camera.getMode();
 
-					// If switching to follow mode during animation, set up follow position
-					if (mode == Camera::Mode::Follow &&
-						state->animation.isAnimating)
+					// Initialize the new mode if animation is running
+					if (state->animation.isAnimating)
 					{
-						// state->camera.forward = normalize(state->animation.currentPosition -
-						// 								  state->camera.position);
-						// Position camera behind vehicle
-						Vec3f backDir = {0.f, 0.f, -1.f};
-						if (length(state->animation.velocity) > 0.1f)
+						switch (newMode)
 						{
-							backDir = normalize(state->animation.velocity) * -1.0f;
-						}
+							case Camera::Mode::Follow:
+								// Initialize follow mode with current vehicle state
+								state->camera.setupFollowMode(
+									state->animation.currentPosition,
+									state->animation.velocity);
+								break;
 
-						state->camera.followMode(state->animation.currentPosition, backDir);
+							case Camera::Mode::FixedGround:
+								// Initialize fixed ground mode
+								state->camera.setupFixedGroundMode(
+									state->animation.currentPosition);
+								break;
+
+							case Camera::Mode::Free:
+								// Nothing special for free mode
+								break;
+						}
 					}
-					// If switching to fixed ground mode
-					else if (mode == Camera::Mode::FixedGround)
+					else
 					{
-						if (state->animation.isAnimating ||
-							state->animation.animationTime > 0.0f)
-							{
-								// state->camera.forward = normalize(state->animation.currentPosition -
-								// 								  state->camera.getPosition());
-							}
-						state->camera.fixedGroundMode();
+						// Initialize based on vehicle start position
+						switch (newMode)
+						{
+							case Camera::Mode::Follow:
+								state->camera.setupFollowMode(
+									state->animation.startPosition,
+									Vec3f{0.f, 0.f, -1.f} // Default forward
+								);
+								break;
+
+							case Camera::Mode::FixedGround:
+								state->camera.setupFixedGroundMode(
+									state->animation.startPosition);
+								break;
+						}
 					}
 				}
 				break;
@@ -766,7 +836,7 @@ namespace
 						std::print("  Start "); state->animation.printCoordinates(state->animation.startPosition);
 						std::print("  End "); state->animation.printCoordinates(state->animation.endPosition);
 						std::print("  Duration: {:.2f} seconds\n", state->animation.kTotalAnimationTime);
-						std::print("  Max speed: {:.1f} units/s\n", AnimationState::kMaxSpeed);
+						std::print("  Max speed: {:.1f} units/s\n", AnimationState::kMaxVelocity);
 						std::print("  Max height allowed: {:.2f} units\n", AnimationState::kMaxAllowedHeight);
 					}
 					else
