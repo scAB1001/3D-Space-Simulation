@@ -82,6 +82,7 @@ GENERATED += $(OBJDIR)/loadobj.o
 GENERATED += $(OBJDIR)/main.o
 GENERATED += $(OBJDIR)/renderer.o
 GENERATED += $(OBJDIR)/simple_mesh.o
+GENERATED += $(OBJDIR)/space_vehicle.o
 GENERATED += $(OBJDIR)/test.o
 GENERATED += $(OBJDIR)/texture.o
 GENERATED += $(OBJDIR)/ui.o
@@ -93,6 +94,7 @@ OBJECTS += $(OBJDIR)/loadobj.o
 OBJECTS += $(OBJDIR)/main.o
 OBJECTS += $(OBJDIR)/renderer.o
 OBJECTS += $(OBJDIR)/simple_mesh.o
+OBJECTS += $(OBJDIR)/space_vehicle.o
 OBJECTS += $(OBJDIR)/test.o
 OBJECTS += $(OBJDIR)/texture.o
 OBJECTS += $(OBJDIR)/ui.o
@@ -181,6 +183,9 @@ $(OBJDIR)/renderer.o: renderer.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/simple_mesh.o: simple_mesh.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/space_vehicle.o: space_vehicle.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/test.o: test.cpp
