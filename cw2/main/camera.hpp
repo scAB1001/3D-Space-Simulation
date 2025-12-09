@@ -38,6 +38,8 @@ public:
     void setSpeed(float newSpeed) noexcept;
     void setBaseSpeed(float newBaseSpeed) noexcept;
 
+    bool isMode(Mode mode) noexcept;
+
     // Camera control
     void updateVectors() noexcept;
     Mat44f getViewMatrix() const noexcept;
@@ -67,6 +69,7 @@ public:
     // State management
     void debugOrientation(const Vec3f &targetPosition) const noexcept;
     void lookAtTarget(const Vec3f &targetPosition) noexcept;
+    void offsetPositionFromTarget(const Vec3f &targetPosition, Vec3f offset) noexcept;
     void resetToInitial() noexcept;
 
 private:
@@ -92,17 +95,15 @@ private:
     struct FollowSettings
     {
         float distance = 30.0f;
-        Vec3f sideOffset = {10.f, 5.f, 0.f}; // Parallel to side: (right, up, forward)
+        Vec3f sideOffset = {20.f, 5.f, 0.f}; // Parallel to side: (right, up, forward)
         bool useRightSide = true;            // Switch between left/right side
 
     } followSettings;
 
     struct FixedGroundSettings
     {
-        // Note: yaw and pitch are not fixed - they always look at vehicle
-        Vec3f position = {-37.45f, 17.90f, -48.04f};
-        float yaw = 1.463f;    // radians
-        float pitch = -0.240f; // radians
+        // yaw and pitch are calculated dynamically
+        Vec3f position = {-33.05f, 15.90f, -32.0f};
     } fixedGroundSettings;
 
     // Helper methods

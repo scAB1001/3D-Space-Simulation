@@ -273,7 +273,7 @@ try
 		state.camera.updateVectors();
 
 		// Handle camera movement in free mode only
-		if (state.input.mouseLookActive && state.camera.getMode() == Camera::Mode::Free)
+		if (state.input.mouseLookActive && state.camera.isMode(Camera::Mode::Free))
 		{
 			if (state.input.moveForward) state.camera.moveForward(dt);
 			if (state.input.moveBackward) state.camera.moveBackward(dt);
@@ -315,7 +315,7 @@ try
 		state.camera.updateVectors();
 
 		// ------------- Setup camera pipeline -------------
-		// TODO: Modularise this later
+		// TODO: Modularize this later
 		// Projection matrix
 		Mat44f projection = make_perspective_projection(Config::Rendering::kFOV, aspectRatio, Config::Rendering::kNearPlane, Config::Rendering::kFarPlane);
 
@@ -324,7 +324,6 @@ try
 		Mat44f projView = projection * view;
 
 		// Model matrices
-
 		/* CUBE */
 		// Calculate cube transform
 		Mat44f cubeTransform;
@@ -497,34 +496,13 @@ namespace
 			case GLFW_KEY_RIGHT_SHIFT:
 				state->input.shiftPressed = isPressed;
 				state->camera.setSpeed(isPressed ? Config::Camera::kBaseSpeed * Config::Camera::kSpeedFastMultiplier : Config::Camera::kBaseSpeed);
-
-				// TODO: Remove later. For debugging.
-				// std::print("Shift pressed\n");
-
-				// if (GLFW_RELEASE == aAction)
-				// 	std::print("Shift released\n");
 				break;
 
 			case GLFW_KEY_LEFT_CONTROL:
             case GLFW_KEY_RIGHT_CONTROL:
 				state->input.controlPressed = isPressed;
 				state->camera.setSpeed(isPressed ? Config::Camera::kBaseSpeed * Config::Camera::kSpeedSlowMultiplier : Config::Camera::kBaseSpeed);
-
-				// TODO: Remove later. For debugging.
-				// std::print("Ctrl pressed\n");
-
-				// if (GLFW_RELEASE == aAction)
-				// 	std::print("Ctrl released\n");
 				break;
-
-			// TODO: Remove later. For debugging.
-			// case GLFW_KEY_SPACE:
-			// 	if (aAction == GLFW_PRESS)
-			// 	{
-			// 		state->input.cameraActive = !state->input.cameraActive;
-			// 		std::print("Camera movement: {}\n", state->input.cameraActive ? "ENABLED" : "DISABLED");
-			// 	}
-			// 	break;
 
 			// TODO: Remove later. For debugging.
 			case GLFW_KEY_P:
@@ -532,24 +510,12 @@ namespace
 				{
 					// Position
 					Vec3f pos = state->camera.getPosition();
-					std::print("Camera position: ({}, {}, {})\n",
-							   pos.x,
-							   pos.y,
-							   pos.z);
+					state->animation.printCoordinates(pos);
 
 					// Orientation
 					float yaw = state->camera.getYaw();
 					float pitch = state->camera.getPitch();
-					std::print("Camera yaw: {} radians, pitch: {} radians\n", yaw, pitch);
-
-					// // Convert to degrees for easier understanding
-					// float yawDeg = yaw * (180.f / Config::kFloatPi);
-					// float pitchDeg = pitch * (180.f / Config::kFloatPi);
-
-					// // 2 decimal places
-					// yawDeg = std::round(yawDeg * 100.f) / 100.f;
-					// pitchDeg = std::round(pitchDeg * 100.f) / 100.f;
-					// std::print("Camera yaw: {} degrees, pitch: {} degrees\n", yawDeg, pitchDeg);
+					std::print("Camera yaw: {:2f} radians, pitch: {:2f} radians\n", yaw, pitch);
 				}
 				break;
 
@@ -559,52 +525,25 @@ namespace
 					state->camera.cycleMode();
 					auto newMode = state->camera.getMode();
 
-					// Initialize the new mode if animation is running
-					if (state->animation.isAnimating)
+					switch (newMode)
 					{
-						switch (newMode)
-						{
-							using enum Camera::Mode;
-							case Follow:
-								// Initialize follow mode with current vehicle state
-								state->camera.setupFollowMode(
-									state->animation.currentPosition,
-									state->animation.velocity);
-								break;
+						using enum Camera::Mode;
+						case Follow:
+							// Initialize follow mode with current vehicle state
+							state->camera.setupFollowMode(
+								state->animation.currentPosition,
+								state->animation.velocity);
+							break;
 
-							case FixedGround:
-								// Initialize fixed ground mode
-								state->camera.setupFixedGroundMode(
-									state->animation.currentPosition);
-								break;
+						case FixedGround:
+							// Initialize fixed ground mode
+							state->camera.setupFixedGroundMode(
+								state->animation.currentPosition);
+							break;
 
-							case Free:
-								default:
-								break;
-						}
-					}
-					else
-					{
-						// Initialize based on vehicle start position
-						switch (newMode)
-						{
-							using enum Camera::Mode;
-							case Follow:
-								state->camera.setupFollowMode(
-									state->animation.startPosition,
-									Vec3f{0.f, 0.f, -1.f} // Default forward
-								);
-								break;
-
-							case FixedGround:
-								state->camera.setupFixedGroundMode(
-									state->animation.startPosition);
-								break;
-
-							case Free:
-								default:
-								break;
-						}
+						case Free:
+						default:
+							break;
 					}
 				}
 				break;
@@ -614,12 +553,10 @@ namespace
 				{
 					if (!state->animation.isAnimating)
 					{
-						// START animation
 						state->animation.start();
 					}
 					else
 					{
-						// TOGGLE pause
 						state->animation.togglePause();
 					}
 				}
@@ -629,17 +566,30 @@ namespace
 			case GLFW_KEY_G: // Faces vehicle from current position and orientation
 				if (aAction == GLFW_PRESS)
 				{
-					// First, debug current state
-					state->camera.debugOrientation(state->animation.currentPosition);
+					/* TESTING FOLLOW CAMERA */
+					// Calculate offset position to cube.
+					// update position to be in-line with the cube but at a fixed distance
+					Vec3f toCube = state->animation.currentPosition - state->camera.getPosition();
 
-					// Then look at target
-					state->camera.lookAtTarget(state->animation.currentPosition);
+					// Follow distance should be a fixed distance of vec3f length
+					toCube = normalize(toCube) * length(Vec3f{10.f, 5.f, 0.f});
+					Vec3f newCamPos = state->animation.currentPosition - toCube;
+					state->camera.setPosition(newCamPos);
 
-					// Debug after adjustment
-					std::print("\nAfter lookAtTarget:\n");
-					state->camera.debugOrientation(state->animation.currentPosition);
+					/* TESTING FIXED GROUND CAMERA
+					// state->camera.setPosition(Vec3f{-37.45f, 17.90f, -48.04f});
+					// 	// First, debug current state
+					// state->camera.debugOrientation(state->animation.currentPosition);
+
+					// // Then look at target
+					// state->camera.lookAtTarget(state->animation.currentPosition);
+
+					// // Debug after adjustment
+					// std::print("\nAfter lookAtTarget:\n");
+					// state->camera.debugOrientation(state->animation.currentPosition);
 
 					// testCameraOrientation(state->camera, state->animation.currentPosition);
+					*/
 				}
 
 				break;

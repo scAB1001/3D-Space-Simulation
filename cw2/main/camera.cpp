@@ -32,6 +32,11 @@ Mat44f Camera::getViewMatrix() const noexcept
     return make_look_at(position, position + forward, up);
 }
 
+bool Camera::isMode(Mode mode) noexcept
+{
+    return mode == getMode();
+}
+
 void Camera::setPosition(Vec3f newPosition) noexcept
 {
     position = newPosition;
@@ -145,6 +150,7 @@ void Camera::updateForAnimation(const Vec3f &vehiclePos, const Vec3f &vehicleVel
     {
         case Mode::Follow:
         {
+            /*
             // Get vehicle forward direction (use velocity if moving, otherwise default)
             Vec3f vehicleForward;
             if (length(vehicleVelocity) > 0.1f)
@@ -191,8 +197,11 @@ void Camera::updateForAnimation(const Vec3f &vehiclePos, const Vec3f &vehicleVel
             float followSpeed = 3.0f * dt;
             followSpeed = std::clamp(followSpeed, 0.0f, 1.0f);
             position = position * (1.0f - followSpeed) + desiredPosition * followSpeed;
+            */
 
-            lookAtTarget(vehiclePos);
+            offsetPositionFromTarget(vehiclePos, position - vehiclePos);
+            // lookAtTarget(vehiclePos);
+
             break;
         }
 
@@ -234,21 +243,7 @@ void Camera::setupFollowMode(const Vec3f &vehiclePos, const Vec3f &vehicleForwar
         return;
 
     // Initialize camera position for follow mode
-    Vec3f vehicleRight = normalize(cross(vehicleForward, worldUp));
-    Vec3f vehicleUp = normalize(cross(vehicleRight, vehicleForward));
 
-    float sideMultiplier = followSettings.useRightSide ? 1.0f : -1.0f;
-
-    Vec3f offset =
-        vehicleRight * (followSettings.sideOffset.x * sideMultiplier) +
-        vehicleUp * followSettings.sideOffset.y +
-        vehicleForward * followSettings.sideOffset.z;
-
-    offset = normalize(offset) * followSettings.distance;
-
-    position = vehiclePos + offset;
-    forward = normalize(vehiclePos - position);
-    updateVectors();
 }
 
 void Camera::setupFixedGroundMode(const Vec3f &vehiclePos)
@@ -258,19 +253,7 @@ void Camera::setupFixedGroundMode(const Vec3f &vehiclePos)
 
     // Set fixed ground position
     position = fixedGroundSettings.position;
-
-    yaw = fixedGroundSettings.yaw;
-    pitch = fixedGroundSettings.pitch;
-    // Look at vehicle
-    // forward = normalize(vehiclePos - position);
-
-    // Calculate yaw and pitch from forward vector
-    // yaw = atan2(forward.x, forward.z);
-    // pitch = asin(forward.y);
-
-    applyPitchConstraints();
-    normalizeYaw();
-    updateVectors();
+    lookAtTarget(vehiclePos);
 }
 
 void Camera::debugOrientation(const Vec3f &targetPosition) const noexcept
@@ -350,6 +333,11 @@ void Camera::lookAtTarget(const Vec3f &targetPosition) noexcept
         std::print("  Yaw: {:.3f} rad\n", yaw);
         std::print("  Pitch: {:.3f} rad\n", pitch);
     }
+}
+
+void Camera::offsetPositionFromTarget(const Vec3f &targetPosition, Vec3f offset) noexcept
+{
+    position = targetPosition + offset;
 }
 
 void Camera::resetToInitial() noexcept
