@@ -13,7 +13,7 @@ public:
     {
         Free,       // User-controlled
         Follow,     // Fixed distance following vehicle
-        FixedGround // Fixed position on ground
+        Fixed       // Fixed position on ground
     };
 
     // Constructors
@@ -49,7 +49,7 @@ public:
 
     // Special mode initializations
     void initFollowMode(const Vec3f &vehiclePos, const Vec3f &vehicleForward);
-    void initFixedGroundMode(const Vec3f &vehiclePos);
+    void initFixedMode(const Vec3f &vehiclePos);
 
     // Movement
     void moveForward(float dt) noexcept;
@@ -69,6 +69,9 @@ public:
     // State management
     void debugOrientation(const Vec3f &targetPosition) const noexcept;
     void lookAtTarget(const Vec3f &targetPosition) noexcept;
+    void debugOut(const Vec3f &vehiclePos, const Vec3f &vehicleVelocity);
+    void updateFollowMode(const Vec3f &vehiclePos, const Vec3f &vehicleVelocity, float dt);
+
     void offsetPositionFromTarget(const Vec3f &targetPosition, Vec3f offset) noexcept;
     void resetToInitial() noexcept;
 
@@ -94,18 +97,21 @@ private:
     // Mode-specific settings
     struct FollowSettings
     {
-        float distance = 30.0f;
-        Vec3f sideOffset = {20.f, 5.f, 0.f}; // Parallel to side: (right, up, forward)
-        bool useRightSide = true;            // Switch between left/right side
+        float distance = 8.0f;             // Distance behind vehicle
+        float height = 3.0f;               // Height above vehicle
+        float sideOffset = 2.0f;           // Horizontal offset for side view
+        float smoothness = 5.0f;           // Interpolation speed
+        bool useRightSide = true;          // Which side to view from
+        bool lookAtVehicle = true;         // Should camera look at vehicle
+        Vec3f lookAhead = Config::kZeroVec3; // Look ahead offset
 
     } followSettings;
 
-    struct FixedGroundSettings
+    struct FixedSettings
     {
         // yaw and pitch are calculated dynamically
         Vec3f position = {-33.05f, 15.90f, -32.0f};
-    } fixedGroundSettings;
-
+    } fixedSettings;
     // Helper methods
     void applyPitchConstraints() noexcept;
     void normalizeYaw() noexcept;

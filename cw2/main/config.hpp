@@ -10,6 +10,9 @@ namespace Config
     // Math constants
     constexpr float kFloatPi = std::numbers::pi_v<float>;
     constexpr Vec3f kZeroVec3 = {0.f, 0.f, 0.f};
+    constexpr Vec3f kWorldUp = {0.f, 1.f, 0.f};
+    constexpr Vec3f kWorldForward = {0.f, 0.f, -1.f}; // OpenGL default
+    constexpr Vec3f kWorldRight = {1.f, 0.f, 0.f};
 
     namespace Camera
     {
@@ -61,22 +64,6 @@ namespace Config
 
         // Clear color (dark gray)
         constexpr Vec3f kClearColor = {0.2f, 0.2f, 0.2f};
-    }
-
-    namespace Animation
-    {
-        // Vehicle animation
-        constexpr float kTotalAnimationTime = 25.0f; // Total duration (25 seconds)
-        constexpr float kMaxAllowedHeight = 35.0f;   // Maximum height limit
-        constexpr float kMaxSpeed = 25.0f;           // units per second
-        constexpr float kAccelerationRate = 1.5f;    // acceleration (units/sec²)
-
-        // Flight profile constants
-        constexpr float kLaunchHeight = 15.0f;         // Maximum height during launch
-        constexpr float kCruiseHeight = 30.0f;         // Peak height during cruise
-        constexpr float kHoverHeight = 10.0f;          // Hover height above landing pad
-        constexpr float kBezierControlOffset = 20.0f;  // Control point offset
-        constexpr float kHorizontalScaleDist = 100.0f; // Distance for height scaling
     }
 }
 

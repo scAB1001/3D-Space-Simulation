@@ -116,7 +116,7 @@ void Camera::moveDown(float dt) noexcept
 
 void Camera::rotate(float yawOffset, float pitchOffset) noexcept
 {
-    if (mode != Mode::Free)
+    if (mode != Mode::Free && mode != Mode::Follow)
         return;
 
     yaw += yawOffset;
@@ -150,64 +150,13 @@ void Camera::updateForAnimation(const Vec3f &vehiclePos, const Vec3f &vehicleVel
     {
         case Mode::Follow:
         {
-            /*
-            // Get vehicle forward direction (use velocity if moving, otherwise default)
-            Vec3f vehicleForward;
-            if (length(vehicleVelocity) > 0.1f)
-            {
-                vehicleForward = normalize(vehicleVelocity);
-            }
-            else
-            {
-                // If vehicle isn't moving, forward should be from camera to vehicle
-                vehicleForward = normalize(vehiclePos - position);
-            }
-
-            // Calculate vehicle right and up vectors
-            Vec3f vehicleRight = normalize(cross(vehicleForward, worldUp));
-            if (length(vehicleRight) < 0.001f)
-            {
-                vehicleRight = Vec3f{1.0f, 0.0f, 0.0f};
-            }
-
-            Vec3f vehicleUp = normalize(cross(vehicleRight, vehicleForward));
-
-            // Determine which side to be on
-            float sideMultiplier = followSettings.useRightSide ? 1.0f : -1.0f;
-
-            // Calculate camera position relative to vehicle
-            Vec3f offset =
-                vehicleRight * (followSettings.sideOffset.x * sideMultiplier) +
-                vehicleUp * followSettings.sideOffset.y -
-                vehicleForward * followSettings.sideOffset.z; // Negative = behind
-
-            // Apply fixed distance
-            if (length(offset) > 0.001f)
-            {
-                offset = normalize(offset) * followSettings.distance;
-            }
-            else
-            {
-                offset = Vec3f{0.f, followSettings.distance * 0.5f, -followSettings.distance};
-            }
-
-            Vec3f desiredPosition = vehiclePos + offset;
-
-            // Smooth interpolation
-            float followSpeed = 3.0f * dt;
-            followSpeed = std::clamp(followSpeed, 0.0f, 1.0f);
-            position = position * (1.0f - followSpeed) + desiredPosition * followSpeed;
-            */
-
-            offsetPositionFromTarget(vehiclePos, position - vehiclePos);
-            // lookAtTarget(vehiclePos);
-
+            updateFollowMode(vehiclePos, vehicleVelocity, dt);
             break;
         }
 
-        case Mode::FixedGround:
+        case Mode::Fixed:
         {
-            position = fixedGroundSettings.position;
+            position = fixedSettings.position;
             lookAtTarget(vehiclePos);
             break;
         }
@@ -227,10 +176,10 @@ void Camera::cycleMode() noexcept
             std::print("Camera mode: FOLLOW (tracking vehicle)\n");
             break;
         case Mode::Follow:
-            mode = Mode::FixedGround;
+            mode = Mode::Fixed;
             std::print("Camera mode: FIXED GROUND\n");
             break;
-        case Mode::FixedGround:
+        case Mode::Fixed:
             mode = Mode::Free;
             std::print("Camera mode: FREE (user control)\n");
             break;
@@ -243,16 +192,33 @@ void Camera::initFollowMode(const Vec3f &vehiclePos, const Vec3f &vehicleForward
         return;
 
     // Initialize camera position for follow mode
+    std::print("Initializing FOLLOW camera mode.\n");
+    // Hardcoded for your specific flight path
+    Vec3f flightDir = normalize(Vec3f{1.f, 0.f, 0.02f});  // Mostly east
+    Vec3f sideDir = normalize(cross(flightDir, worldUp)); // Perpendicular
+    Vec3f upDir = Vec3f{0.f, 1.f, 0.f};
 
+    // Position: 25 units to right, 8 units up, 5 units behind
+    Vec3f offset =
+        sideDir * 25.0f +  // Right side
+        upDir * 8.0f +     // Above
+        -flightDir * 5.0f; // Slightly behind
+
+    position = vehiclePos + offset;
+
+    // Look at vehicle
+    lookAtTarget(vehiclePos);
+
+    std::print("Follow camera: Side-on view along flight path\n");
 }
 
-void Camera::initFixedGroundMode(const Vec3f &vehiclePos)
+void Camera::initFixedMode(const Vec3f &vehiclePos)
 {
-    if (mode != Mode::FixedGround)
+    if (mode != Mode::Fixed)
         return;
 
     // Set fixed ground position
-    position = fixedGroundSettings.position;
+    position = fixedSettings.position;
     lookAtTarget(vehiclePos);
 }
 
@@ -333,6 +299,74 @@ void Camera::lookAtTarget(const Vec3f &targetPosition) noexcept
         // std::print("  Yaw: {:.3f} rad\n", yaw);
         // std::print("  Pitch: {:.3f} rad\n", pitch);
     }
+}
+
+void Camera::debugOut(const Vec3f &vehiclePos, const Vec3f &vehicleVelocity)
+{
+    std::print("=== Camera State ===\n");
+    std::print("Camera position = ({:.2f}, {:.2f}, {:.2f})\n",
+               position.x, position.y, position.z);
+    std::print("  Vehicle position: ({:.2f}, {:.2f}, {:.2f})\n",
+               vehiclePos.x, vehiclePos.y, vehiclePos.z);
+    std::print("VehicleVelocity=({:.2f},{:.2f},{:.2f}), length={:.2f}\n",
+               vehicleVelocity.x, vehicleVelocity.y, vehicleVelocity.z,
+               length(vehicleVelocity));
+    std::print("Forward: ({:.3f}, {:.3f}, {:.3f})\n",
+               forward.x, forward.y, forward.z);
+    std::print("Up:      ({:.3f}, {:.3f}, {:.3f})\n",
+               up.x, up.y, up.z);
+    std::print("Right:   ({:.3f}, {:.3f}, {:.3f})\n",
+               right.x, right.y, right.z);
+    std::print("Yaw:   {:.3f} rad ({:.1f}°)\n",
+               yaw, yaw * (180.0f / Config::kFloatPi));
+    std::print("Pitch: {:.3f} rad ({:.1f}°)\n",
+               pitch, pitch * (180.0f / Config::kFloatPi));
+    std::print("Mode: {}\n",
+               (mode == Mode::Free ? "Free" :
+                mode == Mode::Follow ? "Follow" :
+                mode == Mode::Fixed ? "Fixed" : "Unknown"));
+}
+
+void Camera::updateFollowMode(const Vec3f &vehiclePos, const Vec3f &vehicleVelocity, float dt)
+{
+    if (mode != Mode::Follow)
+        return;
+
+    // 1. Calculate flight path direction (horizontal)
+    static Vec3f flightPathDir = normalize(Vec3f{1.f, 0.f, 0.f}); // Default east
+
+    if (length(vehicleVelocity) > 0.1f)
+    {
+        Vec3f horizontalVel = vehicleVelocity;
+        horizontalVel.y = 0.f;
+        if (length(horizontalVel) > 0.01f)
+        {
+            flightPathDir = normalize(horizontalVel);
+        }
+    }
+
+    // 2. Camera position: PERPENDICULAR to flight path (true side-on)
+    Vec3f perpendicularDir = normalize(cross(flightPathDir, worldUp));
+    if (length(perpendicularDir) < 0.001f)
+        perpendicularDir = Vec3f{0.f, 0.f, 1.f}; // Fallback
+
+    // Determine which side (right/left)
+    float sideMultiplier = followSettings.useRightSide ? 1.0f : -1.0f;
+
+    // 3. Calculate position:
+    // - Perpendicular offset for side view
+    // - Slightly behind along flight path
+    // - Above vehicle
+    Vec3f desiredOffset =
+        perpendicularDir * (25.0f * sideMultiplier) + // Side distance
+        Vec3f{0.f, 10.0f, 0.f} +                      // Height
+        -flightPathDir * 5.0f;                        // Slightly behind
+
+    Vec3f desiredPosition = vehiclePos + desiredOffset;
+
+    // 4. Smooth movement
+    float smoothFactor = std::min(followSettings.smoothness * dt * 2.0f, 1.0f);
+    position = mix(position, desiredPosition, smoothFactor);
 }
 
 void Camera::offsetPositionFromTarget(const Vec3f &targetPosition, Vec3f offset) noexcept

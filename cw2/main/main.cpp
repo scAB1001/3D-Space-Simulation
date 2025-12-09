@@ -493,12 +493,12 @@ namespace
 						using enum Camera::Mode;
 						case Follow:
 							state->camera.initFollowMode(
-								state->animation.currentPosition,
-								state->animation.velocity);
+									state->animation.currentPosition,
+									state->animation.velocity);
 							break;
 
-						case FixedGround:
-							state->camera.initFixedGroundMode(
+						case Fixed:
+							state->camera.initFixedMode(
 								state->animation.currentPosition);
 							break;
 
