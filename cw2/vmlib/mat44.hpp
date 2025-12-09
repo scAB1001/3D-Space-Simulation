@@ -1,10 +1,10 @@
 #ifndef MAT44_HPP_E7187A26_469E_48AD_A3D2_63150F05A4CA
 #define MAT44_HPP_E7187A26_469E_48AD_A3D2_63150F05A4CA
-// SOLUTION_TAGS: gl-(ex-[^12]|cw-2|resit)
 
 #include <cmath>
 #include <cassert>
 #include <cstdlib>
+#include "../main/config.hpp"
 
 #include "vec3.hpp"
 #include "vec4.hpp"

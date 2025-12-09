@@ -26,6 +26,13 @@ void beginFrame()
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 }
 
+void resetBindings()
+{
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
 void endFrame()
 {
     // Restore default render state
@@ -33,8 +40,8 @@ void endFrame()
     glEnable(GL_CULL_FACE);
 
     // Cleanup: unbind VAO and program
-    glBindVertexArray(0);
-    glUseProgram(0);
+    resetBindings();
+    // glUseProgram(0);
 }
 
 void setLightingUniforms(
@@ -97,21 +104,55 @@ void drawMesh(
 }
 
 // Convenience wrappers for specific object types
-void drawLandingPad(
-    GLuint vao,
-    GLsizei vertexCount,
-    const Mat44f &projCameraWorld,
-    const Mat33f &normalMatrix)
+// void drawLandingPads(
+//     GLuint vao,
+//     GLsizei vertexCount,
+//     const Mat44f &projCameraWorld,
+//     const Mat33f &normalMatrix)
+// {
+//     // Set material type uniform
+//     glUniform1i(10, 0); // uMaterialType
+
+//     // Set transformation matrices
+//     glUniformMatrix4fv(0, 1, GL_TRUE, projCameraWorld.v);
+//     glUniformMatrix3fv(1, 1, GL_TRUE, normalMatrix.v);
+
+//     // No texture
+//     glBindTexture(GL_TEXTURE_2D, 0);
+
+//     // With texture
+//     // glUniform1i(10, 1);
+//     // glActiveTexture(GL_TEXTURE0);
+//     // glBindTexture(GL_TEXTURE_2D, 1);
+
+//     // Bind VAO and draw
+//     glBindVertexArray(vao);
+
+//     glDrawArrays(GL_TRIANGLES, 0, vertexCount); // Pad
+// }
+
+void drawLandingPads(
+    const std::vector<LandingPad> &pads,
+    const Mat44f &projView)
 {
-    drawMesh(
-        vao,
-        vertexCount,
-        false, // landing pads don't use indices
-        0,     // no index count
-        0,     // materialType = 0 (colored)
-        0,     // no texture
-        projCameraWorld,
-        normalMatrix);
+    glUniform1i(10, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    // Bind VAO once (so that all pads share it)
+    // this works by because all pads use the same (shared) VAO
+    glBindVertexArray(pads[0].vao);
+
+    // Draw each pad by updating its transform, normal matrix and then drawing
+    for (const auto &pad : pads)
+    {
+        Mat44f projCameraWorld = projView * pad.transform;
+        Mat33f normalMatrix = make_uniform_normal(pad.transform);
+
+        glUniformMatrix4fv(0, 1, GL_TRUE, projCameraWorld.v);
+        glUniformMatrix3fv(1, 1, GL_TRUE, normalMatrix.v);
+
+        glDrawArrays(GL_TRIANGLES, 0, pad.vertexCount);
+    }
 }
 
 void drawTerrain(

@@ -148,3 +148,26 @@ void test_all_mesh_functions()
 
     std::print("=== ALL TESTS PASSED ===\n\n");
 }
+
+void testCameraOrientation(Camera &camera, const Vec3f &target)
+{
+    // Method 1: Your current method
+    Vec3f dir = target - camera.getPosition();
+    dir = normalize(dir);
+
+    float yaw1 = std::atan2(dir.x, dir.z);
+    float pitch1 = std::asin(dir.y);
+
+    // Method 2: Alternative
+    float yaw2 = std::atan2(-dir.z, dir.x); // Rotated 90 degrees
+    float pitch2 = std::asin(dir.y);
+
+    // Method 3: Another alternative
+    float yaw3 = std::atan2(dir.z, dir.x);
+    float pitch3 = std::asin(dir.y);
+
+    std::print("Test orientations:\n");
+    std::print("  Method 1 (atan2(x,z)): yaw={:.3f}, pitch={:.3f}\n", yaw1, pitch1);
+    std::print("  Method 2 (atan2(-z,x)): yaw={:.3f}, pitch={:.3f}\n", yaw2, pitch2);
+    std::print("  Method 3 (atan2(z,x)): yaw={:.3f}, pitch={:.3f}\n", yaw3, pitch3);
+}

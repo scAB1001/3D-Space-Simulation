@@ -15,11 +15,14 @@
 #include "loadobj.hpp"
 #include "landing_pad.hpp"
 #include "renderer.hpp"
+#include "camera.hpp"
 #include "test.hpp"
 
 
 void test_vao_creation();
 
 void test_all_mesh_functions();
+
+void testCameraOrientation(Camera &camera, const Vec3f &target);
 
 #endif // TEST_HPP

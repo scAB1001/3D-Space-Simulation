@@ -188,49 +188,6 @@ SimpleMeshData concatenate(SimpleMeshData aM, SimpleMeshData const &aN)
     }
 
     return aM;
-
-    /*
-    // Handle indexed meshes
-    if (aM.hasIndices() || aN.hasIndices())
-    {
-        // For indexed meshes, we need to adjust indices
-        std::size_t offset = aM.positions.size();
-
-        // Concatenate positions, colors, normals, texcoords
-        aM.positions.insert(aM.positions.end(), aN.positions.begin(), aN.positions.end());
-        aM.colors.insert(aM.colors.end(), aN.colors.begin(), aN.colors.end());
-        aM.normals.insert(aM.normals.end(), aN.normals.begin(), aN.normals.end());
-        aM.texcoords.insert(aM.texcoords.end(), aN.texcoords.begin(), aN.texcoords.end());
-
-        // Concatenate indices with offset
-        if (aN.hasIndices())
-        {
-            if (!aM.hasIndices())
-            {
-                // If aM wasn't indexed but aN is, we need to create indices for aM first
-                for (std::size_t i = 0; i < aM.positions.size() - offset; ++i)
-                    aM.indices.push_back(i);
-            }
-
-            // Add aN's indices with offset
-            for (auto index : aN.indices)
-                aM.indices.push_back(static_cast<unsigned int>(index + offset));
-        }
-    }
-    else
-    {
-        // Original non-indexed concatenation
-        aM.positions.insert(aM.positions.end(), aN.positions.begin(), aN.positions.end());
-        aM.normals.insert(aM.normals.end(), aN.normals.begin(), aN.normals.end());
-        aM.texcoords.insert(aM.texcoords.end(), aN.texcoords.begin(), aN.texcoords.end());
-
-        // For non-indexed meshes, also concatenate colors
-        if (!aM.colors.empty() && !aN.colors.empty())
-            aM.colors.insert(aM.colors.end(), aN.colors.begin(), aN.colors.end());
-    }
-
-    return aM;
-    */
 }
 
 SimpleMeshData concatenate_many(std::initializer_list<std::reference_wrapper<const SimpleMeshData>> meshes)
@@ -380,78 +337,6 @@ SimpleMeshData concatenate_many(std::initializer_list<std::reference_wrapper<con
     }
 
     return result;
-
-    /*
-    // Calculate total sizes
-    std::size_t totalPositions = 0;
-    std::size_t totalColors = 0;
-    std::size_t totalNormals = 0;
-    std::size_t totalTexcoords = 0;
-    std::size_t totalIndices = 0;
-
-    bool hasIndices = false;
-
-    // TODO: VERIFY MESH DATA
-
-    for (const auto &mesh_ref : meshes)
-    {
-        const auto &mesh = mesh_ref.get();
-        totalPositions += mesh.positions.size();
-        totalColors += mesh.colors.size();
-        totalNormals += mesh.normals.size();
-        totalTexcoords += mesh.texcoords.size();
-        totalIndices += mesh.indices.size();
-
-        if (mesh.hasIndices())
-            hasIndices = true;
-    }
-
-    // Pre-allocate memory
-    SimpleMeshData result;
-    result.positions.reserve(totalPositions);
-    result.colors.reserve(totalColors);
-    result.normals.reserve(totalNormals);
-    result.texcoords.reserve(totalTexcoords);
-
-    if (hasIndices)
-        result.indices.reserve(totalIndices);
-
-    // Concatenate data with index adjustment
-    std::size_t vertexOffset = 0;
-
-    for (const auto &mesh_ref : meshes)
-    {
-        const auto &mesh = mesh_ref.get();
-
-        // Concatenate vertex data
-        result.positions.insert(result.positions.end(), mesh.positions.begin(), mesh.positions.end());
-
-        if (!mesh.colors.empty())
-            result.colors.insert(result.colors.end(), mesh.colors.begin(), mesh.colors.end());
-
-        if (!mesh.normals.empty())
-            result.normals.insert(result.normals.end(), mesh.normals.begin(), mesh.normals.end());
-        if (!mesh.texcoords.empty())
-            result.texcoords.insert(result.texcoords.end(), mesh.texcoords.begin(), mesh.texcoords.end());
-
-        // Concatenate indices with offset
-        if (mesh.hasIndices())
-        {
-            for (auto index : mesh.indices)
-                result.indices.push_back(static_cast<unsigned int>(index + vertexOffset));
-        }
-        else if (hasIndices)
-        {
-            // If result will be indexed but this mesh isn't, create indices for it
-            for (std::size_t i = 0; i < mesh.positions.size(); ++i)
-                result.indices.push_back(static_cast<unsigned int>(vertexOffset + i));
-        }
-
-        vertexOffset += mesh.positions.size();
-    }
-
-    return result;
-    */
 }
 
 // Buffer and Attribute Object creation functions

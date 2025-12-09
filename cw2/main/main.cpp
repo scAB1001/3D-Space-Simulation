@@ -17,15 +17,23 @@
 #include "../vmlib/mat44.hpp"
 #include "../vmlib/mat33.hpp"
 
+// Definitions
 #include "defaults.hpp"
 #include "config.hpp"
+#include "camera.hpp"
+#include "input_state.hpp"
+#include "animation_state.hpp"
+#include "renderer.hpp"
+
+// Shapes
+#include "simple_mesh.hpp"
 #include "cone.hpp"
 #include "cylinder.hpp"
-#include "simple_mesh.hpp"
+
+// Utilities
+#include "landing_pad.hpp"
 #include "texture.hpp"
 #include "loadobj.hpp"
-#include "landing_pad.hpp"
-#include "renderer.hpp"
 #include "test.hpp"
 
 // TODO: LIST
@@ -38,68 +46,11 @@ namespace
 {
 	constexpr char const *kWindowTitle = "COMP3811 - CW2";
 
-	// Camera struct to hold camera state and methods
-	struct Camera {
-		/* Update camera state
-		 * Radius controls vertical distance from cameraTarget point (here: origin)
-		 * Phi controls horizontal angle around the cameraTarget point
-		 * Theta controls vertical angle from the horizontal plane
-		 */
-
-		// CITE: https://learnopengl.com/Getting-started/Camera
-		Vec3f position = Config::kInitialCameraPos;
-        Vec3f forward = {0.f, 0.f, -1.f};
-		Vec3f right = {1.f, 0.f, 0.f};
-		Vec3f worldUp = {0.f, 1.f, 0.f};
-		Vec3f up = {0.f, 1.f, 0.f};
-
-		float yaw = Config::kInitialCameraYaw; // Left/right rotation (around Y)
-		float pitch = 0.f;					   // Up/down rotation (around X)
-		float speed = Config::kCameraBaseSpeed;
-
-		/* Note: that we normalize the resulting right vector.
-		 * If we wouldn't normalize this vector, the resulting cross product may return
-		 *	differently sized vectors based on the cameraFront variable.
-
-		 * If we would not normalize the vector we would move slow or fast
-		 *	based on the camera's orientation instead of at a consistent movement speed.
-		 */
-		void updateVectors() {
-            forward.x = std::cos(yaw) * std::cos(pitch);
-            forward.y = std::sin(pitch);
-            forward.z = std::sin(yaw) * std::cos(pitch);
-            forward = normalize(forward);
-
-			// Recalculate right and up vectors
-            right = normalize(cross(forward, worldUp));
-
-			// Calculate actual up vector (perpendicular to forward and right)
-            up = normalize(cross(right, forward));
-        }
-
-        Mat44f getViewMatrix() const {
-            return make_look_at(position, position + forward, up);
-        }
-    };
-
-    struct InputState {
-        bool moveForward = false;
-        bool moveBackward = false;
-        bool moveLeft = false;
-        bool moveRight = false;
-        bool moveUp = false;
-        bool moveDown = false;
-        bool mouseLookActive = false;
-		bool cameraActive = true; // TODO: Remove later. For debugging.
-        float lastMouseX = 0.f;
-        float lastMouseY = 0.f;
-        bool firstMouse = true;
-    };
-
-    struct State_ {
+	struct State_ {
         ShaderProgram* prog = nullptr;
         Camera camera;
         InputState input;
+		AnimationState animation;
     };
 
 	// GLFW Callbacks Declarations
@@ -212,11 +163,9 @@ try
 	 * 	The z-component is ignored for texcoords
 	 * For colors: vec3(r, g, b) in buffer -> read as vec3(r, g, b) in shader
 	 */
-
-	// Load main shader program
 	ShaderProgram unifiedProg( {
-		{ GL_VERTEX_SHADER, "assets/cw2/shaders/unified.vert" },
-		{ GL_FRAGMENT_SHADER, "assets/cw2/shaders/unified.frag" }
+		{ GL_VERTEX_SHADER, "assets/cw2/shaders/u.vert" },
+		{ GL_FRAGMENT_SHADER, "assets/cw2/shaders/u.frag" }
 	} );
 	state.prog = &unifiedProg;
 
@@ -225,14 +174,12 @@ try
 	float angle = 0.f;
 
 	//TODO: create VBOs and VAO
-	// 0. Load parlahti
 	auto parlahtiMesh = load_wavefront_obj("assets/cw2/parlahti.obj");
 	GLuint parlahtiVao = create_vao(parlahtiMesh);
 	std::size_t parlahtiVertexCount = parlahtiMesh.vertexCount();
 	std::println("Terrain loaded: {} vertices, material type: {}",
                  parlahtiVertexCount, parlahtiMesh.materialType);
 
-	// Load parlahti texture if available
 	GLuint parlahtiTexture = 0;
 	if (parlahtiMesh.materialType == 1 && parlahtiMesh.hasTexcoords())
 	{
@@ -240,10 +187,9 @@ try
 		parlahtiTexture = load_texture_2d("assets/cw2/L4343A-4k.jpeg");
 	}
 
-	// Create landing pads (instances)
 	std::vector<LandingPad> landingPads = {
-		LandingPad(Config::kLandingPad1Pos, Config::kLandingPadScale),
-		LandingPad(Config::kLandingPad2Pos, Config::kLandingPadScale)
+		LandingPad(Config::World::kLandingPad1Pos, Config::World::kLandingPadScale),
+		LandingPad(Config::World::kLandingPad2Pos, Config::World::kLandingPadScale)
 	};
 
 	/* CUBE */
@@ -253,33 +199,13 @@ try
 	GLuint cubeVao = create_vao(cubeMesh);
 	std::size_t cubeVertexCount = cubeMesh.vertexCount();
 
-	/* ARROWS */
-	auto baseCylinder = make_batched_indexed_cylinder(true, 16, {0.2f, 0.8f, 0.2f});
-	auto baseCone = make_batched_indexed_cone(true, 16, {0.8f, 0.2f, 0.2f}, make_translation(Vec3f{1.f, 0.f, 0.f}) * make_scaling(0.5f, 0.5f, 0.5f));
-
-	// 1. Test concatenate()
-	auto testArrowMesh_concat = concatenate(baseCylinder, baseCone);
-	testArrowMesh_concat.materialType = 0; // Colored
-	GLuint testArrowVao_concat = create_vao(testArrowMesh_concat);
-	std::size_t testArrowVertexCount_concat = testArrowMesh_concat.vertexCount();
-
-	// 2. Test concatenate_many()
-	auto testArrowMesh_concat_many = concatenate_many({baseCylinder, baseCone});
-	testArrowMesh_concat_many.materialType = 0; // Colored
-	GLuint testArrowVao_concat_many = create_vao(testArrowMesh_concat_many);
-	std::size_t testArrowVertexCount_concat_many = testArrowMesh_concat_many.vertexCount();
-
-	// 3. Test create_vao_from_meshes()
-	GLuint testArrowVao_from_meshes = create_vao_from_meshes({baseCylinder, baseCone});
-	std::size_t testArrowVertexCount_from_meshes = baseCylinder.vertexCount() + baseCone.vertexCount();
-
 	// -------------- Run tests --------------
 	// test_all_mesh_functions();
 	// test_vao_creation();
 
-	// Reset state
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	// Reset state. This unbinds any VAO or VBO we may have left bound.
+	// Unbind ebo too (to be safe), do this by calling
+	resetBindings();
 
 	// Main loop
 	while (!glfwWindowShouldClose(window))
@@ -323,54 +249,80 @@ try
 		// Update camera state
 		state.camera.updateVectors();
 
-		// Handle camera movement
-		// TODO: Remove cameraActive later. For debugging.
-		if (state.input.mouseLookActive && state.input.cameraActive) {
-            float moveSpeed = state.camera.speed * dt;
+		// Handle camera movement in free mode only
+		if (state.input.mouseLookActive && state.camera.isMode(Camera::Mode::Free))
+		{
+			if (state.input.moveForward) state.camera.moveForward(dt);
+			if (state.input.moveBackward) state.camera.moveBackward(dt);
+			if (state.input.moveLeft) state.camera.moveLeft(dt);
+			if (state.input.moveRight) state.camera.moveRight(dt);
+			if (state.input.moveUp) state.camera.moveUp(dt);
+			if (state.input.moveDown) state.camera.moveDown(dt);
 
-            if (state.input.moveForward) state.camera.position += state.camera.forward * moveSpeed;
-            if (state.input.moveBackward) state.camera.position -= state.camera.forward * moveSpeed;
-            if (state.input.moveLeft) state.camera.position -= state.camera.right * moveSpeed;
-            if (state.input.moveRight) state.camera.position += state.camera.right * moveSpeed;
-            if (state.input.moveUp) state.camera.position += state.camera.up * moveSpeed;
-            if (state.input.moveDown) state.camera.position -= state.camera.up * moveSpeed;
+			// Clamp position
+			state.camera.clampVertical(Config::World::kMinCameraHeight, Config::World::kMaxCameraHeight);
+			state.camera.clampToWorldBounds();
+		}
 
-            // Clamp vertical movement only
-            state.camera.position.y = std::clamp(state.camera.position.y, Config::kSeaLevel + 0.5f, 50.f);
+		// Update animation state
+		if (state.animation.isAnimating && !state.animation.isPaused)
+		{
+			state.animation.update(dt);
 
-			// Clamp position to within parlahti bounds
-			state.camera.position.x = std::clamp(state.camera.position.x, -Config::kWorldBorder, Config::kWorldBorder);
-			state.camera.position.z = std::clamp(state.camera.position.z, -Config::kWorldBorder, Config::kWorldBorder);
-        }
+			state.camera.updateForAnimation(state.animation.currentPosition,
+											state.animation.velocity, dt);
+
+			// Periodic debug output
+			static float lastDebugTime = 0.0f;
+			state.animation.printDebugOutput(lastDebugTime);
+
+			// Check if animation is complete
+			if (state.animation.animationTime >= state.animation.kTotalAnimationTime)
+			{
+				state.animation.isAnimating = false;
+				state.animation.currentPosition = state.animation.endPosition;
+				state.animation.velocity = Config::kZeroVec3;
+				state.animation.currentSpeed = 0.0f;
+
+				std::print("Animation COMPLETE\n");
+			}
+		}
+
+		// Update camera state
+		state.camera.updateVectors();
 
 		// ------------- Setup camera pipeline -------------
-		// TODO: Modularise this later
+		// TODO: Modularize this later
 		// Projection matrix
-		Mat44f projection = make_perspective_projection(Config::kFOV, aspectRatio, Config::kNearPlane, Config::kFarPlane);
+		Mat44f projection = make_perspective_projection(Config::Rendering::kFOV, aspectRatio, Config::Rendering::kNearPlane, Config::Rendering::kFarPlane);
 
 		// View matrix
 		Mat44f view = state.camera.getViewMatrix();
 		Mat44f projView = projection * view;
 
 		// Model matrices
-		/* TEST ARROWS*/
-		// 1. Test concatenate()
-		Mat44f model2world_testArrow_concat = make_rotation_y(angle) * make_translation(Vec3f{-12.f, 0.f, 0.f});
-		Mat44f projCameraWorld_testArrow_concat = make_proj_camera_world(projView, model2world_testArrow_concat);
-		Mat33f normalMatrix_testArrow_concat = make_uniform_normal(model2world_testArrow_concat);
-
-		// 2. Test concatenate_many()
-		Mat44f model2world_arrow_concat_many = make_translation(Vec3f{-8.f, 0.f, 0.f});
-		Mat44f projCameraWorld_arrow_concat_many = make_proj_camera_world(projView, model2world_arrow_concat_many);
-		Mat33f normalMatrix_arrow_concat_many = make_uniform_normal(model2world_arrow_concat_many);
-
-		// 3. Test create_vao_from_meshes()
-		Mat44f model2world_arrow_from_meshes = make_rotation_y(-angle) * make_translation(Vec3f{-4.f, 0.f, 0.f});
-		Mat44f projCameraWorld_arrow_from_meshes = make_proj_camera_world(projView, model2world_arrow_from_meshes);
-		Mat33f normalMatrix_arrow_from_meshes = make_uniform_normal(model2world_arrow_from_meshes);
-
 		/* CUBE */
-		Mat44f model2world_cube = make_rotation_y(angle) * make_translation(Vec3f{0.f, 2.f, 0.f});
+		// Calculate cube transform
+		Mat44f model2world_cube;
+		if (state.animation.isAnimating ||
+			(state.animation.animationTime >= state.animation.kTotalAnimationTime &&
+			 state.animation.animationTime > 0.0f))
+		{
+			Mat44f rotation = calculate_rocket_rotation(state.animation);
+
+			// Combine translation and rotation
+			model2world_cube = make_translation(state.animation.currentPosition) *
+							   make_scaling(0.5f, 0.5f, 0.5f) *
+							   rotation;
+		}
+		else
+		{
+			// Static position at start (pre-launch)
+			model2world_cube = make_translation(state.animation.startPosition) *
+							   make_scaling(0.5f, 0.5f, 0.5f) *
+							   make_rotation_y(angle * 0.3f);
+		}
+
 		Mat44f projCameraWorld_cube = make_proj_camera_world(projView, model2world_cube);
 		Mat33f normalMatrix_cube = make_uniform_normal(model2world_cube);
 
@@ -383,9 +335,9 @@ try
 
 		// ------ Set lighting uniforms (shared by all objects) ------
 		setLightingUniforms(
-			Config::kLightDir,
-			Config::kLightDiffuse,
-			Config::kSceneAmbient
+			Config::Rendering::kLightDir,
+			Config::Rendering::kLightDiffuse,
+			Config::Rendering::kSceneAmbient
 		);
 
 		// ----- Render Terrain -----
@@ -398,43 +350,7 @@ try
 		);
 
 		// ----- Render Landing Pads (INSTANCED DRAWING) -----
-		for (const auto &pad : landingPads)
-		{
-			Mat44f projCameraWorld_pad = projView * pad.transform;
-			Mat33f normalMatrix_pad = make_uniform_normal(pad.transform);
-
-			drawLandingPad(
-				pad.vao,
-				pad.vertexCount,
-				projCameraWorld_pad,
-				normalMatrix_pad
-			);
-		}
-
-		// ----- Render Test Arrows -----
-		drawColoredObject(
-			testArrowVao_concat,
-			testArrowVertexCount_concat,
-			testArrowMesh_concat.indexCount(),
-			projCameraWorld_testArrow_concat,
-			normalMatrix_testArrow_concat
-		);
-
-		drawColoredObject(
-			testArrowVao_concat_many,
-			testArrowVertexCount_concat_many,
-			testArrowMesh_concat_many.indexCount(),
-			projCameraWorld_arrow_concat_many,
-			normalMatrix_arrow_concat_many
-		);
-
-		drawColoredObject(
-			testArrowVao_from_meshes,
-			testArrowVertexCount_from_meshes,
-			baseCylinder.indexCount() + baseCone.indexCount(),
-			projCameraWorld_arrow_from_meshes,
-			normalMatrix_arrow_from_meshes
-		);
+		drawLandingPads(landingPads, projView);
 
 		// ----- Render Cube -----
 		drawColoredObject(
@@ -458,10 +374,6 @@ try
 	state.prog = nullptr;
 
 	// TODO: additional cleanup
-	glDeleteVertexArrays(1, &testArrowVao_concat);
-	glDeleteVertexArrays(1, &testArrowVao_concat_many);
-	glDeleteVertexArrays(1, &testArrowVao_from_meshes);
-
 	glDeleteVertexArrays(1, &parlahtiVao);
 	glDeleteVertexArrays(1, &cubeVao);
 
@@ -502,11 +414,16 @@ namespace
 		{
 			case GLFW_KEY_ESCAPE:
 				if (aAction == GLFW_PRESS)
+				{
+					// TODO: Remove later. For debugging.
+					std::println("Exiting...");
 					glfwSetWindowShouldClose(aWindow, GLFW_TRUE);
+				}
 				break;
 
 			case GLFW_KEY_R:
 				if (aAction == GLFW_PRESS && state->prog)
+				{
 					try
 					{
 						state->prog->reload();
@@ -518,6 +435,17 @@ namespace
 						std::print(stderr, "{}\n", eErr.what());
 						std::print(stderr, "Keeping old shader.\n");
 					}
+
+					// Reset animation
+					state->animation.reset();
+
+					// Reset camera to Free mode but do not change it's initial position
+					state->camera.setMode(Camera::Mode::Free);
+					state->camera.updateVectors();
+
+					std::print("Animation RESET - Vehicle returned to launch pad\n");
+					std::print("Camera mode RESET to FREE\n");
+				}
 				break;
 
 			case GLFW_KEY_W: state->input.moveForward = isPressed; break;
@@ -529,67 +457,102 @@ namespace
 
 			case GLFW_KEY_LEFT_SHIFT:
 			case GLFW_KEY_RIGHT_SHIFT:
-				state->camera.speed = isPressed ? Config::kCameraBaseSpeed * 5.f : Config::kCameraBaseSpeed;
-				// TODO: Remove later. For debugging.
-				// std::print("Shift pressed\n");
-
-				// if (GLFW_RELEASE == aAction)
-				// 	std::print("Shift released\n");
+				state->input.shiftPressed = isPressed;
+				state->camera.setSpeed(isPressed ? Config::Camera::kBaseSpeed * Config::Camera::kSpeedFastMultiplier : Config::Camera::kBaseSpeed);
 				break;
 
 			case GLFW_KEY_LEFT_CONTROL:
             case GLFW_KEY_RIGHT_CONTROL:
-                state->camera.speed = isPressed ? Config::kCameraBaseSpeed * 0.2f : Config::kCameraBaseSpeed;
-
-				// TODO: Remove later. For debugging.
-				// std::print("Ctrl pressed\n");
-
-				// if (GLFW_RELEASE == aAction)
-				// 	std::print("Ctrl released\n");
+				state->input.controlPressed = isPressed;
+				state->camera.setSpeed(isPressed ? Config::Camera::kBaseSpeed * Config::Camera::kSpeedSlowMultiplier : Config::Camera::kBaseSpeed);
 				break;
 
-			case GLFW_KEY_SPACE: // TODO: Remove later. For debugging.
-				if (aAction == GLFW_PRESS)
-				{
-					state->input.cameraActive = !state->input.cameraActive;
-					std::print("Camera movement: {}\n", state->input.cameraActive ? "ENABLED" : "DISABLED");
-				}
-				break;
-
-			case GLFW_KEY_C: // TODO: Remove later. For debugging.
+			// TODO: Remove later. For debugging.
+			case GLFW_KEY_P:
 				if (aAction == GLFW_PRESS)
 				{
 					// Position
-					std::print("Camera position: ({}, {}, {})\n",
-							   state->camera.position.x,
-							   state->camera.position.y,
-							   state->camera.position.z);
+					Vec3f pos = state->camera.getPosition();
+					state->animation.printCoordinates(pos);
+
 					// Orientation
-					std::print("Camera yaw: {} radians, pitch: {} radians\n",
-							   state->camera.yaw,
-							   state->camera.pitch);
-
-					// Convert to degrees for easier understanding
-					float yawDeg = state->camera.yaw * (180.f / Config::kFloatPi);
-					float pitchDeg = state->camera.pitch * (180.f / Config::kFloatPi);
-
-					// 2 decimal places
-					yawDeg = std::round(yawDeg * 100.f) / 100.f;
-					pitchDeg = std::round(pitchDeg * 100.f) / 100.f;
-					std::print("Camera yaw: {} degrees, pitch: {} degrees\n",
-							   yawDeg,
-							   pitchDeg);
+					float yaw = state->camera.getYaw();
+					float pitch = state->camera.getPitch();
+					std::print("Camera yaw: {:2f} radians, pitch: {:2f} radians\n", yaw, pitch);
 				}
 				break;
 
-			case GLFW_KEY_G:
+			case GLFW_KEY_C:
 				if (aAction == GLFW_PRESS)
 				{
-					// Reset camera to initial position and orientation
-					state->camera.position = Vec3f{-72.799965, -0.96877396, 10.692477};
-					state->camera.yaw = 1.2900052f;
-					state->camera.pitch = -0.06900009f;
+					state->camera.cycleMode();
+					auto newMode = state->camera.getMode();
+
+					switch (newMode)
+					{
+						using enum Camera::Mode;
+						case Follow:
+							state->camera.initFollowMode(
+									state->animation.currentPosition,
+									state->animation.velocity);
+							break;
+
+						case Fixed:
+							state->camera.initFixedMode(
+								state->animation.currentPosition);
+							break;
+
+						case Free:
+						default:
+							break;
+					}
 				}
+				break;
+
+			case GLFW_KEY_F:
+				if (aAction == GLFW_PRESS)
+				{
+					if (!state->animation.isAnimating)
+					{
+						state->animation.start();
+					}
+					else
+					{
+						state->animation.togglePause();
+					}
+				}
+				break;
+
+			// TODO: Remove later. For debugging.
+			case GLFW_KEY_G: // Faces vehicle from current position and orientation
+				if (aAction == GLFW_PRESS)
+				{
+					/* TESTING FOLLOW CAMERA */
+					// Calculate offset position to cube.
+					// update position to be in-line with the cube but at a fixed distance
+					Vec3f toCube = state->animation.currentPosition - state->camera.getPosition();
+
+					// Follow distance should be a fixed distance of vec3f length
+					toCube = normalize(toCube) * length(Vec3f{20.f, 5.f, 0.f});
+					Vec3f newCamPos = state->animation.currentPosition - toCube;
+					state->camera.setPosition(newCamPos);
+
+					/* TESTING FIXED GROUND CAMERA
+					// state->camera.setPosition(Vec3f{-37.45f, 17.90f, -48.04f});
+					// 	// First, debug current state
+					// state->camera.debugOrientation(state->animation.currentPosition);
+
+					// // Then look at target
+					// state->camera.lookAtTarget(state->animation.currentPosition);
+
+					// // Debug after adjustment
+					// std::print("\nAfter lookAtTarget:\n");
+					// state->camera.debugOrientation(state->animation.currentPosition);
+
+					// testCameraOrientation(state->camera, state->animation.currentPosition);
+					*/
+				}
+
 				break;
 
 			case GLFW_KEY_J: // TODO: Remove later. For debugging.
@@ -598,11 +561,11 @@ namespace
 					// Jump between the two landing pads
 					static size_t currentPadIndex = 1;
 					Vec2f orientation{-2.43f, -0.088f};
-					Vec3f landingPadPos = (currentPadIndex == 1) ? Config::kLandingPad1Pos : Config::kLandingPad2Pos;
+					Vec3f landingPadPos = (currentPadIndex == 1) ? Config::World::kLandingPad1Pos : Config::World::kLandingPad2Pos;
 
-					state->camera.position = landingPadPos + Vec3f{0.f, 0.5f, 0.f};
-					state->camera.yaw = orientation.x;
-					state->camera.pitch = orientation.y;
+					state->camera.setPosition(landingPadPos + Vec3f{0.f, 0.5f, 0.f});
+					state->camera.setYaw(orientation.x);
+					state->camera.setPitch(orientation.y);
 
 					std::print("Jumped to Landing Pad {} at position: ({}, {}, {})\n",
 							   currentPadIndex,
@@ -626,16 +589,25 @@ namespace
 
 		if (aButton == GLFW_MOUSE_BUTTON_RIGHT && aAction == GLFW_PRESS)
 		{
-			// Toggle mouse look mode, hide cursor
-			state->input.mouseLookActive = !state->input.mouseLookActive;
-			glfwSetInputMode(aWindow, GLFW_CURSOR,
-				state->input.mouseLookActive ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
-
-			if (state->input.mouseLookActive)
+			if (!state->input.mouseLookActive)
 			{
-				state->input.firstMouse = true;
-				// TODO: Remove later. For debugging.
-				// std::print("Mouse Look: {}\n", state->input.mouseLookActive ? "ENABLED" : "DISABLED");
+				// Activating mouse look
+				double mouseX, mouseY;
+				glfwGetCursorPos(aWindow, &mouseX, &mouseY);
+
+				state->input.activateMouseLook(static_cast<float>(mouseX),
+											   static_cast<float>(mouseY));
+
+				// Hide cursor and capture it
+				glfwSetInputMode(aWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+				std::print("Mouse look ENABLED\n");
+			}
+			else
+			{
+				// Deactivating mouse look and showing cursor
+				state->input.deactivateMouseLook();
+				glfwSetInputMode(aWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+				std::print("Mouse look DISABLED\n");
 			}
 		}
 	}
@@ -648,35 +620,28 @@ namespace
 		// Handle mouse movement for camera orientation
 		if (state->input.firstMouse)
 		{
-			state->input.lastMouseX = static_cast<float>(aX);
-			state->input.lastMouseY = static_cast<float>(aY);
+			// Use initial mouse position and don't apply rotation on this first frame
+			state->input.updateMousePosition(static_cast<float>(aX), static_cast<float>(aY));
 			state->input.firstMouse = false;
+			return;
 		}
 
 		// Calculate the mouse's offset since the last frame.
 		float xOffset = static_cast<float>(aX) - state->input.lastMouseX;
 		float yOffset = state->input.lastMouseY - static_cast<float>(aY); // Reversed
 
-		state->input.lastMouseX = static_cast<float>(aX);
-		state->input.lastMouseY = static_cast<float>(aY);
+		// Update last positions
+		state->input.updateMousePosition(static_cast<float>(aX), static_cast<float>(aY));
 
 		// Apply sensitivity
-		xOffset *= Config::kCameraSensitivity;
-		yOffset *= Config::kCameraSensitivity;
+		xOffset *= Config::Camera::kSensitivity;
+		yOffset *= Config::Camera::kSensitivity;
 
-		// Update yaw and pitch
-		state->camera.yaw += xOffset;
-		state->camera.pitch += yOffset;
-
-		// Constrain pitch to avoid gimbal lock ~89 degrees or pi/2.1 radians
-		constexpr float maxPitch = Config::kFloatPi / 2.1f;
-		state->camera.pitch = std::clamp(state->camera.pitch, -maxPitch, maxPitch);
-
-		// Normalize yaw to the range [-pi, pi] for numerical stability
-		if (state->camera.yaw > Config::kFloatPi)
-			state->camera.yaw -= 2.f * Config::kFloatPi;
-		if (state->camera.yaw < -Config::kFloatPi)
-			state->camera.yaw += 2.f * Config::kFloatPi;
+		// Rotate camera if there's significant movement (avoid micro-jitter)
+		if (std::abs(xOffset) > Config::Camera::kDeadZone || std::abs(yOffset) > Config::Camera::kDeadZone)
+		{
+			state->camera.rotate(xOffset, yOffset);
+		}
 	}
 
 }

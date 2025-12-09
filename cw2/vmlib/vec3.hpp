@@ -1,10 +1,10 @@
 #ifndef VEC3_HPP_5710DADF_17EF_453C_A9C8_4A73DC66B1CD
 #define VEC3_HPP_5710DADF_17EF_453C_A9C8_4A73DC66B1CD
-// SOLUTION_TAGS: gl-(ex-[^12]|cw-2|resit)
 
 #include <cmath>
 #include <cassert>
 #include <cstdlib>
+#include <print> // TODO: Remove
 
 struct Vec3f
 {
@@ -152,6 +152,87 @@ Vec3f normalize( Vec3f aVec ) noexcept
 {
 	auto const l = length( aVec );
 	return aVec / l;
+}
+
+inline
+Vec3f calculate_bezier_position(float t,
+								const Vec3f &p0,
+								const Vec3f &p1,
+								const Vec3f &p2,
+								const Vec3f &p3) noexcept
+{
+	// Cubic Bezier curve: B(t) = (1-t)³P₀ + 3(1-t)²tP₁ + 3(1-t)t²P₂ + t³P₃
+	float u = 1.0f - t;
+	float uu = u * u;
+	float uuu = uu * u;
+	float tt = t * t;
+	float ttt = tt * t;
+
+	return uuu * p0 +
+		   3.0f * uu * t * p1 +
+		   3.0f * u * tt * p2 +
+		   ttt * p3;
+}
+
+// Helper function implementation
+inline Vec3f calculate_optimal_side_position(const Vec3f &vehiclePos,
+                                             const Vec3f &flightDir,
+                                             float sideDistance,
+                                             float height,
+                                             float rearDistance,
+                                             bool useRightSide)
+{
+    // Ensure flight direction is valid
+    Vec3f normalizedFlightDir = length(flightDir) > 0.001f ? normalize(flightDir) : Vec3f{1.f, 0.f, 0.f};
+
+    // Calculate perpendicular direction (side view)
+    Vec3f sideDir = normalize(cross(normalizedFlightDir, Vec3f{0.f, 1.f, 0.f}));
+    if (length(sideDir) < 0.001f)
+        sideDir = Vec3f{0.f, 0.f, 1.f}; // Fallback
+
+    // Apply side multiplier
+    float sideMultiplier = useRightSide ? 1.0f : -1.0f;
+
+    // Calculate offset: side + height + slightly behind
+    Vec3f offset =
+        sideDir * (sideDistance * sideMultiplier) +
+        Vec3f{0.f, height, 0.f} +
+        -normalizedFlightDir * rearDistance;
+
+    return vehiclePos + offset;
+}
+
+
+inline
+Vec3f mix(const Vec3f &a, const Vec3f &b, float t) noexcept
+{
+	// DEBUG
+	if (!std::isfinite(a.x) || !std::isfinite(a.y) || !std::isfinite(a.z))
+	{
+		std::print("WARNING: mix() got NaN in a\n");
+		return b;
+	}
+	if (!std::isfinite(b.x) || !std::isfinite(b.y) || !std::isfinite(b.z))
+	{
+		std::print("WARNING: mix() got NaN in b\n");
+		return a;
+	}
+	if (!std::isfinite(t) || t < 0.0f || t > 1.0f)
+	{
+		std::print("WARNING: mix() got invalid t={}\n", t);
+		return b;
+	}
+
+	Vec3f result = a * (1.0f - t) + b * t;
+
+	if (!std::isfinite(result.x) || !std::isfinite(result.y) || !std::isfinite(result.z))
+	{
+		std::print("ERROR: mix() produced NaN: a=({},{},{}), b=({},{},{}), t={}\n",
+				   a.x, a.y, a.z, b.x, b.y, b.z, t);
+		return b;
+	}
+
+	return result;
 }
 
 #endif // VEC3_HPP_5710DADF_17EF_453C_A9C8_4A73DC66B1CD

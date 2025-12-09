@@ -8,7 +8,6 @@
 #include "simple_mesh.hpp"
 
 #include "../vmlib/vec3.hpp"
-#include "../vmlib/mat33.hpp"
 #include "../vmlib/mat44.hpp"
 
 SimpleMeshData make_cylinder(
