@@ -6,6 +6,14 @@
 
 struct InputState
 {
+    // TODO: Remove later. For debugging.
+    bool trackingEnabled = false;
+    void toggleTracking() noexcept
+    {
+        trackingEnabled = !trackingEnabled;
+        std::print("Tracking camera {}\n", trackingEnabled ? "ENABLED" : "DISABLED");
+    }
+
     // Movement flags
     bool moveForward = false;
     bool moveBackward = false;

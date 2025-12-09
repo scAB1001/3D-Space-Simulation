@@ -70,6 +70,27 @@ namespace
 	};
 }
 
+void applySimpleTracking(Camera &camera, const Vec3f &targetPosition)
+{
+	// Get current camera position
+	Vec3f cameraPos = camera.getPosition();
+
+	// Calculate direction to target
+	Vec3f direction = targetPosition - cameraPos;
+
+	if (length(direction) > 0.001f)
+	{
+		direction = normalize(direction);
+
+		// Calculate yaw and pitch from direction
+		float yaw = atan2(direction.x, direction.z);
+		float pitch = asin(direction.y);
+
+		// Set camera orientation
+		camera.setYaw(yaw);
+		camera.setPitch(pitch);
+	}
+}
 
 int main()
 try
@@ -299,8 +320,8 @@ try
 			state.animation.update(dt);
 
 			// Update camera based on current mode
-			state.camera.updateForAnimation(state.animation.currentPosition,
-											state.animation.velocity, dt);
+			// state.camera.updateForAnimation(state.animation.currentPosition,
+			// 								state.animation.velocity, dt);
 
 			// Periodic debug output
 			static float lastDebugTime = 0.0f;
@@ -329,120 +350,28 @@ try
 			}
 		}
 
-		/* Update animation state
-		if (state.animation.isAnimating && !state.animation.isPaused)
+		if (state.input.trackingEnabled)
 		{
-			state.animation.animationTime += dt;
+			// Simple tracking: camera looks at vehicle from its current position
+			Vec3f cameraToVehicle = state.animation.currentPosition - state.camera.getPosition();
 
-			// Store previous position for velocity calculation
-			state.animation.previousPosition = state.animation.currentPosition;
-
-			// Calculate normalized time and current phase
-			float normalizedT = state.animation.getNormalizedTime();
-			AnimationState::Phase currentPhase = state.animation.getCurrentPhase(normalizedT);
-			float phaseProgress = 0.0f;
-
-			// Update phase if it changed
-			static AnimationState::Phase lastPhase = AnimationState::Phase::Launch;
-			if (currentPhase != state.animation.phase)
+			if (length(cameraToVehicle) > 0.001f)
 			{
-				lastPhase = state.animation.phase;
-				state.animation.phase = currentPhase;
+				cameraToVehicle = normalize(cameraToVehicle);
 
-				// Log phase transition
-				std::print("[Flight] Transition: {} -> {} at {:.2f}s\n",
-						   state.animation.getPhaseNameSpecific(lastPhase),
-						   state.animation.getPhaseNameSpecific(currentPhase),
-						   state.animation.animationTime);
+				// Calculate yaw and pitch from direction vector
+				float yaw = atan2(cameraToVehicle.x, cameraToVehicle.z);
+				float pitch = asin(cameraToVehicle.y);
+
+				// Apply constraints
+				constexpr float maxPitch = Config::kFloatPi / 2.1f;
+				pitch = std::clamp(pitch, -maxPitch, maxPitch);
+
+				// Set camera orientation
+				state.camera.setYaw(yaw);
+				state.camera.setPitch(pitch);
 			}
-
-			// Get progress within current phase
-			phaseProgress = state.animation.getPhaseProgress();
-
-			// Calculate speed based on current phase
-			state.animation.currentSpeed = calculate_rocket_speed(
-				state.animation.phase,
-				phaseProgress,
-				state.animation.currentSpeed,
-				state.animation.kAccelerationRate,
-				state.animation.kMaxSpeed);
-
-			// Calculate new position
-			state.animation.currentPosition = calculate_rocket_position(
-				state.animation.animationTime,
-				state.animation.kTotalAnimationTime,
-				state.animation.startPosition,
-				state.animation.endPosition,
-				state.animation.currentSpeed,
-				state.animation.kAccelerationRate,
-				state.animation.kMaxSpeed,
-				state.animation // Pass the entire state for precomputed values
-			);
-
-			// Track maximum height reached
-			float currentHeight = state.animation.currentPosition.y - state.animation.startPosition.y;
-			if (currentHeight > state.animation.maxHeightReached)
-			{
-				state.animation.maxHeightReached = currentHeight;
-
-				// Debug output for height monitoring
-				if (state.animation.maxHeightReached > state.animation.kMaxAllowedHeight * 0.9f)
-				{
-					std::print("[Height] {}: {:.1f} units (Max: {:.1f})\n",
-							   state.animation.getPhaseName(),
-							   currentHeight,
-							   state.animation.maxHeightReached);
-				}
-			}
-
-			// Enforce height limit (safety clamp)
-			if (currentHeight > AnimationState::kMaxAllowedHeight)
-			{
-				state.animation.currentPosition.y = state.animation.startPosition.y +
-													AnimationState::kMaxAllowedHeight;
-			}
-
-			// Calculate velocity
-			if (dt > 0.001f)
-			{
-				state.animation.velocity = (state.animation.currentPosition -
-											state.animation.previousPosition) /
-										   dt;
-			}
-
-			// Update camera based on current mode
-			state.camera.updateForAnimation(state.animation.currentPosition,
-											state.animation.velocity, dt);
-
-			// Periodic debug output
-			static float lastDebugTime = 0.0f;
-			if (state.animation.animationTime - lastDebugTime > 2.0f)
-			{
-				std::print("[Flight] {} | Time: {:.2f}s | Altitude: {:.2f} | Speed: {:.2f} | Phase Progress: {:.2f}%\n",
-						   state.animation.getPhaseName(),
-						   state.animation.animationTime,
-						   currentHeight,
-						   state.animation.currentSpeed,
-						   phaseProgress * 100.0f);
-				lastDebugTime = state.animation.animationTime;
-			}
-
-			// Check if animation is complete
-			if (state.animation.animationTime >= state.animation.kTotalAnimationTime)
-			{
-				state.animation.isAnimating = false;
-				state.animation.currentPosition = state.animation.endPosition;
-				state.animation.velocity = Config::kZeroVec3;
-				state.animation.currentSpeed = 0.0f;
-
-				std::print("Animation COMPLETE\n");
-				std::print("  Final phase: {}\n", state.animation.getPhaseName());
-				std::print("  Max height: {:.1f} units (Limit: {:.1f})\n",
-						   state.animation.maxHeightReached,
-						   AnimationState::kMaxAllowedHeight);
-				std::print("  Successfully landed at Pad 2\n");
-			}
-		}*/
+		}
 
 		// Update camera state
 		state.camera.updateVectors();
@@ -457,21 +386,6 @@ try
 		Mat44f projView = projection * view;
 
 		// Model matrices
-		/* TEST ARROWS*/
-		// 1. Test concatenate()
-		Mat44f model2world_testArrow_concat = make_rotation_y(angle) * make_translation(Vec3f{-12.f, 0.f, 0.f});
-		Mat44f projCameraWorld_testArrow_concat = make_proj_camera_world(projView, model2world_testArrow_concat);
-		Mat33f normalMatrix_testArrow_concat = make_uniform_normal(model2world_testArrow_concat);
-
-		// 2. Test concatenate_many()
-		Mat44f model2world_arrow_concat_many = make_translation(Vec3f{-8.f, 0.f, 0.f});
-		Mat44f projCameraWorld_arrow_concat_many = make_proj_camera_world(projView, model2world_arrow_concat_many);
-		Mat33f normalMatrix_arrow_concat_many = make_uniform_normal(model2world_arrow_concat_many);
-
-		// 3. Test create_vao_from_meshes()
-		Mat44f model2world_arrow_from_meshes = make_rotation_y(-angle) * make_translation(Vec3f{-4.f, 0.f, 0.f});
-		Mat44f projCameraWorld_arrow_from_meshes = make_proj_camera_world(projView, model2world_arrow_from_meshes);
-		Mat33f normalMatrix_arrow_from_meshes = make_uniform_normal(model2world_arrow_from_meshes);
 
 		/* CUBE */
 		// Calculate cube transform
@@ -494,47 +408,6 @@ try
 							make_scaling(0.5f, 0.5f, 0.5f) *
 							make_rotation_y(angle * 0.3f);
 		}
-		/*
-		Mat44f cubeTransform;
-		if (state.animation.isAnimating ||
-			(state.animation.animationTime >= state.animation.kTotalAnimationTime &&
-			 state.animation.animationTime > 0.0f))
-		{
-			// Animated or completed animation
-			Mat44f rotation;
-
-			if (state.animation.isAnimating)
-			{
-				// Calculate rotation based on current flight phase
-				float phaseProgress = state.animation.getPhaseProgress();
-
-				rotation = calculate_rocket_rotation(
-					state.animation.currentPosition,
-					state.animation.previousPosition,
-					state.animation.velocity,
-					state.animation.phase,
-					phaseProgress,
-					state.animation // Pass state for precomputed values
-				);
-			}
-			else
-			{
-				// Completed animation - upright on landing pad
-				rotation = kIdentity44f; // Perfectly vertical
-			}
-
-			// Combine translation and rotation
-			cubeTransform = make_translation(state.animation.currentPosition) *
-							make_scaling(0.5f, 0.5f, 0.5f) *
-							rotation;
-		}
-		else
-		{
-			// Static position at start (pre-launch)
-			cubeTransform = make_translation(state.animation.startPosition) *
-							make_scaling(0.5f, 0.5f, 0.5f) *
-							make_rotation_y(angle * 0.3f); // Gentle idle rotation
-		}*/
 
 		// Mat44f model2world_cube = make_rotation_y(angle) * make_translation(Vec3f{0.f, 2.f, 0.f});
 		// Mat44f projCameraWorld_cube = make_proj_camera_world(projView, model2world_cube);
@@ -579,31 +452,6 @@ try
 			);
 		}
 
-		// ----- Render Test Arrows -----
-		drawColoredObject(
-			testArrowVao_concat,
-			testArrowVertexCount_concat,
-			testArrowMesh_concat.indexCount(),
-			projCameraWorld_testArrow_concat,
-			normalMatrix_testArrow_concat
-		);
-
-		drawColoredObject(
-			testArrowVao_concat_many,
-			testArrowVertexCount_concat_many,
-			testArrowMesh_concat_many.indexCount(),
-			projCameraWorld_arrow_concat_many,
-			normalMatrix_arrow_concat_many
-		);
-
-		drawColoredObject(
-			testArrowVao_from_meshes,
-			testArrowVertexCount_from_meshes,
-			baseCylinder.indexCount() + baseCone.indexCount(),
-			projCameraWorld_arrow_from_meshes,
-			normalMatrix_arrow_from_meshes
-		);
-
 		// ----- Render Cube -----
 		drawColoredObject(
 			cubeVao,
@@ -626,10 +474,6 @@ try
 	state.prog = nullptr;
 
 	// TODO: additional cleanup
-	glDeleteVertexArrays(1, &testArrowVao_concat);
-	glDeleteVertexArrays(1, &testArrowVao_concat_many);
-	glDeleteVertexArrays(1, &testArrowVao_from_meshes);
-
 	glDeleteVertexArrays(1, &parlahtiVao);
 	glDeleteVertexArrays(1, &cubeVao);
 
@@ -760,14 +604,14 @@ namespace
 					float pitch = state->camera.getPitch();
 					std::print("Camera yaw: {} radians, pitch: {} radians\n", yaw, pitch);
 
-					// Convert to degrees for easier understanding
-					float yawDeg = yaw * (180.f / Config::kFloatPi);
-					float pitchDeg = pitch * (180.f / Config::kFloatPi);
+					// // Convert to degrees for easier understanding
+					// float yawDeg = yaw * (180.f / Config::kFloatPi);
+					// float pitchDeg = pitch * (180.f / Config::kFloatPi);
 
-					// 2 decimal places
-					yawDeg = std::round(yawDeg * 100.f) / 100.f;
-					pitchDeg = std::round(pitchDeg * 100.f) / 100.f;
-					std::print("Camera yaw: {} degrees, pitch: {} degrees\n", yawDeg, pitchDeg);
+					// // 2 decimal places
+					// yawDeg = std::round(yawDeg * 100.f) / 100.f;
+					// pitchDeg = std::round(pitchDeg * 100.f) / 100.f;
+					// std::print("Camera yaw: {} degrees, pitch: {} degrees\n", yawDeg, pitchDeg);
 				}
 				break;
 
@@ -782,21 +626,22 @@ namespace
 					{
 						switch (newMode)
 						{
-							case Camera::Mode::Follow:
+							using enum Camera::Mode;
+							case Follow:
 								// Initialize follow mode with current vehicle state
 								state->camera.setupFollowMode(
 									state->animation.currentPosition,
 									state->animation.velocity);
 								break;
 
-							case Camera::Mode::FixedGround:
+							case FixedGround:
 								// Initialize fixed ground mode
 								state->camera.setupFixedGroundMode(
 									state->animation.currentPosition);
 								break;
 
-							case Camera::Mode::Free:
-								// Nothing special for free mode
+							case Free:
+								default:
 								break;
 						}
 					}
@@ -805,16 +650,21 @@ namespace
 						// Initialize based on vehicle start position
 						switch (newMode)
 						{
-							case Camera::Mode::Follow:
+							using enum Camera::Mode;
+							case Follow:
 								state->camera.setupFollowMode(
 									state->animation.startPosition,
 									Vec3f{0.f, 0.f, -1.f} // Default forward
 								);
 								break;
 
-							case Camera::Mode::FixedGround:
+							case FixedGround:
 								state->camera.setupFixedGroundMode(
 									state->animation.startPosition);
+								break;
+
+							case Free:
+								default:
 								break;
 						}
 					}
@@ -828,35 +678,11 @@ namespace
 					{
 						// START animation
 						state->animation.start();
-
-						// TODO: Remove later. For debugging.
-						std::print("\nAnimation STARTED\n");
-						std::println("-----------------------------");
-						std::print("  Phase: {}\n", state->animation.getPhaseName());
-						std::print("  Start "); state->animation.printCoordinates(state->animation.startPosition);
-						std::print("  End "); state->animation.printCoordinates(state->animation.endPosition);
-						std::print("  Duration: {:.2f} seconds\n", state->animation.kTotalAnimationTime);
-						std::print("  Max speed: {:.1f} units/s\n", AnimationState::kMaxVelocity);
-						std::print("  Max height allowed: {:.2f} units\n", AnimationState::kMaxAllowedHeight);
 					}
 					else
 					{
 						// TOGGLE pause
 						state->animation.togglePause();
-
-						// TODO: Remove later. For debugging.
-						std::print("\nAnimation {}PAUSED\n", state->animation.isPaused ? "" : "UN");
-						std::println("-----------------------------");
-						std::print("  Phase: {}\n", state->animation.getPhaseName());
-
-						// TODO: Remove later. For debugging.
-						if (state->animation.isPaused)
-						{
-							std::print("  Current "); state->animation.printCoordinates(state->animation.currentPosition);
-							std::print("  Speed: {:.2f} units/sec\n", state->animation.currentSpeed);
-							std::print("  Max height so far: {:.2f} units\n", state->animation.maxHeightReached);
-
-						}
 					}
 				}
 				break;
@@ -865,11 +691,67 @@ namespace
 			case GLFW_KEY_G: // Goes to landing pad 1 position at sea level
 				if (aAction == GLFW_PRESS)
 				{
-					// Reset camera to initial position and orientation
-					state->camera.setPosition(Vec3f{-72.799965, -0.96877396, 10.692477});
-					state->camera.setYaw(1.2900052f);
-					state->camera.setPitch(-0.06900009f);
+					// Toggle tracking
+					state->input.trackingEnabled = !state->input.trackingEnabled;
+
+					if (state->input.trackingEnabled)
+					{
+						std::print("Camera tracking ENABLED\n");
+
+						// Get vehicle position
+						Vec3f vehiclePos = state->animation.currentPosition;
+
+						// Set camera to a GOOD DEFAULT tracking position
+						// Position: behind and to the right of vehicle, looking at it
+						Vec3f cameraPos;
+
+						// Determine a good position based on animation phase
+						if (state->animation.isAnimating && length(state->animation.velocity) > 0.1f)
+						{
+							// If vehicle is moving, position camera behind it
+							Vec3f backDir = normalize(state->animation.velocity) * -15.0f;
+							cameraPos = vehiclePos + backDir + Vec3f{5.f, 8.f, 0.f}; // Right and above
+						}
+						else
+						{
+							// Default static position
+							cameraPos = vehiclePos + Vec3f{-10.f, 8.f, 10.f};
+						}
+
+						// Set camera position
+						state->camera.setPosition(cameraPos);
+
+						// Calculate initial look direction
+						Vec3f lookDir = vehiclePos - cameraPos;
+						if (length(lookDir) > 0.001f)
+						{
+							lookDir = normalize(lookDir);
+
+							// Calculate yaw and pitch
+							float yaw = atan2(lookDir.x, lookDir.z);
+							float pitch = asin(lookDir.y);
+
+							// Set camera orientation
+							state->camera.setYaw(yaw);
+							state->camera.setPitch(pitch);
+
+							std::print("  Camera positioned at: ({:.2f}, {:.2f}, {:.2f})\n",
+									   cameraPos.x, cameraPos.y, cameraPos.z);
+							std::print("  Looking at vehicle: ({:.2f}, {:.2f}, {:.2f})\n",
+									   vehiclePos.x, vehiclePos.y, vehiclePos.z);
+						}
+					}
+					else
+					{
+						std::print("Camera tracking DISABLED\n");
+
+						// Reset to a sensible free camera position
+						// You might want to keep the current position or reset to initial
+						// For now, let's keep the current position but stop tracking
+						// state->camera.resetToInitial(); // Uncomment if you want to reset
+					}
 				}
+
 				break;
 
 			case GLFW_KEY_J: // TODO: Remove later. For debugging.

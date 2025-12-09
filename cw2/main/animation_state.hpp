@@ -240,7 +240,7 @@ struct AnimationState
 
             // Continue ascending while gradually moving horizontally
             float heightProgress = phaseT; // Linear continuation
-            float totalHeightProgress = kVerticalAscentEnd + phaseT * (kLaunchTiltEnd - kVerticalAscentEnd);
+            // float totalHeightProgress = kVerticalAscentEnd + phaseT * (kLaunchTiltEnd - kVerticalAscentEnd);
             float targetHeight = adjustedVerticalHeight + (adjustedLaunchHeight - adjustedVerticalHeight) * heightProgress;
 
             // Gradually increase horizontal movement (cubic ease-in)
@@ -431,7 +431,7 @@ struct AnimationState
         std::print("  End position: ({:.2f}, {:.2f}, {:.2f})\n",
                    endPosition.x, endPosition.y, endPosition.z);
         std::print("  Duration: {:.2f} seconds\n", kTotalAnimationTime);
-        std::print("  Max speed: {:.1f} units/s\n", kMaxVelocity);
+        std::print("  Max speed: {:.2f} units/s\n", kMaxVelocity);
         std::print("  Max height allowed: {:.2f} units\n", kMaxAllowedHeight);
     }
 
@@ -465,75 +465,75 @@ inline Mat44f calculate_rocket_rotation(const AnimationState &state) noexcept
 
     switch (state.phase)
     {
-    case AnimationState::Phase::VerticalAscent:
-    {
-        // Perfectly vertical during ascent
-        // Small idle rotation for visual interest
-        float idleRotation = state.animationTime * 0.5f; // Slow rotation
-        rotation = make_rotation_y(idleRotation);
-        break;
-    }
-
-    case AnimationState::Phase::LaunchTilt:
-    {
-        // Gradually tilt toward target direction
-        float phaseProgress = state.getPhaseProgress();
-
-        // Calculate target yaw (direction to landing pad)
-        float targetYaw = atan2(state.targetDirection.x, state.targetDirection.z);
-
-        // Interpolate from vertical (0) to target yaw
-        float currentYaw = targetYaw * phaseProgress;
-
-        // Tilt angle increases with phase progress
-        float tiltAngle = AnimationState::kMaxTiltAngle * phaseProgress;
-
-        rotation = make_rotation_y(currentYaw) * make_rotation_x(-tiltAngle);
-        break;
-    }
-
-    case AnimationState::Phase::Cruise:
-    {
-        if (length(state.velocity) > 0.001f)
+        case AnimationState::Phase::VerticalAscent:
         {
-            // Follow velocity direction
-            Vec3f forwardDir = normalize(state.velocity);
-            float yaw = atan2(forwardDir.x, forwardDir.z);
-            float pitch = -asin(forwardDir.y);
-
-            // Clamp pitch
-            pitch = std::clamp(pitch, -AnimationState::kMaxPitchAngle,
-                               AnimationState::kMaxPitchAngle);
-
-            rotation = make_rotation_y(yaw) * make_rotation_x(pitch);
+            // Perfectly vertical during ascent
+            // Small idle rotation for visual interest
+            float idleRotation = state.animationTime * 0.5f; // Slow rotation
+            rotation = make_rotation_y(idleRotation);
+            break;
         }
-        break;
-    }
 
-    case AnimationState::Phase::Landing:
-    {
-        // Gradually level out for landing
-        float phaseProgress = state.getPhaseProgress();
-
-        if (phaseProgress < AnimationState::kLandingHoverFraction)
+        case AnimationState::Phase::LaunchTilt:
         {
-            // Still tilted during hover
+            // Gradually tilt toward target direction
+            float phaseProgress = state.getPhaseProgress();
+
+            // Calculate target yaw (direction to landing pad)
+            float targetYaw = atan2(state.targetDirection.x, state.targetDirection.z);
+
+            // Interpolate from vertical (0) to target yaw
+            float currentYaw = targetYaw * phaseProgress;
+
+            // Tilt angle increases with phase progress
+            float tiltAngle = AnimationState::kMaxTiltAngle * phaseProgress;
+
+            rotation = make_rotation_y(currentYaw) * make_rotation_x(-tiltAngle);
+            break;
+        }
+
+        case AnimationState::Phase::Cruise:
+        {
             if (length(state.velocity) > 0.001f)
             {
+                // Follow velocity direction
                 Vec3f forwardDir = normalize(state.velocity);
                 float yaw = atan2(forwardDir.x, forwardDir.z);
-                float currentPitch = -asin(forwardDir.y);
-                float pitch = currentPitch * (1.0f - phaseProgress * 2.0f);
+                float pitch = -asin(forwardDir.y);
+
+                // Clamp pitch
+                pitch = std::clamp(pitch, -AnimationState::kMaxPitchAngle,
+                                AnimationState::kMaxPitchAngle);
+
                 rotation = make_rotation_y(yaw) * make_rotation_x(pitch);
             }
+            break;
         }
-        else
+
+        case AnimationState::Phase::Landing:
         {
-            // Upright for final descent
-            rotation = kIdentity44f;
+            // Gradually level out for landing
+            float phaseProgress = state.getPhaseProgress();
+
+            if (phaseProgress < AnimationState::kLandingHoverFraction)
+            {
+                // Still tilted during hover
+                if (length(state.velocity) > 0.001f)
+                {
+                    Vec3f forwardDir = normalize(state.velocity);
+                    float yaw = atan2(forwardDir.x, forwardDir.z);
+                    float currentPitch = -asin(forwardDir.y);
+                    float pitch = currentPitch * (1.0f - phaseProgress * 2.0f);
+                    rotation = make_rotation_y(yaw) * make_rotation_x(pitch);
+                }
+            }
+            else
+            {
+                // Upright for final descent
+                rotation = kIdentity44f;
+            }
+            break;
         }
-        break;
-    }
     }
 
     return rotation;

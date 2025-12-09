@@ -84,6 +84,7 @@ GENERATED += $(OBJDIR)/renderer.o
 GENERATED += $(OBJDIR)/simple_mesh.o
 GENERATED += $(OBJDIR)/test.o
 GENERATED += $(OBJDIR)/texture.o
+GENERATED += $(OBJDIR)/ui.o
 OBJECTS += $(OBJDIR)/camera.o
 OBJECTS += $(OBJDIR)/cone.o
 OBJECTS += $(OBJDIR)/cylinder.o
@@ -94,6 +95,7 @@ OBJECTS += $(OBJDIR)/renderer.o
 OBJECTS += $(OBJDIR)/simple_mesh.o
 OBJECTS += $(OBJDIR)/test.o
 OBJECTS += $(OBJDIR)/texture.o
+OBJECTS += $(OBJDIR)/ui.o
 
 # Rules
 # #############################################
@@ -185,6 +187,9 @@ $(OBJDIR)/test.o: test.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/texture.o: texture.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ui.o: ui.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 

@@ -262,16 +262,37 @@ void Camera::setupFixedGroundMode(const Vec3f &vehiclePos)
     // Set fixed ground position
     position = fixedGroundSettings.position;
 
+    yaw = fixedGroundSettings.yaw;
+    pitch = fixedGroundSettings.pitch;
     // Look at vehicle
-    forward = normalize(vehiclePos - position);
+    // forward = normalize(vehiclePos - position);
 
     // Calculate yaw and pitch from forward vector
-    yaw = atan2(forward.x, forward.z);
-    pitch = asin(forward.y);
+    // yaw = atan2(forward.x, forward.z);
+    // pitch = asin(forward.y);
 
     applyPitchConstraints();
     normalizeYaw();
     updateVectors();
+}
+
+void Camera::lookAtTarget(const Vec3f &targetPosition) noexcept
+{
+    // Calculate direction to target
+    Vec3f direction = targetPosition - position;
+
+    if (length(direction) > 0.001f)
+    {
+        direction = normalize(direction);
+
+        // Calculate yaw and pitch from direction
+        yaw = atan2(direction.x, direction.z);
+        pitch = asin(direction.y);
+
+        applyPitchConstraints();
+        normalizeYaw();
+        updateVectors();
+    }
 }
 
 void Camera::resetToInitial() noexcept
