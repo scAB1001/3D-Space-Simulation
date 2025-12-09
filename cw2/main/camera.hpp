@@ -48,8 +48,8 @@ public:
     void cycleMode() noexcept;
 
     // Special mode initializations
-    void setupFollowMode(const Vec3f &vehiclePos, const Vec3f &vehicleForward);
-    void setupFixedGroundMode(const Vec3f &vehiclePos);
+    void initFollowMode(const Vec3f &vehiclePos, const Vec3f &vehicleForward);
+    void initFixedGroundMode(const Vec3f &vehiclePos);
 
     // Movement
     void moveForward(float dt) noexcept;

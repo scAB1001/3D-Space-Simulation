@@ -5,12 +5,12 @@
 #include "../vmlib/mat44.hpp"
 #include "../vmlib/mat33.hpp"
 #include "../vmlib/vec3.hpp"
+#include "landing_pad.hpp"
 
-
-// Scene setup (clearing, state)
+// Scene setup and frame management
 void globalGLSetup();
-
 void beginFrame();
+void resetBindings();
 void endFrame();
 
 // Lighting setup (call once per frame)
@@ -19,7 +19,6 @@ void setLightingUniforms(
     const Vec3f &lightDiffuse,
     const Vec3f &sceneAmbient);
 
-// Object rendering functions (only drawing + uniform setting)
 void drawMesh(
     GLuint vao,
     GLsizei vertexCount,
@@ -30,11 +29,9 @@ void drawMesh(
     const Mat44f &projCameraWorld,
     const Mat33f &normalMatrix);
 
-void drawLandingPad(
-    GLuint vao,
-    GLsizei vertexCount,
-    const Mat44f &projCameraWorld,
-    const Mat33f &normalMatrix);
+void drawLandingPads(
+    const std::vector<LandingPad> &pads,
+    const Mat44f &projView);
 
 void drawTerrain(
     GLuint vao,

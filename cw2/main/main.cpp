@@ -70,28 +70,6 @@ namespace
 	};
 }
 
-void testCameraOrientation(Camera &camera, const Vec3f &target)
-{
-	// Method 1: Your current method
-	Vec3f dir = target - camera.getPosition();
-	dir = normalize(dir);
-
-	float yaw1 = std::atan2(dir.x, dir.z);
-	float pitch1 = std::asin(dir.y);
-
-	// Method 2: Alternative
-	float yaw2 = std::atan2(-dir.z, dir.x); // Rotated 90 degrees
-	float pitch2 = std::asin(dir.y);
-
-	// Method 3: Another alternative
-	float yaw3 = std::atan2(dir.z, dir.x);
-	float pitch3 = std::asin(dir.y);
-
-	std::print("Test orientations:\n");
-	std::print("  Method 1 (atan2(x,z)): yaw={:.3f}, pitch={:.3f}\n", yaw1, pitch1);
-	std::print("  Method 2 (atan2(-z,x)): yaw={:.3f}, pitch={:.3f}\n", yaw2, pitch2);
-	std::print("  Method 3 (atan2(z,x)): yaw={:.3f}, pitch={:.3f}\n", yaw3, pitch3);
-}
 
 int main()
 try
@@ -185,7 +163,6 @@ try
 	 * 	The z-component is ignored for texcoords
 	 * For colors: vec3(r, g, b) in buffer -> read as vec3(r, g, b) in shader
 	 */
-
 	ShaderProgram unifiedProg( {
 		{ GL_VERTEX_SHADER, "assets/cw2/shaders/u.vert" },
 		{ GL_FRAGMENT_SHADER, "assets/cw2/shaders/u.frag" }
@@ -226,9 +203,9 @@ try
 	// test_all_mesh_functions();
 	// test_vao_creation();
 
-	// Reset state
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	// Reset state. This unbinds any VAO or VBO we may have left bound.
+	// Unbind ebo too (to be safe), do this by calling
+	resetBindings();
 
 	// Main loop
 	while (!glfwWindowShouldClose(window))
@@ -326,7 +303,7 @@ try
 		// Model matrices
 		/* CUBE */
 		// Calculate cube transform
-		Mat44f cubeTransform;
+		Mat44f model2world_cube;
 		if (state.animation.isAnimating ||
 			(state.animation.animationTime >= state.animation.kTotalAnimationTime &&
 			 state.animation.animationTime > 0.0f))
@@ -334,23 +311,20 @@ try
 			Mat44f rotation = calculate_rocket_rotation(state.animation);
 
 			// Combine translation and rotation
-			cubeTransform = make_translation(state.animation.currentPosition) *
-							make_scaling(0.5f, 0.5f, 0.5f) *
-							rotation;
+			model2world_cube = make_translation(state.animation.currentPosition) *
+							   make_scaling(0.5f, 0.5f, 0.5f) *
+							   rotation;
 		}
 		else
 		{
 			// Static position at start (pre-launch)
-			cubeTransform = make_translation(state.animation.startPosition) *
-							make_scaling(0.5f, 0.5f, 0.5f) *
-							make_rotation_y(angle * 0.3f);
+			model2world_cube = make_translation(state.animation.startPosition) *
+							   make_scaling(0.5f, 0.5f, 0.5f) *
+							   make_rotation_y(angle * 0.3f);
 		}
 
-		// Mat44f model2world_cube = make_rotation_y(angle) * make_translation(Vec3f{0.f, 2.f, 0.f});
-		// Mat44f projCameraWorld_cube = make_proj_camera_world(projView, model2world_cube);
-		// Mat33f normalMatrix_cube = make_uniform_normal(model2world_cube);
-		Mat44f projCameraWorld_cube = make_proj_camera_world(projView, cubeTransform);
-		Mat33f normalMatrix_cube = make_uniform_normal(cubeTransform);
+		Mat44f projCameraWorld_cube = make_proj_camera_world(projView, model2world_cube);
+		Mat33f normalMatrix_cube = make_uniform_normal(model2world_cube);
 
 		// TODO: Draw scene
 		OGL_CHECKPOINT_DEBUG();
@@ -376,18 +350,7 @@ try
 		);
 
 		// ----- Render Landing Pads (INSTANCED DRAWING) -----
-		for (const auto &pad : landingPads)
-		{
-			Mat44f projCameraWorld_pad = projView * pad.transform;
-			Mat33f normalMatrix_pad = make_uniform_normal(pad.transform);
-
-			drawLandingPad(
-				pad.vao,
-				pad.vertexCount,
-				projCameraWorld_pad,
-				normalMatrix_pad
-			);
-		}
+		drawLandingPads(landingPads, projView);
 
 		// ----- Render Cube -----
 		drawColoredObject(
@@ -529,15 +492,13 @@ namespace
 					{
 						using enum Camera::Mode;
 						case Follow:
-							// Initialize follow mode with current vehicle state
-							state->camera.setupFollowMode(
+							state->camera.initFollowMode(
 								state->animation.currentPosition,
 								state->animation.velocity);
 							break;
 
 						case FixedGround:
-							// Initialize fixed ground mode
-							state->camera.setupFixedGroundMode(
+							state->camera.initFixedGroundMode(
 								state->animation.currentPosition);
 							break;
 
@@ -572,7 +533,7 @@ namespace
 					Vec3f toCube = state->animation.currentPosition - state->camera.getPosition();
 
 					// Follow distance should be a fixed distance of vec3f length
-					toCube = normalize(toCube) * length(Vec3f{10.f, 5.f, 0.f});
+					toCube = normalize(toCube) * length(Vec3f{20.f, 5.f, 0.f});
 					Vec3f newCamPos = state->animation.currentPosition - toCube;
 					state->camera.setPosition(newCamPos);
 

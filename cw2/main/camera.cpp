@@ -237,7 +237,7 @@ void Camera::cycleMode() noexcept
     }
 }
 
-void Camera::setupFollowMode(const Vec3f &vehiclePos, const Vec3f &vehicleForward)
+void Camera::initFollowMode(const Vec3f &vehiclePos, const Vec3f &vehicleForward)
 {
     if (mode != Mode::Follow)
         return;
@@ -246,7 +246,7 @@ void Camera::setupFollowMode(const Vec3f &vehiclePos, const Vec3f &vehicleForwar
 
 }
 
-void Camera::setupFixedGroundMode(const Vec3f &vehiclePos)
+void Camera::initFixedGroundMode(const Vec3f &vehiclePos)
 {
     if (mode != Mode::FixedGround)
         return;
@@ -326,12 +326,12 @@ void Camera::lookAtTarget(const Vec3f &targetPosition) noexcept
         pitch = std::asin(forward.y);
 
         // TODO: Remove later. For debugging.
-        std::print("=== lookAtTarget Debug ===\n");
-        std::print("Direct vector method:\n");
-        std::print("  Forward: ({:.3f}, {:.3f}, {:.3f})\n",
-                    forward.x, forward.y, forward.z);
-        std::print("  Yaw: {:.3f} rad\n", yaw);
-        std::print("  Pitch: {:.3f} rad\n", pitch);
+        // std::print("=== lookAtTarget Debug ===\n");
+        // std::print("Direct vector method:\n");
+        // std::print("  Forward: ({:.3f}, {:.3f}, {:.3f})\n",
+        //             forward.x, forward.y, forward.z);
+        // std::print("  Yaw: {:.3f} rad\n", yaw);
+        // std::print("  Pitch: {:.3f} rad\n", pitch);
     }
 }
 

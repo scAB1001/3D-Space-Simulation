@@ -80,13 +80,4 @@ namespace Config
     }
 }
 
-/* TODO: Potential view setup for fixed camera mode
-    - position: (-12.102316, 23.208414, 75.28221)
-    - yaw: -1.7148036 radians, pitch: -0.23699781 radians
-    - yaw: -98.25 degrees, pitch: -13.58 degrees
-
-    TODO: Flight follows phases by seconds, not actual state of animation.
-    FIX.
-*/
-
 #endif // CONFIG_HPP
