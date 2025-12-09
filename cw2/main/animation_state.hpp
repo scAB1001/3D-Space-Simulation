@@ -391,10 +391,25 @@ struct AnimationState
     // TODO: Remove later. For debugging.
     void printCoordinates(Vec3f position) const
     {
-        std::print("position: ({:.2f}, {:.2f}, {:.2f})\n",
+        std::print("Position: ({:.2f}, {:.2f}, {:.2f})\n",
                    position.x,
                    position.y,
                    position.z);
+    }
+
+    void printDebugOutput(float &lastDebugTime) const
+    {
+        if (animationTime - lastDebugTime > 2.0f)
+        {
+            std::print("[Flight] {} | Time: {:.2f}s | Altitude: {:.2f} | Speed: {:.2f} \n",
+                    getPhaseName(),
+                    animationTime,
+                    currentPosition.y - startPosition.y,
+                    currentSpeed
+            );
+            printCoordinates(currentPosition);
+            lastDebugTime = animationTime;
+        }
     }
 
     // Reset all animation state

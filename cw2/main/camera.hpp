@@ -65,6 +65,7 @@ public:
     void clampVertical(float minY, float maxY) noexcept;
 
     // State management
+    void debugOrientation(const Vec3f &targetPosition) const noexcept;
     void lookAtTarget(const Vec3f &targetPosition) noexcept;
     void resetToInitial() noexcept;
 
@@ -99,7 +100,7 @@ private:
     struct FixedGroundSettings
     {
         // Note: yaw and pitch are not fixed - they always look at vehicle
-        Vec3f position = {-37.45f, 13.687f, -48.04f};
+        Vec3f position = {-37.45f, 17.90f, -48.04f};
         float yaw = 1.463f;    // radians
         float pitch = -0.240f; // radians
     } fixedGroundSettings;

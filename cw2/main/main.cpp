@@ -70,26 +70,27 @@ namespace
 	};
 }
 
-void applySimpleTracking(Camera &camera, const Vec3f &targetPosition)
+void testCameraOrientation(Camera &camera, const Vec3f &target)
 {
-	// Get current camera position
-	Vec3f cameraPos = camera.getPosition();
+	// Method 1: Your current method
+	Vec3f dir = target - camera.getPosition();
+	dir = normalize(dir);
 
-	// Calculate direction to target
-	Vec3f direction = targetPosition - cameraPos;
+	float yaw1 = std::atan2(dir.x, dir.z);
+	float pitch1 = std::asin(dir.y);
 
-	if (length(direction) > 0.001f)
-	{
-		direction = normalize(direction);
+	// Method 2: Alternative
+	float yaw2 = std::atan2(-dir.z, dir.x); // Rotated 90 degrees
+	float pitch2 = std::asin(dir.y);
 
-		// Calculate yaw and pitch from direction
-		float yaw = atan2(direction.x, direction.z);
-		float pitch = asin(direction.y);
+	// Method 3: Another alternative
+	float yaw3 = std::atan2(dir.z, dir.x);
+	float pitch3 = std::asin(dir.y);
 
-		// Set camera orientation
-		camera.setYaw(yaw);
-		camera.setPitch(pitch);
-	}
+	std::print("Test orientations:\n");
+	std::print("  Method 1 (atan2(x,z)): yaw={:.3f}, pitch={:.3f}\n", yaw1, pitch1);
+	std::print("  Method 2 (atan2(-z,x)): yaw={:.3f}, pitch={:.3f}\n", yaw2, pitch2);
+	std::print("  Method 3 (atan2(z,x)): yaw={:.3f}, pitch={:.3f}\n", yaw3, pitch3);
 }
 
 int main()
@@ -185,11 +186,6 @@ try
 	 * For colors: vec3(r, g, b) in buffer -> read as vec3(r, g, b) in shader
 	 */
 
-	// Load main shader program
-	// ShaderProgram unifiedProg( {
-	// 	{ GL_VERTEX_SHADER, "assets/cw2/shaders/unified.vert" },
-	// 	{ GL_FRAGMENT_SHADER, "assets/cw2/shaders/unified.frag" }
-	// } );
 	ShaderProgram unifiedProg( {
 		{ GL_VERTEX_SHADER, "assets/cw2/shaders/u.vert" },
 		{ GL_FRAGMENT_SHADER, "assets/cw2/shaders/u.frag" }
@@ -201,14 +197,12 @@ try
 	float angle = 0.f;
 
 	//TODO: create VBOs and VAO
-	// 0. Load parlahti
 	auto parlahtiMesh = load_wavefront_obj("assets/cw2/parlahti.obj");
 	GLuint parlahtiVao = create_vao(parlahtiMesh);
 	std::size_t parlahtiVertexCount = parlahtiMesh.vertexCount();
 	std::println("Terrain loaded: {} vertices, material type: {}",
                  parlahtiVertexCount, parlahtiMesh.materialType);
 
-	// Load parlahti texture if available
 	GLuint parlahtiTexture = 0;
 	if (parlahtiMesh.materialType == 1 && parlahtiMesh.hasTexcoords())
 	{
@@ -216,7 +210,6 @@ try
 		parlahtiTexture = load_texture_2d("assets/cw2/L4343A-4k.jpeg");
 	}
 
-	// Create landing pads (instances)
 	std::vector<LandingPad> landingPads = {
 		LandingPad(Config::World::kLandingPad1Pos, Config::World::kLandingPadScale),
 		LandingPad(Config::World::kLandingPad2Pos, Config::World::kLandingPadScale)
@@ -228,26 +221,6 @@ try
 	cubeMesh.materialType = 0; // Colored
 	GLuint cubeVao = create_vao(cubeMesh);
 	std::size_t cubeVertexCount = cubeMesh.vertexCount();
-
-	/* ARROWS */
-	auto baseCylinder = make_batched_indexed_cylinder(true, 16, {0.2f, 0.8f, 0.2f});
-	auto baseCone = make_batched_indexed_cone(true, 16, {0.8f, 0.2f, 0.2f}, make_translation(Vec3f{1.f, 0.f, 0.f}) * make_scaling(0.5f, 0.5f, 0.5f));
-
-	// 1. Test concatenate()
-	auto testArrowMesh_concat = concatenate(baseCylinder, baseCone);
-	testArrowMesh_concat.materialType = 0; // Colored
-	GLuint testArrowVao_concat = create_vao(testArrowMesh_concat);
-	std::size_t testArrowVertexCount_concat = testArrowMesh_concat.vertexCount();
-
-	// 2. Test concatenate_many()
-	auto testArrowMesh_concat_many = concatenate_many({baseCylinder, baseCone});
-	testArrowMesh_concat_many.materialType = 0; // Colored
-	GLuint testArrowVao_concat_many = create_vao(testArrowMesh_concat_many);
-	std::size_t testArrowVertexCount_concat_many = testArrowMesh_concat_many.vertexCount();
-
-	// 3. Test create_vao_from_meshes()
-	GLuint testArrowVao_from_meshes = create_vao_from_meshes({baseCylinder, baseCone});
-	std::size_t testArrowVertexCount_from_meshes = baseCylinder.vertexCount() + baseCone.vertexCount();
 
 	// -------------- Run tests --------------
 	// test_all_mesh_functions();
@@ -319,24 +292,12 @@ try
 		{
 			state.animation.update(dt);
 
-			// Update camera based on current mode
-			// state.camera.updateForAnimation(state.animation.currentPosition,
-			// 								state.animation.velocity, dt);
+			state.camera.updateForAnimation(state.animation.currentPosition,
+											state.animation.velocity, dt);
 
 			// Periodic debug output
 			static float lastDebugTime = 0.0f;
-			if (state.animation.animationTime - lastDebugTime > 2.0f)
-			{
-				std::print("[Flight] {} | Time: {:.2f}s | Altitude: {:.2f} | Speed: {:.2f} | Coords: ({},{},{})\n",
-						   state.animation.getPhaseName(),
-						   state.animation.animationTime,
-						   state.animation.currentPosition.y - state.animation.startPosition.y,
-						   state.animation.currentSpeed,
-						   state.animation.currentPosition.x,
-						   state.animation.currentPosition.y,
-						   state.animation.currentPosition.z);
-				lastDebugTime = state.animation.animationTime;
-			}
+			state.animation.printDebugOutput(lastDebugTime);
 
 			// Check if animation is complete
 			if (state.animation.animationTime >= state.animation.kTotalAnimationTime)
@@ -347,29 +308,6 @@ try
 				state.animation.currentSpeed = 0.0f;
 
 				std::print("Animation COMPLETE\n");
-			}
-		}
-
-		if (state.input.trackingEnabled)
-		{
-			// Simple tracking: camera looks at vehicle from its current position
-			Vec3f cameraToVehicle = state.animation.currentPosition - state.camera.getPosition();
-
-			if (length(cameraToVehicle) > 0.001f)
-			{
-				cameraToVehicle = normalize(cameraToVehicle);
-
-				// Calculate yaw and pitch from direction vector
-				float yaw = atan2(cameraToVehicle.x, cameraToVehicle.z);
-				float pitch = asin(cameraToVehicle.y);
-
-				// Apply constraints
-				constexpr float maxPitch = Config::kFloatPi / 2.1f;
-				pitch = std::clamp(pitch, -maxPitch, maxPitch);
-
-				// Set camera orientation
-				state.camera.setYaw(yaw);
-				state.camera.setPitch(pitch);
 			}
 		}
 
@@ -688,68 +626,20 @@ namespace
 				break;
 
 			// TODO: Remove later. For debugging.
-			case GLFW_KEY_G: // Goes to landing pad 1 position at sea level
+			case GLFW_KEY_G: // Faces vehicle from current position and orientation
 				if (aAction == GLFW_PRESS)
 				{
-					// Toggle tracking
-					state->input.trackingEnabled = !state->input.trackingEnabled;
+					// First, debug current state
+					state->camera.debugOrientation(state->animation.currentPosition);
 
-					if (state->input.trackingEnabled)
-					{
-						std::print("Camera tracking ENABLED\n");
+					// Then look at target
+					state->camera.lookAtTarget(state->animation.currentPosition);
 
-						// Get vehicle position
-						Vec3f vehiclePos = state->animation.currentPosition;
+					// Debug after adjustment
+					std::print("\nAfter lookAtTarget:\n");
+					state->camera.debugOrientation(state->animation.currentPosition);
 
-						// Set camera to a GOOD DEFAULT tracking position
-						// Position: behind and to the right of vehicle, looking at it
-						Vec3f cameraPos;
-
-						// Determine a good position based on animation phase
-						if (state->animation.isAnimating && length(state->animation.velocity) > 0.1f)
-						{
-							// If vehicle is moving, position camera behind it
-							Vec3f backDir = normalize(state->animation.velocity) * -15.0f;
-							cameraPos = vehiclePos + backDir + Vec3f{5.f, 8.f, 0.f}; // Right and above
-						}
-						else
-						{
-							// Default static position
-							cameraPos = vehiclePos + Vec3f{-10.f, 8.f, 10.f};
-						}
-
-						// Set camera position
-						state->camera.setPosition(cameraPos);
-
-						// Calculate initial look direction
-						Vec3f lookDir = vehiclePos - cameraPos;
-						if (length(lookDir) > 0.001f)
-						{
-							lookDir = normalize(lookDir);
-
-							// Calculate yaw and pitch
-							float yaw = atan2(lookDir.x, lookDir.z);
-							float pitch = asin(lookDir.y);
-
-							// Set camera orientation
-							state->camera.setYaw(yaw);
-							state->camera.setPitch(pitch);
-
-							std::print("  Camera positioned at: ({:.2f}, {:.2f}, {:.2f})\n",
-									   cameraPos.x, cameraPos.y, cameraPos.z);
-							std::print("  Looking at vehicle: ({:.2f}, {:.2f}, {:.2f})\n",
-									   vehiclePos.x, vehiclePos.y, vehiclePos.z);
-						}
-					}
-					else
-					{
-						std::print("Camera tracking DISABLED\n");
-
-						// Reset to a sensible free camera position
-						// You might want to keep the current position or reset to initial
-						// For now, let's keep the current position but stop tracking
-						// state->camera.resetToInitial(); // Uncomment if you want to reset
-					}
+					// testCameraOrientation(state->camera, state->animation.currentPosition);
 				}
 
 				break;

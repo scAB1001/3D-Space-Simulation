@@ -153,12 +153,17 @@ void Camera::updateForAnimation(const Vec3f &vehiclePos, const Vec3f &vehicleVel
             }
             else
             {
-                // Default forward (towards target or world -Z)
-                vehicleForward = Vec3f{0.f, 0.f, -1.f};
+                // If vehicle isn't moving, forward should be from camera to vehicle
+                vehicleForward = normalize(vehiclePos - position);
             }
 
             // Calculate vehicle right and up vectors
             Vec3f vehicleRight = normalize(cross(vehicleForward, worldUp));
+            if (length(vehicleRight) < 0.001f)
+            {
+                vehicleRight = Vec3f{1.0f, 0.0f, 0.0f};
+            }
+
             Vec3f vehicleUp = normalize(cross(vehicleRight, vehicleForward));
 
             // Determine which side to be on
@@ -167,47 +172,39 @@ void Camera::updateForAnimation(const Vec3f &vehiclePos, const Vec3f &vehicleVel
             // Calculate camera position relative to vehicle
             Vec3f offset =
                 vehicleRight * (followSettings.sideOffset.x * sideMultiplier) +
-                vehicleUp * followSettings.sideOffset.y +
-                vehicleForward * followSettings.sideOffset.z;
+                vehicleUp * followSettings.sideOffset.y -
+                vehicleForward * followSettings.sideOffset.z; // Negative = behind
 
             // Apply fixed distance
-            offset = normalize(offset) * followSettings.distance;
+            if (length(offset) > 0.001f)
+            {
+                offset = normalize(offset) * followSettings.distance;
+            }
+            else
+            {
+                offset = Vec3f{0.f, followSettings.distance * 0.5f, -followSettings.distance};
+            }
 
             Vec3f desiredPosition = vehiclePos + offset;
 
             // Smooth interpolation
             float followSpeed = 3.0f * dt;
+            followSpeed = std::clamp(followSpeed, 0.0f, 1.0f);
             position = position * (1.0f - followSpeed) + desiredPosition * followSpeed;
 
-            // Always look at vehicle
-            forward = normalize(vehiclePos - position);
-            updateVectors();
-
+            lookAtTarget(vehiclePos);
             break;
         }
 
         case Mode::FixedGround:
         {
-            // Fixed position on ground
             position = fixedGroundSettings.position;
-
-            // Always look at vehicle
-            forward = normalize(vehiclePos - position);
-
-            // Calculate yaw and pitch from forward vector
-            yaw = atan2(forward.x, forward.z);
-            pitch = asin(forward.y);
-
-            applyPitchConstraints();
-            normalizeYaw();
-            updateVectors();
-
+            lookAtTarget(vehiclePos);
             break;
         }
 
         case Mode::Free:
         default:
-            // User controls camera - nothing to do here
             break;
     }
 }
@@ -276,22 +273,82 @@ void Camera::setupFixedGroundMode(const Vec3f &vehiclePos)
     updateVectors();
 }
 
+void Camera::debugOrientation(const Vec3f &targetPosition) const noexcept
+{
+    Vec3f toTarget = targetPosition - position;
+    if (length(toTarget) > 0.001f)
+    {
+        toTarget = normalize(toTarget);
+
+        std::print("=== Camera Debug ===\n");
+        std::print("Camera position: ({:.2f}, {:.2f}, {:.2f})\n",
+                   position.x, position.y, position.z);
+        std::print("Target position: ({:.2f}, {:.2f}, {:.2f})\n",
+                   targetPosition.x, targetPosition.y, targetPosition.z);
+        std::print("Direction to target: ({:.3f}, {:.3f}, {:.3f})\n",
+                   toTarget.x, toTarget.y, toTarget.z);
+        std::print("Camera forward: ({:.3f}, {:.3f}, {:.3f})\n",
+                   forward.x, forward.y, forward.z);
+        std::print("Camera yaw: {:.3f} rad ({:.1f}°)\n",
+                   yaw, yaw * (180.0f / Config::kFloatPi));
+        std::print("Camera pitch: {:.3f} rad ({:.1f}°)\n",
+                   pitch, pitch * (180.0f / Config::kFloatPi));
+
+        // Calculate what yaw/pitch SHOULD be
+        float desiredYaw = std::atan2(toTarget.x, toTarget.z);
+        float desiredPitch = std::asin(toTarget.y);
+
+        std::print("Desired yaw: {:.3f} rad ({:.1f}°)\n",
+                   desiredYaw, desiredYaw * (180.0f / Config::kFloatPi));
+        std::print("Desired pitch: {:.3f} rad ({:.1f}°)\n",
+                   desiredPitch, desiredPitch * (180.0f / Config::kFloatPi));
+
+        float dotp = dot(forward, toTarget);
+        std::print("Alignment: {:.3f} (1.0 = perfect, 0.0 = 90°, -1.0 = opposite)\n", dotp);
+
+        if (dotp < 0.99f)
+        {
+            std::print("WARNING: Camera not facing target properly!\n");
+        }
+    }
+}
+
 void Camera::lookAtTarget(const Vec3f &targetPosition) noexcept
 {
-    // Calculate direction to target
-    Vec3f direction = targetPosition - position;
+    // Direct forward vector calculation
+    Vec3f newForward = targetPosition - position;
 
-    if (length(direction) > 0.001f)
+    if (length(newForward) > 0.001f)
     {
-        direction = normalize(direction);
+        newForward = normalize(newForward);
 
-        // Calculate yaw and pitch from direction
-        yaw = atan2(direction.x, direction.z);
-        pitch = asin(direction.y);
+        // Calculate right vector
+        Vec3f newRight = normalize(cross(newForward, worldUp));
+        if (length(newRight) < 0.001f)
+        {
+            // Handle edge case when looking straight up/down
+            newRight = Vec3f{1.0f, 0.0f, 0.0f};
+        }
 
-        applyPitchConstraints();
-        normalizeYaw();
-        updateVectors();
+        // Calculate up vector
+        Vec3f newUp = normalize(cross(newRight, newForward));
+
+        // Set vectors directly
+        forward = newForward;
+        right = newRight;
+        up = newUp;
+
+        // Extract yaw and pitch from forward vector
+        yaw = std::atan2(forward.z, forward.x);
+        pitch = std::asin(forward.y);
+
+        // TODO: Remove later. For debugging.
+        std::print("=== lookAtTarget Debug ===\n");
+        std::print("Direct vector method:\n");
+        std::print("  Forward: ({:.3f}, {:.3f}, {:.3f})\n",
+                    forward.x, forward.y, forward.z);
+        std::print("  Yaw: {:.3f} rad\n", yaw);
+        std::print("  Pitch: {:.3f} rad\n", pitch);
     }
 }
 
