@@ -16,6 +16,8 @@
 #include "../vmlib/vec4.hpp"
 #include "../vmlib/mat44.hpp"
 #include "../vmlib/mat33.hpp"
+#include "state.hpp"
+
 
 // Definitions
 #include "defaults.hpp"
@@ -46,12 +48,6 @@ namespace
 {
 	constexpr char const *kWindowTitle = "COMP3811 - CW2";
 
-	struct State_ {
-        ShaderProgram* prog = nullptr;
-        Camera camera;
-        InputState input;
-		AnimationState animation;
-    };
 
 	// GLFW Callbacks Declarations
 	void glfw_callback_error_(int, char const *);
@@ -341,13 +337,45 @@ try
 		// Clear every frame.
 		beginFrame();
 		glUseProgram(unifiedProg.programId());
+		computeVehicleLights(state, model2world_vehicle);
+
 
 		// ------ Set lighting uniforms (shared by all objects) ------
+		
+		// compute updated light positions
+// upload lights to shader
+		for (int i = 0; i < 3; i++)
+		{
+			std::string name = "uPointPos[" + std::to_string(i) + "]";
+			glUniform3fv(glGetUniformLocation(unifiedProg.programId(),
+						name.c_str()),
+						1, &state.pointLights[i].position.x);
+
+			name = "uPointColor[" + std::to_string(i) + "]";
+			glUniform3fv(glGetUniformLocation(unifiedProg.programId(),
+						name.c_str()),
+						1, &state.pointLights[i].color.x);
+
+			name = "uPointEnabled[" + std::to_string(i) + "]";
+			glUniform1i(glGetUniformLocation(unifiedProg.programId(),
+						name.c_str()),
+						state.pointLights[i].enabled);
+		}
+
 		setLightingUniforms(
 			Config::Rendering::kLightDir,
 			Config::Rendering::kLightDiffuse,
 			Config::Rendering::kSceneAmbient
 		);
+
+
+
+
+		glUniform1i(glGetUniformLocation(unifiedProg.programId(), "uDirEnabled"), state.dirLightEnabled);
+		Vec3f camPos = state.camera.getPosition();
+		glUniform3fv(glGetUniformLocation(unifiedProg.programId(), "uCameraPos"),
+					1, &camPos.x);
+
 
 		// ----- Render Terrain -----
 		drawTerrain(
@@ -355,8 +383,10 @@ try
 			parlahtiVertexCount,
 			parlahtiTexture,
 			projView,
-			kIdentity33f
+			kIdentity33f,
+			kIdentity44f      // NEW model matrix
 		);
+
 
 		// ----- Render Landing Pads (INSTANCED DRAWING) -----
 		drawLandingPads(landingPads, projView);
@@ -367,8 +397,10 @@ try
 			vehicleVertexCount,
 			vehicleIndexCount,
 			projCameraWorld_vehicle,
-			normalMatrix_vehicle
+			normalMatrix_vehicle,
+			model2world_vehicle   // NEW
 		);
+
 
 
 		// Cleanup the modified global state: Reset VAO and program.
@@ -457,6 +489,22 @@ namespace
 					std::print("Camera mode RESET to FREE\n");
 				}
 				break;
+			case GLFW_KEY_1:
+				if (aAction == GLFW_PRESS) state->pointLights[0].enabled = !state->pointLights[0].enabled;
+				break;
+
+			case GLFW_KEY_2:
+				if (aAction == GLFW_PRESS) state->pointLights[1].enabled = !state->pointLights[1].enabled;
+				break;
+
+			case GLFW_KEY_3:
+				if (aAction == GLFW_PRESS) state->pointLights[2].enabled = !state->pointLights[2].enabled;
+				break;
+
+			case GLFW_KEY_4:
+				if (aAction == GLFW_PRESS) state->dirLightEnabled = !state->dirLightEnabled;
+				break;
+
 
 			case GLFW_KEY_W: state->input.moveForward = isPressed; break;
 			case GLFW_KEY_S: state->input.moveBackward = isPressed; break;

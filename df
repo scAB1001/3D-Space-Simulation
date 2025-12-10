@@ -1,0 +1,201 @@
+[33mcommit dfd0e07c43b1836353f5705fe480efe5a4c4dea3[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32marchie1.5[m[33m)[m
+Author: Archibald Simpson [sc22a2s] <sc22a2s@uol-pc-051703.leeds.ac.uk>
+Date:   Wed Dec 10 11:12:52 2025 +0000
+
+    light sorces added to world
+
+[33mcommit a82209dc27017ffda281bd4eadff69ee45efd1bf[m
+Author: Archibald Simpson [sc22a2s] <sc22a2s@uol-pc-055409.leeds.ac.uk>
+Date:   Tue Dec 9 19:46:21 2025 +0000
+
+    rocket built
+
+[33mcommit 2e35595326ebad04c95a4d25636670b4e3d3c4bf[m
+Author: Archibald Simpson [sc22a2s] <sc22a2s@uol-pc-055409.leeds.ac.uk>
+Date:   Tue Dec 9 19:43:25 2025 +0000
+
+    rocket sort of built
+
+[33mcommit 420aeea3eb2aed5839e7f24bee850c543f762276[m[33m ([m[1;31morigin/andreas[m[33m, [m[1;32mandreas[m[33m)[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Tue Dec 9 17:35:16 2025 +0000
+
+    feat: <ANDREAS>: Task 1.7 & 1.8 - DONE. Todo: Make more of a curve and
+    tidy code.
+
+[33mcommit d42f49c195b8e6e1afb6b289eeeedb111c6514e7[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Tue Dec 9 15:39:51 2025 +0000
+
+    fix: Task 1.4 - pads now use instancing (2 draw calls in batch draw)
+
+[33mcommit f4e03e2dfa5c6b90503262be19f311c90868b646[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Tue Dec 9 13:54:45 2025 +0000
+
+    bug: Follow camera not updating
+
+[33mcommit 0fba1b0a53a77b64c7b11ac4adb117062971bf7b[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Tue Dec 9 12:54:44 2025 +0000
+
+    fix: <ANDREAS>: FixedGround camera works - use `yaw = std::atan2(forward.z, forward.x);` not atan2(x,z).
+
+[33mcommit b49c9cd87fa8529c86c33a91647f392d53a9bc28[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Tue Dec 9 11:36:14 2025 +0000
+
+    bug: removed extra meshes. Camera tracking not updating each frame.
+
+[33mcommit 2f0ee52d02e4348797487ce26d932039639636f7[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Sat Dec 6 22:55:24 2025 +0000
+
+    feat: <ANDREAS>: Task 1.7 - Done; cameras are not working.
+
+[33mcommit 43b90048f91aec134513bc2281f9ef55a547065b[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Sat Dec 6 19:59:49 2025 +0000
+
+    fix: Mouse Look sorted
+
+[33mcommit 3ece448a21637a44ee6f85f534d3346a7d7dd264[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Sat Dec 6 19:37:07 2025 +0000
+
+    feat: Modularised Camera and Input state. Fix approach 1 for FPS
+    movement for right click.
+
+[33mcommit ef2ad2bc2833fb26b6ad4c9b4475f60250f132aa[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Sat Dec 6 18:21:25 2025 +0000
+
+    feat: Still have phase bugs and Follow camera mode issues. Modularised
+    animation_state and updated vmlib/ files accordingly.
+
+[33mcommit e7f9e645ee0ff89712d47d2d4e0b3dcad11cc0ad[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Fri Dec 5 18:51:51 2025 +0000
+
+    feat: Task 1.7 & 1.8 - DONE - Fix bugs then test.
+
+[33mcommit 3f383cb80369f54dc05eb39c75c0b6ff007aa28d[m
+Author: Andreas Bazigos <sc222ab@leeds.ac.uk>
+Date:   Fri Dec 5 14:30:42 2025 +0000
+
+    feat: Started Animation.
+
+[33mcommit d65ee195176370a43673ed8cc9f0754d700eb8a1[m
+Author: Andreas Bazigos <sc222ab@leeds.ac.uk>
+Date:   Fri Dec 5 13:00:46 2025 +0000
+
+    feat: <ANDREAS>: Task 4 - DONE. New files for modularisation. TODO: FIX
+    terrain loading because TERRAIN MESH DOES NOT NEED IT but it is provided
+    and the landing pad uses it. TODO: FIX mesh - does not render correctly.
+
+[33mcommit a5af81fe1a741f5a762ef7a1574f3d73b23765ce[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Thu Dec 4 13:50:00 2025 +0000
+
+    feat: <ANDREAS>: Updated main-layout, used dedicated class for landing
+    pad.
+
+[33mcommit 2053b41e11fedddc0e22dab521f2716f53ee8bc0[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Thu Dec 4 10:44:31 2025 +0000
+
+    feat: <ANDREAS>: Implemented TASK 3 - Texturing with a unified shader
+    approach, new loadobj.hpp method to load this orthophoto.
+
+[33mcommit d243b792311bb530a2826822370ed6dad6a02014[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Tue Dec 2 14:04:03 2025 +0000
+
+    feat: <ANDREAS>: Task 2 - ALMOST done. There is a bug with the mouse
+    look and spacebar implementations together, basic light model works.
+
+[33mcommit 7dd3b87ec0444d8d5572ea8effb3d5402b487bee[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Tue Dec 2 12:26:22 2025 +0000
+
+    feat: <ANDREAS>: Setup lighting with dir(0,1,-1) but the cube is buggy.
+
+[33mcommit d40305460327690579f232bebca4a5d51849b28a[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Tue Dec 2 12:16:35 2025 +0000
+
+    feat: <ANDREAS>: Proper FPS-style camera implemented, check TODOs with ?
+
+[33mcommit b7894ea2a19f7b31c1c2ca57ed740bb28251c10c[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Sun Nov 30 22:08:24 2025 +0000
+
+    feat: <Andreas>: Updated vmlib/mat44.hpp->`Mat44f operator* ()` method to
+    use the transpose of the right matrix as it is more optimal. 117/117
+    tests *still* pass.
+
+[33mcommit 9de4e6c28c27f53a4495418e57b6c3c765396ac7[m
+Author: Andreas Bazigos <sc222ab@leeds.ac.uk>
+Date:   Fri Nov 28 20:41:13 2025 +0000
+
+    feat: <Andreas>: Implemented WASDQE key movement but its buggy. We are
+    using arcball camera. Zoom In and Out need fixing.
+
+[33mcommit 84f899726e270b9695b8e9cb1317f4341e2d4c90[m
+Author: Andreas Bazigos <sc222ab@leeds.ac.uk>
+Date:   Fri Nov 28 20:01:37 2025 +0000
+
+    feat: <Andreas>: Implemented an FP camera (might need to change to
+    arcball). Added shaders, GLFW setup, drawing, zooming, scrolling,
+    cube.hpp to help draw. Cubes are buggy and don't draw correctly but
+    movement with W and S (and mouse scroll) work.
+
+[33mcommit 901c01494d66fffc11ee20b8ab2cce09265b5b35[m
+Author: Andreas Bazigos <sc222ab@leeds.ac.uk>
+Date:   Fri Nov 28 19:00:03 2025 +0000
+
+    fix: <Andreas>: Implemented test case fixes (missing braces around
+    vars), added comments for certain tests. 117/117 pass.
+
+[33mcommit 4e8af4486d845bcc81b0176dcec0bc8d493c407f[m
+Author: Andreas Bazigos <sc222ab@leeds.ac.uk>
+Date:   Fri Nov 28 14:54:36 2025 +0000
+
+    bug: <Andreas> Import errors with Catch hpp
+
+[33mcommit f9268de4e3b87251850e9dcb1a101353a2c237e2[m
+Author: Andreas Bazigos <sc222ab@leeds.ac.uk>
+Date:   Fri Nov 28 14:51:45 2025 +0000
+
+    feat: <Andreas> Began implementing test cases for task1.1
+
+[33mcommit 9f02c379f49cd07e17ee1658052221891509043c[m
+Author: Andreas Bazigos <sc222ab@leeds.ac.uk>
+Date:   Fri Nov 28 14:23:01 2025 +0000
+
+    feat: <Andreas> Implemented code for Task 1.1 in mat44.hpp, 16/16 tests
+    pass. Need to add more test cases.
+
+[33mcommit f89c74384faca576d36b560d2f78499d68cdbaf2[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Fri Nov 14 19:36:28 2025 +0000
+
+    feat: Scripts updated
+
+[33mcommit c481847c278c1b8f765f8a787d32eb15bacddbc6[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Fri Nov 14 19:10:16 2025 +0000
+
+    feat: branched to dev, modifying build and git scripts
+
+[33mcommit fd769385265d299c3ade9a64c790b1b85e45a589[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Fri Nov 14 19:04:26 2025 +0000
+
+    init: no premake or make ran, use this for submission
+
+[33mcommit 1b4dd7fa7854a638bc463ef6197bc1d5ba7f98c8[m
+Author: scAB1001 <sc222ab@leeds.ac.uk>
+Date:   Fri Nov 14 19:03:40 2025 +0000
+
+    first commit
