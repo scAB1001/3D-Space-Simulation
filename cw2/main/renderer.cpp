@@ -11,12 +11,6 @@ void globalGLSetup()
     glDepthFunc(GL_LESS);
     glClearDepthf(1.f);
     glClearColor(0.2f, 0.2f, 0.2f, 0.0f);
-
-    // Enable blending for UI
-    glEnable(GL_BLEND);
-
-    // TODO: WHY DOES THIS MAKE THE SCREEN GREY
-    // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void beginFrame()
@@ -29,10 +23,6 @@ void beginFrame()
 
     // Optional: Wireframe mode for debugging
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-    // Enable 3D rendering state
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
 }
 
 void resetBindings()
@@ -48,14 +38,8 @@ void endFrame()
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glEnable(GL_CULL_FACE);
 
-    // Disable 3D state for UI
-    // glDisable(GL_DEPTH_TEST);
-    // glDisable(GL_CULL_FACE);
-    // glDisable(GL_FRAMEBUFFER_SRGB);
-
     // Cleanup: unbind VAO and program
     resetBindings();
-    // glUseProgram(0);
 }
 
 void setLightingUniforms(

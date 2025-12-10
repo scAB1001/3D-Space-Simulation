@@ -35,7 +35,6 @@
 #include "texture.hpp"
 #include "loadobj.hpp"
 #include "test.hpp"
-#include "ui_system.hpp"
 
 // TODO: LIST
 // - 1.4 CALL DRAW_ARRAY TWICE
@@ -52,7 +51,6 @@ namespace
         Camera camera;
         InputState input;
 		AnimationState animation;
-		UISystem ui;
 	};
 
 	// GLFW Callbacks Declarations
@@ -136,51 +134,6 @@ try
 	std::print("VERSION {}\n", (char const *)glGetString(GL_VERSION));
 	std::print("SHADING_LANGUAGE_VERSION {}\n", (char const *)glGetString(GL_SHADING_LANGUAGE_VERSION));
 
-	// Initialize UI system
-	UISystem &ui = state.ui;
-	if (!ui.init("assets/cw2/DroidSansMonoDotted.ttf"))
-	{
-		std::print(stderr, "Failed to initialize UI system\n");
-		// Handle error appropriately
-	}
-	else
-	{
-		std::print("UI initialized successfully\n");
-
-		// Test getting text size
-		Vec2f textSize = ui.fontRenderer.getTextSize("TEST");
-		std::print("Test text size: {}x{}\n", textSize.x, textSize.y);
-	}
-
-	// Set initial screen size
-	int width, height;
-	glfwGetFramebufferSize(window, &width, &height);
-	ui.setScreenSize(width, height);
-
-	// Set up UI buttons once, outside the main loop
-	UIButton launchButton;
-	launchButton.label = "LAUNCH";
-	launchButton.position = Vec2f{static_cast<float>(width) / 2, static_cast<float>(height) - 60.f};
-	launchButton.size = Vec2f{120.f, 40.f};
-	launchButton.onClick = [&state]()
-	{
-		if (!state.animation.isAnimating)
-			state.animation.start();
-	};
-
-	UIButton resetButton;
-	resetButton.label = "RESET";
-	resetButton.position = Vec2f{static_cast<float>(width) / 2, static_cast<float>(height) - 120.f};
-	resetButton.size = Vec2f{120.f, 40.f};
-	resetButton.onClick = [&state]()
-	{
-		state.animation.reset();
-		state.camera.setMode(Camera::Mode::Free);
-		state.camera.updateVectors();
-	};
-
-	ui.addButton("launch", launchButton);
-	ui.addButton("reset", resetButton);
 
 	// Ddebug output
 #if !defined(NDEBUG)
@@ -279,39 +232,11 @@ try
 					glfwWaitEvents();
 					glfwGetFramebufferSize(window, &nwidth, &nheight);
 				} while (0 == nwidth || 0 == nheight);
-
-				fbwidth = float(nwidth);
-				fbheight = float(nheight);
 			}
 
 			glViewport(0, 0, nwidth, nheight);
-
-			// Update UI screen size when window is resized
-			ui.setScreenSize(nwidth, nheight);
-
-			// Update button positions for new screen size
-			if (auto *launchBtn = ui.getButton("launch"))
-			{
-				launchBtn->position = Vec2f{fbwidth / 2, fbheight - 60.f};
-			}
-			if (auto *resetBtn = ui.getButton("reset"))
-			{
-				resetBtn->position = Vec2f{fbwidth / 2, fbheight - 120.f};
-			}
 		}
 		float aspectRatio = static_cast<float>(fbwidth) / static_cast<float>(fbheight);
-
-		// Update UI - convert mouse coordinates correctly
-		double mouseX, mouseY;
-		glfwGetCursorPos(window, &mouseX, &mouseY);
-
-		// GLFW mouse Y is top=0, bottom=height, but UI expects bottom=0, top=height
-		// So we need to flip Y coordinate
-		float mouseYFlipped = fbheight - static_cast<float>(mouseY);
-
-		bool mousePressed = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-		ui.update(static_cast<float>(mouseX), mouseYFlipped, mousePressed);
-
 
 		// Update state
 		auto const now = Clock::now();
@@ -406,7 +331,7 @@ try
 		OGL_CHECKPOINT_DEBUG();
 
 		// Clear every frame.
-		/*
+		// /*
 		beginFrame();
 		glUseProgram(unifiedProg.programId());
 
@@ -438,80 +363,9 @@ try
 			normalMatrix_cube
 		);
 
-		// ----- Draw UI -----
-		ui.draw();
-
-		// Draw altitude text
-		std::string altitudeText = "Altitude: " +
-								   std::to_string(state.animation.currentPosition.y - state.animation.startPosition.y) +
-								   " units";
-		ui.drawText(altitudeText, 20.f, 20.f, Vec4f{1.f, 1.f, 1.f, 1.f});
-
-
-		// Cleanup the modified global state: Reset VAO and program.
 		endFrame();
-		*/
+		// */
 
-		// Clear frame
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// --- 3D RENDERING ---
-		glUseProgram(unifiedProg.programId());
-
-		// Set up 3D state
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_CULL_FACE);
-		glEnable(GL_FRAMEBUFFER_SRGB);
-
-		// Draw 3D objects
-		// ------ Set lighting uniforms (shared by all objects) ------
-		setLightingUniforms(
-			Config::Rendering::kLightDir,
-			Config::Rendering::kLightDiffuse,
-			Config::Rendering::kSceneAmbient);
-
-		// ----- Render Terrain -----
-		drawTerrain(
-			parlahtiVao,
-			parlahtiVertexCount,
-			parlahtiTexture,
-			projView,
-			kIdentity33f);
-
-		// ----- Render Landing Pads (INSTANCED DRAWING) -----
-		drawLandingPads(landingPads, projView);
-
-		// Clean up 3D state
-		glBindVertexArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
-
-		// --- UI RENDERING ---
-		// UI will handle its own state management
-		ui.draw();
-		static int frameCounter = 0;
-		if (frameCounter % 60 == 0)
-		{ // Print every second at 60 FPS
-			std::print("Frame: {}, Screen size: {}x{}\n", frameCounter, fbwidth, fbheight);
-			std::print("Mouse: ({}, {}), Flipped: ({}, {})\n",
-					   mouseX, mouseY, mouseX, mouseYFlipped);
-
-			// Check button positions
-			if (auto *btn = ui.getButton("launch"))
-			{
-				std::print("Launch button: pos=({}, {}), size=({}, {}), hovered={}, pressed={}\n",
-						   btn->position.x, btn->position.y,
-						   btn->size.x, btn->size.y,
-						   btn->isHovered, btn->isPressed);
-			}
-		}
-		frameCounter++;
-
-		// Draw altitude text
-		std::string altitudeText = "Altitude: " +
-								   std::to_string(state.animation.currentPosition.y - state.animation.startPosition.y) +
-								   " units";
-		ui.drawText(altitudeText, 20.f, 20.f, Vec4f{1.f, 1.f, 1.f, 1.f});
 		OGL_CHECKPOINT_DEBUG();
 
 		// Display results

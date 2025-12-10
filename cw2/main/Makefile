@@ -77,7 +77,6 @@ OBJECTS :=
 GENERATED += $(OBJDIR)/camera.o
 GENERATED += $(OBJDIR)/cone.o
 GENERATED += $(OBJDIR)/cylinder.o
-GENERATED += $(OBJDIR)/font_renderer.o
 GENERATED += $(OBJDIR)/landing_pad.o
 GENERATED += $(OBJDIR)/loadobj.o
 GENERATED += $(OBJDIR)/main.o
@@ -85,11 +84,9 @@ GENERATED += $(OBJDIR)/renderer.o
 GENERATED += $(OBJDIR)/simple_mesh.o
 GENERATED += $(OBJDIR)/test.o
 GENERATED += $(OBJDIR)/texture.o
-GENERATED += $(OBJDIR)/ui_system.o
 OBJECTS += $(OBJDIR)/camera.o
 OBJECTS += $(OBJDIR)/cone.o
 OBJECTS += $(OBJDIR)/cylinder.o
-OBJECTS += $(OBJDIR)/font_renderer.o
 OBJECTS += $(OBJDIR)/landing_pad.o
 OBJECTS += $(OBJDIR)/loadobj.o
 OBJECTS += $(OBJDIR)/main.o
@@ -97,7 +94,6 @@ OBJECTS += $(OBJDIR)/renderer.o
 OBJECTS += $(OBJDIR)/simple_mesh.o
 OBJECTS += $(OBJDIR)/test.o
 OBJECTS += $(OBJDIR)/texture.o
-OBJECTS += $(OBJDIR)/ui_system.o
 
 # Rules
 # #############################################
@@ -170,9 +166,6 @@ $(OBJDIR)/cone.o: cone.cpp
 $(OBJDIR)/cylinder.o: cylinder.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/font_renderer.o: font_renderer.cpp
-	@echo "$(notdir $<)"
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/landing_pad.o: landing_pad.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -192,9 +185,6 @@ $(OBJDIR)/test.o: test.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/texture.o: texture.cpp
-	@echo "$(notdir $<)"
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/ui_system.o: ui_system.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 
