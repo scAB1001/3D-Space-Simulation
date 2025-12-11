@@ -11,7 +11,7 @@
 struct PointLight {
     Vec3f position;
     Vec3f color;
-    bool enabled=true;
+    bool enabled = true;
 
     void toggle() noexcept {
         enabled = !enabled;
@@ -19,19 +19,23 @@ struct PointLight {
 };
 
 struct State_ {
-    ShaderProgram* prog = nullptr;    // <-- REQUIRED
+    ShaderProgram* prog = nullptr;
 
     Camera camera;
     InputState input;
     AnimationState animation;
 
-    // Task 1.6 Lighting
-    bool dirLightEnabled = true;
+    bool globalDirLightEnabled = true;
     PointLight pointLights[3] = {
         { Vec3f{0,0,0}, Vec3f{1.f,0.2f,0.2f}, true },
         { Vec3f{0,0,0}, Vec3f{0.2f,1.f,0.2f}, true },
         { Vec3f{0,0,0}, Vec3f{0.2f,0.2f,1.f}, true }
     };
+
+    void toggleGlobalDirLight() noexcept
+    {
+        globalDirLightEnabled = !globalDirLightEnabled;
+    }
 };
 
 

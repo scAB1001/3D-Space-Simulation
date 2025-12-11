@@ -17,8 +17,7 @@ uniform vec3 uPointPos[3];
 uniform vec3 uPointColor[3];
 uniform int  uPointEnabled[3];
 
-uniform int uDirEnabled; // 1 = use directional, 0 = disable
-
+uniform int uGlobalDirLightEnabled; // 1 = use directional, 0 = disable
 // ------------ OUTPUT ------------
 layout(location = 0) out vec3 oColor;
 
@@ -38,7 +37,7 @@ void main()
     // Directional lighting
     // ------------------------
     vec3 lighting = vec3(0.0);
-    if (uDirEnabled == 1)
+    if (uGlobalDirLightEnabled == 1)
         lighting += v2fDiffuse;
 
     // ------------------------

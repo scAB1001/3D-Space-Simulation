@@ -302,39 +302,7 @@ try
 
 		beginFrame();
 		glUseProgram(unifiedProg.programId());
-		computeVehicleLights(state, model2world_vehicle);
-
-
-		// ------ Set lighting uniforms (shared by all objects) ------
-		for (int i = 0; i < 3; i++)
-		{
-			std::string name = "uPointPos[" + std::to_string(i) + "]";
-			glUniform3fv(glGetUniformLocation(unifiedProg.programId(),
-						name.c_str()),
-						1, &state.pointLights[i].position.x);
-
-			name = "uPointColor[" + std::to_string(i) + "]";
-			glUniform3fv(glGetUniformLocation(unifiedProg.programId(),
-						name.c_str()),
-						1, &state.pointLights[i].color.x);
-
-			name = "uPointEnabled[" + std::to_string(i) + "]";
-			glUniform1i(glGetUniformLocation(unifiedProg.programId(),
-						name.c_str()),
-						state.pointLights[i].enabled);
-		}
-
-		setLightingUniforms(
-			Config::Rendering::kLightDir,
-			Config::Rendering::kLightDiffuse,
-			Config::Rendering::kSceneAmbient
-		);
-
-		glUniform1i(glGetUniformLocation(unifiedProg.programId(), "uDirEnabled"), state.dirLightEnabled);
-		// glUniform1i(glGetUniformLocation(unifiedProg.programId(), "uDirEnabled"), state.pointLights[3].enabled);
-		Vec3f camPos = state.camera.getPosition();
-		glUniform3fv(glGetUniformLocation(unifiedProg.programId(), "uCameraPos"), 1, &camPos.x);
-
+		setAllLightingUniforms(state, model2world_vehicle);
 
 		// ----- Render Terrain -----
 		drawTerrain(
@@ -443,7 +411,6 @@ namespace
 				}
 				break;
 			case GLFW_KEY_1:
-				// if (aAction == GLFW_PRESS) state->pointLights[0].enabled = !state->pointLights[0].enabled;
 				if (aAction == GLFW_PRESS) state->pointLights[0].toggle();
 				break;
 
@@ -456,12 +423,7 @@ namespace
 				break;
 
 			case GLFW_KEY_4:
-				// if (aAction == GLFW_PRESS) state->dirLightEnabled = !state->dirLightEnabled;
-				if (aAction == GLFW_PRESS)
-				{
-					state->pointLights[3].toggle();
-					state->dirLightEnabled = !state->dirLightEnabled;
-				}
+				if (aAction == GLFW_PRESS) state->toggleGlobalDirLight();
 				break;
 
 
