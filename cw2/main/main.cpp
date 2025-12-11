@@ -5,7 +5,6 @@
 #include <numbers>
 #include <typeinfo>
 #include <stdexcept>
-
 #include <cstdlib>
 
 #include "../support/error.hpp"
@@ -28,15 +27,12 @@
 
 // Shapes
 #include "simple_mesh.hpp"
-#include "cone.hpp"
-#include "cylinder.hpp"
-#include "cube.hpp"
+#include "space_vehicle.hpp"
 
 // Utilities
 #include "landing_pad.hpp"
 #include "texture.hpp"
 #include "loadobj.hpp"
-#include "space_vehicle.hpp"
 
 namespace
 {
@@ -149,17 +145,13 @@ try
 	auto last = Clock::now();
 	float angle = 0.f;
 
-	// TODO: create VBOs and VAO
+	// Create VBOs and VAO
 	auto parlahtiMesh = load_wavefront_obj("assets/cw2/parlahti.obj");
 	GLuint parlahtiVao = create_vao(parlahtiMesh);
 	std::size_t parlahtiVertexCount = parlahtiMesh.vertexCount();
-	std::println("Terrain loaded: {} vertices, material type: {}",
-				 parlahtiVertexCount, parlahtiMesh.materialType);
-
 	GLuint parlahtiTexture = 0;
 	if (parlahtiMesh.materialType == 1 && parlahtiMesh.hasTexcoords())
 	{
-		std::println("Loading parlahti texture...");
 		parlahtiTexture = load_texture_2d("assets/cw2/L4343A-4k.jpeg");
 	}
 
@@ -228,10 +220,6 @@ try
 			if (state.input.moveRight) state.camera.moveRight(dt);
 			if (state.input.moveUp) state.camera.moveUp(dt);
 			if (state.input.moveDown) state.camera.moveDown(dt);
-
-			// Clamp position
-			state.camera.clampVertical(Config::World::kMinCameraHeight, Config::World::kMaxCameraHeight);
-			state.camera.clampToWorldBounds();
 		}
 
 		// Update animation state
@@ -352,7 +340,6 @@ namespace
 						std::print(stderr, "Keeping old shader.\n");
 					}
 
-					// Reset animation
 					state->animation.reset();
 
 					// Reset camera to Free mode but do not change it's initial position
@@ -419,12 +406,10 @@ namespace
 								state->animation.currentPosition,
 								state->animation.velocity);
 							break;
-
 						case Fixed:
 							state->camera.initFixedMode(
 								state->animation.currentPosition);
 							break;
-
 						case Free:
 						default:
 							break;
@@ -434,16 +419,7 @@ namespace
 
 			case GLFW_KEY_F:
 				if (aAction == GLFW_PRESS)
-				{
-					if (!state->animation.isAnimating)
-					{
-						state->animation.start();
-					}
-					else
-					{
-						state->animation.togglePause();
-					}
-				}
+					!state->animation.isAnimating ? state->animation.start() : state->animation.togglePause();
 				break;
 			default:
 				break;
@@ -505,7 +481,7 @@ namespace
 		xOffset *= Config::Camera::kSensitivity;
 		yOffset *= Config::Camera::kSensitivity;
 
-		// Rotate camera if there's significant movement (avoidW micro-jitter)
+		// Rotate camera if there's significant movement (avoids micro-jitter)
 		if (std::abs(xOffset) > Config::Camera::kDeadZone || std::abs(yOffset) > Config::Camera::kDeadZone)
 		{
 			state->camera.rotate(xOffset, yOffset);

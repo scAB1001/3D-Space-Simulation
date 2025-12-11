@@ -7,10 +7,10 @@ SimpleMeshData make_indexed_cube(Vec3f color)
     // 8 unique vertices
     cube.positions = {
         // Front face
-        {-1.0f, -1.0f, 1.0f}, // 0
-        {1.0f, -1.0f, 1.0f},  // 1
-        {1.0f, 1.0f, 1.0f},   // 2
-        {-1.0f, 1.0f, 1.0f},  // 3
+        {-1.0f, -1.0f, 1.0f},  // 0
+        {1.0f, -1.0f, 1.0f},   // 1
+        {1.0f, 1.0f, 1.0f},    // 2
+        {-1.0f, 1.0f, 1.0f},   // 3
         // Back face
         {-1.0f, -1.0f, -1.0f}, // 4
         {1.0f, -1.0f, -1.0f},  // 5

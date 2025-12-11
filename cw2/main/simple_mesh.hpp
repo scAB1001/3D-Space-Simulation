@@ -2,8 +2,12 @@
 #define SIMPLE_MESH_HPP
 
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
 
 #include <vector>
+#include <string>
+#include <cstdlib>
+#include <numbers>
 
 #include "../vmlib/vec2.hpp"
 #include "../vmlib/vec3.hpp"

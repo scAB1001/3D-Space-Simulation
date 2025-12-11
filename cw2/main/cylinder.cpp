@@ -1,7 +1,5 @@
 #include "cylinder.hpp"
 
-#include <numbers>
-
 SimpleMeshData make_batched_indexed_cylinder(bool aCapped, std::size_t aSubdivs, Vec3f aColor, Mat44f aPreTransform)
 {
     SimpleMeshData cylinder;

@@ -3,6 +3,11 @@
 
 #include "../vmlib/vec3.hpp"
 #include "../vmlib/mat44.hpp"
+
+#include <numbers>
+#include <cstdlib>
+#include <algorithm>
+
 #include "config.hpp"
 
 class Camera
@@ -62,14 +67,8 @@ public:
     // Rotation
     void rotate(float yawOffset, float pitchOffset) noexcept;
 
-    // Position clamping
-    void clampToWorldBounds() noexcept;
-    void clampVertical(float minY, float maxY) noexcept;
-
     // State management
-    void debugOrientation(const Vec3f &targetPosition) const noexcept;
     void lookAtTarget(const Vec3f &targetPosition) noexcept;
-    void debugOut(const Vec3f &vehiclePos, const Vec3f &vehicleVelocity);
     void updateFollowMode(const Vec3f &vehiclePos, const Vec3f &vehicleVelocity, float dt);
 
     void offsetPositionFromTarget(const Vec3f &targetPosition, Vec3f offset) noexcept;

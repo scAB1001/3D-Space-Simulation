@@ -2,10 +2,15 @@
 #define RENDERER_HPP
 
 #include <glad/glad.h>
+
 #include "../vmlib/mat44.hpp"
 #include "../vmlib/mat33.hpp"
 #include "../vmlib/vec3.hpp"
+#include "../support/error.hpp"
+
 #include "landing_pad.hpp"
+#include "space_vehicle.hpp"
+#include "config.hpp"
 #include "state.hpp"
 
 // Scene setup and frame management

@@ -331,21 +331,9 @@ GLuint create_bo(GLenum target, const void *data, std::size_t dataSize, GLint at
 
         glVertexAttribPointer(attribIndex, attribSize, GL_FLOAT, GL_FALSE, 0, nullptr);
         glEnableVertexAttribArray(attribIndex);
-
-        // TODO: Remove later. Debug output
-        // if (dataSize > 0)
-        // {
-        //     std::print("Created VBO {}: location={}, size={}, bytes={}\n", bo, attribIndex, attribSize, dataSize);
-        // }
-    }
-    else if (target == GL_ELEMENT_ARRAY_BUFFER && dataSize > 0)
-    {
-        // TODO: Remove later. Debug output
-        // std::print("Created EBO {}: {} indices ({} bytes)\n", bo, dataSize / sizeof(unsigned int), dataSize);
     }
 
     // ------- Error Checking -------
-
     GLenum error = glGetError();
     if (error != GL_NO_ERROR)
     {

@@ -4,7 +4,6 @@
 #include <cmath>
 #include <cassert>
 #include <cstdlib>
-#include <print> // TODO: Remove
 
 struct Vec3f
 {
@@ -209,17 +208,14 @@ Vec3f mix(const Vec3f &a, const Vec3f &b, float t) noexcept
 	// DEBUG
 	if (!std::isfinite(a.x) || !std::isfinite(a.y) || !std::isfinite(a.z))
 	{
-		std::print("WARNING: mix() got NaN in a\n");
 		return b;
 	}
 	if (!std::isfinite(b.x) || !std::isfinite(b.y) || !std::isfinite(b.z))
 	{
-		std::print("WARNING: mix() got NaN in b\n");
 		return a;
 	}
 	if (!std::isfinite(t) || t < 0.0f || t > 1.0f)
 	{
-		std::print("WARNING: mix() got invalid t={}\n", t);
 		return b;
 	}
 
@@ -227,8 +223,6 @@ Vec3f mix(const Vec3f &a, const Vec3f &b, float t) noexcept
 
 	if (!std::isfinite(result.x) || !std::isfinite(result.y) || !std::isfinite(result.z))
 	{
-		std::print("ERROR: mix() produced NaN: a=({},{},{}), b=({},{},{}), t={}\n",
-				   a.x, a.y, a.z, b.x, b.y, b.z, t);
 		return b;
 	}
 

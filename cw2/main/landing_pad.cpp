@@ -1,5 +1,4 @@
 #include "landing_pad.hpp"
-#include <print>
 
 // Static member initialization
 SimpleMeshData LandingPad::meshData;
@@ -16,10 +15,6 @@ void LandingPad::initialize()
     meshData = load_wavefront_obj_with_mtl(
         "assets/cw2/landingpad.obj",
         materials);
-
-    // TODO: Remove later. Debug output
-    // std::println("Loaded landing pad with {} vertices", meshData.positions.size());
-    // std::println("Landing pad has {} materials", materials.size());
 
     // Create VAO once
     sharedVao = create_vao(meshData);
@@ -45,9 +40,7 @@ LandingPad::LandingPad(Vec3f position, float scale) : position(position)
     this->vertexCount = meshData.vertexCount();
     this->transform = make_translation(position) * make_scaling(scale, scale, scale);
 
-    // -----------------------------------------------------
-    // Assign material (choose first material from MTL file)
-    // -----------------------------------------------------
+    // ----- Assign material -----
     if (!materials.empty())
     {
         kd = materials[0].diffuse;      // Kd

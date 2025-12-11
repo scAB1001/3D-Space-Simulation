@@ -1,9 +1,6 @@
 #ifndef INPUT_STATE_HPP
 #define INPUT_STATE_HPP
 
-#include <cstddef>
-#include <print>
-
 struct InputState
 {
     // Movement flags

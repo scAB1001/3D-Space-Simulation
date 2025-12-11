@@ -1,17 +1,4 @@
 #include "renderer.hpp"
-#include "../vmlib/mat44.hpp"
-#include "../vmlib/mat33.hpp"
-#include "../vmlib/vec3.hpp"
-#include "../support/error.hpp"
-
-#include "landing_pad.hpp"
-#include "space_vehicle.hpp"
-#include "config.hpp"
-#include "state.hpp"
-
-
-#include <glad/glad.h>
-#include <print>
 
 // Scene setup and frame management
 void globalGLSetup()

@@ -3,10 +3,6 @@
 
 #include "loadobj.hpp"
 #include "simple_mesh.hpp"
-#include "../vmlib/vec3.hpp"
-#include "../vmlib/mat44.hpp"
-#include <vector>
-#include <glad/glad.h>
 
 struct LandingPad
 {

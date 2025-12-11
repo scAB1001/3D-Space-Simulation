@@ -98,8 +98,6 @@ Mat44f operator*(Mat44f const& aLeft, Mat44f const& aRight) noexcept
 constexpr
 Vec4f operator*( Mat44f const& aLeft, Vec4f const& aRight ) noexcept
 {
-	//TODO: your implementation goes here
-	//TODO: remove the following when you start your implementation
 	// (void)aLeft;   // Avoid warnings about unused arguments until the function
 	// (void)aRight;  // is properly implemented.
 	// return { 0.f, 0.f, 0.f, 0.f };
