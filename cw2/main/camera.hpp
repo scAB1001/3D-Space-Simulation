@@ -4,6 +4,8 @@
 #include "../vmlib/vec3.hpp"
 #include "../vmlib/mat44.hpp"
 #include "config.hpp"
+#include "input_state.hpp"
+// #include "state.hpp"
 
 class Camera
 {
@@ -58,6 +60,7 @@ public:
     void moveRight(float dt) noexcept;
     void moveUp(float dt) noexcept;
     void moveDown(float dt) noexcept;
+    void updateSpeed(Camera &cam, const InputState &input) noexcept;
 
     // Rotation
     void rotate(float yawOffset, float pitchOffset) noexcept;
@@ -117,4 +120,7 @@ private:
     void normalizeYaw() noexcept;
 };
 
-#endif // CAMERA_HPP -72.28,12.27 19.0,14.25
+void processMovement(Camera &cam, const InputState &input, float dt) noexcept;
+
+
+#endif // CAMERA_HPP

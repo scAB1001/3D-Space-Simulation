@@ -32,8 +32,12 @@ struct State_
     InputState input;
     AnimationState animation;
 
-    // === Split Screen ===
-    bool splitScreen = false;      // Press V to toggle
+    bool splitScreenEnabled = false; // Press V to toggle
+
+    void toggleSplitScreen() noexcept
+    {
+        splitScreenEnabled = !splitScreenEnabled;
+    }
 
     Camera leftCamera;
     Camera rightCamera;

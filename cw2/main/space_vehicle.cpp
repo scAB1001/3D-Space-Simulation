@@ -92,7 +92,7 @@ namespace
     Mat44f M_nose = T_nose * R_nose * S_nose;                           // tip at y=bodyHeight + noseHeight
 
     // ===== BASE CUBE: top at y = 0, bottom below pad =====
-    Mat44f S_base = make_scaling(bodyRadius * 1.3f, baseHalfH, bodyRadius * 1.3f);
+    Mat44f S_base = make_scaling(0.6, (0.4*3.9), 0.6);
     Mat44f T_base = make_translation(Vec3f{0.f, -baseHalfH, 0.f});      // y ∈ [-baseH*2, 0]
     Mat44f M_base = T_base * S_base;
 

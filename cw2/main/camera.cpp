@@ -114,6 +114,27 @@ void Camera::moveDown(float dt) noexcept
     position -= up * speed * dt;
 }
 
+void Camera::updateSpeed(Camera &cam, const InputState &input) noexcept
+{
+    // Calculate speed multiplier based on current modifier state
+    float speedMultiplier = 1.0f;
+
+    if (input.shiftPressed)
+    {
+        speedMultiplier = Config::Camera::kSpeedFastMultiplier;
+    }
+    else if (input.controlPressed)
+    {
+        speedMultiplier = Config::Camera::kSpeedSlowMultiplier;
+    }
+
+    // Update all relevant cameras
+    // float baseSpeed = ;
+    cam.setSpeed(Config::Camera::kBaseSpeed * speedMultiplier);
+    // state->leftCamera.setSpeed(baseSpeed * speedMultiplier);
+    // state->rightCamera.setSpeed(baseSpeed * speedMultiplier);
+}
+
 void Camera::rotate(float yawOffset, float pitchOffset) noexcept
 {
     if (mode != Mode::Free && mode != Mode::Follow)
@@ -403,4 +424,23 @@ void Camera::normalizeYaw() noexcept
     {
         yaw += twoPi;
     }
+}
+
+void processMovement(Camera &cam, const InputState &input, float dt) noexcept
+{
+    if (!cam.isMode(Camera::Mode::Free))
+        return;
+
+    if (input.moveForward)
+        cam.moveForward(dt);
+    if (input.moveBackward)
+        cam.moveBackward(dt);
+    if (input.moveLeft)
+        cam.moveLeft(dt);
+    if (input.moveRight)
+        cam.moveRight(dt);
+    if (input.moveUp)
+        cam.moveUp(dt);
+    if (input.moveDown)
+        cam.moveDown(dt);
 }
