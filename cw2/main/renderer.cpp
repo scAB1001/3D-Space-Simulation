@@ -10,7 +10,6 @@ void globalGLSetup()
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     glClearDepthf(1.f);
-    // dark gray - values between 0.0 and 1.0
     glClearColor(0.2f, 0.2f, 0.2f, 0.0f);
 }
 
@@ -41,7 +40,6 @@ void endFrame()
 
     // Cleanup: unbind VAO and program
     resetBindings();
-    // glUseProgram(0);
 }
 
 void setLightingUniforms(

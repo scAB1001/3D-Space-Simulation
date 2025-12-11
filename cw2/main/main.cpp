@@ -51,7 +51,7 @@ namespace
         Camera camera;
         InputState input;
 		AnimationState animation;
-    };
+	};
 
 	// GLFW Callbacks Declarations
 	void glfw_callback_error_(int, char const *);
@@ -133,6 +133,7 @@ try
 	std::print("VENDOR {}\n", (char const *)glGetString(GL_VENDOR));
 	std::print("VERSION {}\n", (char const *)glGetString(GL_VERSION));
 	std::print("SHADING_LANGUAGE_VERSION {}\n", (char const *)glGetString(GL_SHADING_LANGUAGE_VERSION));
+
 
 	// Ddebug output
 #if !defined(NDEBUG)
@@ -330,6 +331,7 @@ try
 		OGL_CHECKPOINT_DEBUG();
 
 		// Clear every frame.
+		// /*
 		beginFrame();
 		glUseProgram(unifiedProg.programId());
 
@@ -361,8 +363,8 @@ try
 			normalMatrix_cube
 		);
 
-		// Cleanup the modified global state: Reset VAO and program.
 		endFrame();
+		// */
 
 		OGL_CHECKPOINT_DEBUG();
 
