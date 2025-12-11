@@ -14,14 +14,16 @@ void beginFrame();
 void resetBindings();
 void endFrame();
 
+// Setting light uniforms
 void setDirectionalLightUniforms(
     const Vec3f &lightDir,
     const Vec3f &lightDiffuse,
     const Vec3f &sceneAmbient);
-void computeVehicleLights(State_& state, const Mat44f& modelVehicle);
+void computeVehicleLights(State_ &state, const Mat44f &modelVehicle);
 void setPointLightUniforms(State_ &state);
 void setAllLightingUniforms(State_ &state, const Mat44f &modelVehicle);
 
+// Drawing helpers
 void drawMesh(
     GLuint vao,
     GLsizei vertexCount,
@@ -32,6 +34,7 @@ void drawMesh(
     const Mat44f &projCameraWorld,
     const Mat33f &normalMatrix,
     const Mat44f &modelMatrix);
+    
 void drawTerrain(
     GLuint vao,
     GLsizei vertexCount,
@@ -39,9 +42,11 @@ void drawTerrain(
     const Mat44f &projCameraWorld,
     const Mat33f &normalMatrix,
     const Mat44f &modelMatrix);
+
 void drawLandingPads(
     const std::vector<LandingPad> &pads,
     const Mat44f &projView);
+
 void drawObject(
     GLuint vao,
     GLsizei vertexCount,

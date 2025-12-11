@@ -15,20 +15,21 @@ struct LandingPad
     GLuint vao;
     std::size_t vertexCount;
 
-    // Static data shared by all landing pads
+    // Each landing pad uses ONE material
+    Vec3f kd;
+    float shininess;
+
+    // Static shared data
     static SimpleMeshData meshData;
     static std::vector<Material> materials;
     static GLuint sharedVao;
     static bool initialized;
 
-    // Initialize shared resources
     static void initialize();
-
-    // Cleanup shared resources
     static void cleanup();
 
-    // Create landing pad instance
     LandingPad(Vec3f position, float scale = 2.0f);
 };
+
 
 #endif // LANDING_PAD_HPP

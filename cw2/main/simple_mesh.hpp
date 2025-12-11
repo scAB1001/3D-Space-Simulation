@@ -15,6 +15,7 @@ struct SimpleMeshData
 	std::vector<Vec2f> texcoords;	   // For textured objects (materialType=1)
 	std::vector<Vec3f> normals;		   // For lighting calculations
 	std::vector<unsigned int> indices; // For indexed rendering (optional)
+	
 
 	int materialType = 0; // 0 = colored, 1 = textured
 
