@@ -226,26 +226,44 @@ try
 		if (state.splitScreen)
 			activeCam = &state.leftCamera;
 
-		if (state.input.mouseLookActive && activeCam->isMode(Camera::Mode::Free))
+		// ========= MOVEMENT: single view → main camera, split view → both cameras =========
+		auto moveCamera = [&](Camera &cam)
 		{
+			if (!cam.isMode(Camera::Mode::Free))
+				return;
+
 			if (state.input.moveForward)
-				activeCam->moveForward(dt);
+				cam.moveForward(dt);
 			if (state.input.moveBackward)
-				activeCam->moveBackward(dt);
+				cam.moveBackward(dt);
 			if (state.input.moveLeft)
-				activeCam->moveLeft(dt);
+				cam.moveLeft(dt);
 			if (state.input.moveRight)
-				activeCam->moveRight(dt);
+				cam.moveRight(dt);
 			if (state.input.moveUp)
-				activeCam->moveUp(dt);
+				cam.moveUp(dt);
 			if (state.input.moveDown)
-				activeCam->moveDown(dt);
+				cam.moveDown(dt);
 
-			// Clamp
-			activeCam->clampVertical(Config::World::kMinCameraHeight,
-									Config::World::kMaxCameraHeight);
+			cam.clampVertical(Config::World::kMinCameraHeight,
+							Config::World::kMaxCameraHeight);
 
-			activeCam->clampToWorldBounds();
+			cam.clampToWorldBounds();
+		};
+
+		if (state.input.mouseLookActive)
+		{
+			if (!state.splitScreen)
+			{
+				// Single-view mode: move main camera only
+				moveCamera(state.camera);
+			}
+			else
+			{
+				// Split-screen mode: move BOTH cameras
+				moveCamera(state.leftCamera);
+				moveCamera(state.rightCamera);
+			}
 		}
 
 
@@ -761,15 +779,22 @@ namespace
 		yOffset *= Config::Camera::kSensitivity;
 
 		// Rotate camera if there's significant movement (avoid micro-jitter)
+		// Rotate camera if there's significant movement (avoid micro-jitter)
 		if (std::abs(xOffset) > Config::Camera::kDeadZone || std::abs(yOffset) > Config::Camera::kDeadZone)
 		{
-			Camera* activeCam = &state->camera;
-
-			if (state->splitScreen)
-				activeCam = &state->leftCamera;
-
-			activeCam->rotate(xOffset, yOffset);
+			if (!state->splitScreen)
+			{
+				// Single-view: rotate only main camera
+				state->camera.rotate(xOffset, yOffset);
+			}
+			else
+			{
+				// Split-screen: rotate BOTH cameras
+				state->leftCamera.rotate(xOffset, yOffset);
+				state->rightCamera.rotate(xOffset, yOffset);
+			}
 		}
+
 	}
 
 }
