@@ -220,33 +220,58 @@ try
 		state.camera.updateVectors();
 
 		// Handle camera movement in free mode only
-		if (state.input.mouseLookActive && state.camera.isMode(Camera::Mode::Free))
+		Camera* activeCam = &state.camera;
+
+// In split screen, LEFT camera receives controls
+		if (state.splitScreen)
+			activeCam = &state.leftCamera;
+
+		if (state.input.mouseLookActive && activeCam->isMode(Camera::Mode::Free))
 		{
 			if (state.input.moveForward)
-				state.camera.moveForward(dt);
+				activeCam->moveForward(dt);
 			if (state.input.moveBackward)
-				state.camera.moveBackward(dt);
+				activeCam->moveBackward(dt);
 			if (state.input.moveLeft)
-				state.camera.moveLeft(dt);
+				activeCam->moveLeft(dt);
 			if (state.input.moveRight)
-				state.camera.moveRight(dt);
+				activeCam->moveRight(dt);
 			if (state.input.moveUp)
-				state.camera.moveUp(dt);
+				activeCam->moveUp(dt);
 			if (state.input.moveDown)
-				state.camera.moveDown(dt);
+				activeCam->moveDown(dt);
 
-			// Clamp position
-			state.camera.clampVertical(Config::World::kMinCameraHeight, Config::World::kMaxCameraHeight);
-			state.camera.clampToWorldBounds();
+			// Clamp
+			activeCam->clampVertical(Config::World::kMinCameraHeight,
+									Config::World::kMaxCameraHeight);
+
+			activeCam->clampToWorldBounds();
 		}
+
 
 		// Update animation state
 		if (state.animation.isAnimating && !state.animation.isPaused)
 		{
 			state.animation.update(dt);
 
-			state.camera.updateForAnimation(state.animation.currentPosition,
-											state.animation.velocity, dt);
+			// Update animation cameras
+			state.camera.updateForAnimation(
+				state.animation.currentPosition,
+				state.animation.velocity,
+				dt);
+
+			if (state.splitScreen)
+			{
+				state.leftCamera.updateForAnimation(
+					state.animation.currentPosition,
+					state.animation.velocity,
+					dt);
+
+				state.rightCamera.updateForAnimation(
+					state.animation.currentPosition,
+					state.animation.velocity,
+					dt);
+			}
 
 			// Periodic debug output
 			static float lastDebugTime = 0.0f;
@@ -298,35 +323,82 @@ try
 		Mat33f normalMatrix_vehicle = make_uniform_normal(model2world_vehicle);
 
 		OGL_CHECKPOINT_DEBUG();
+		// ----------- RENDER VIEW FUNCTION (inside main loop) -----------
+		auto renderView = [&](Camera &cam, float vpWidth, float vpHeight)
+		{
+			float aspect = vpWidth / vpHeight;
 
+			Mat44f projection =
+				make_perspective_projection(
+					Config::Rendering::kFOV,
+					aspect,
+					Config::Rendering::kNearPlane,
+					Config::Rendering::kFarPlane);
+
+			cam.updateVectors();
+			Mat44f view = cam.getViewMatrix();
+			Mat44f projViewLocal = projection * view;
+
+			// Terrain
+			drawTerrain(
+				parlahtiVao,
+				parlahtiVertexCount,
+				parlahtiTexture,
+				projViewLocal,
+				kIdentity33f,
+				kIdentity44f);
+
+			// Landing pads
+			drawLandingPads(landingPads, projViewLocal);
+
+			// Vehicle
+			Mat44f projCameraWorld_vehicle =
+				make_proj_camera_world(projViewLocal, model2world_vehicle);
+
+			Mat33f normalMatrix_vehicle =
+				make_uniform_normal(model2world_vehicle);
+
+			drawObject(
+				vehicleVao,
+				vehicleVertexCount,
+				vehicleIndexCount,
+				projCameraWorld_vehicle,
+				normalMatrix_vehicle,
+				model2world_vehicle);
+		};
+
+
+		// ====================== BEGIN FRAME ======================
 		beginFrame();
 		glUseProgram(unifiedProg.programId());
-		setAllLightingUniforms(state, model2world_vehicle);
 
-		// ----- Render Terrain -----
-		drawTerrain(
-			parlahtiVao,
-			parlahtiVertexCount,
-			parlahtiTexture,
-			projView,
-			kIdentity33f,
-			kIdentity44f);
+		if (!state.splitScreen)
+		{
+			// ----------- SINGLE VIEW MODE -----------
+			glViewport(0, 0, fbwidth, fbheight);
 
-		// ----- Render Landing Pads (Instanced) -----
-		drawLandingPads(landingPads, projView);
+			setAllLightingUniforms(state, model2world_vehicle, state.camera);
 
-		// ----- Render Space Vehicle -----
-		drawObject(
-			vehicleVao,
-			vehicleVertexCount,
-			vehicleIndexCount,
-			projCameraWorld_vehicle,
-			normalMatrix_vehicle,
-			model2world_vehicle);
+			renderView(state.camera, fbwidth, fbheight);
+		}
+		else
+		{
+			// ----------- SPLIT SCREEN MODE -----------
+			float halfW = fbwidth * 0.5f;
 
-		// Cleanup the modified global state: Reset VAO and program.
+			// Left viewport
+			glViewport(0, 0, halfW, fbheight);
+			setAllLightingUniforms(state, model2world_vehicle, state.leftCamera);
+			renderView(state.leftCamera, halfW, fbheight);
+
+			// Right viewport
+			glViewport(halfW, 0, halfW, fbheight);
+			setAllLightingUniforms(state, model2world_vehicle, state.rightCamera);
+			renderView(state.rightCamera, halfW, fbheight);
+		}
+
 		endFrame();
-
+			
 		OGL_CHECKPOINT_DEBUG();
 
 		// Display results
@@ -476,29 +548,119 @@ namespace
 		case GLFW_KEY_C:
 			if (aAction == GLFW_PRESS)
 			{
-				state->camera.cycleMode();
-				auto newMode = state->camera.getMode();
-
-				switch (newMode)
+				if (!state->splitScreen)
 				{
+					// --- Single view ---
+					state->camera.cycleMode();
+					auto newMode = state->camera.getMode();
+
 					using enum Camera::Mode;
-				case Follow:
-					state->camera.initFollowMode(
-						state->animation.currentPosition,
-						state->animation.velocity);
-					break;
+					switch (newMode)
+					{
+						case Follow:
+							state->camera.initFollowMode(
+								state->animation.currentPosition,
+								state->animation.velocity);
+							break;
 
-				case Fixed:
-					state->camera.initFixedMode(
-						state->animation.currentPosition);
-					break;
+						case Fixed:
+							state->camera.initFixedMode(
+								state->animation.currentPosition);
+							break;
 
-				case Free:
-				default:
-					break;
+						default:
+							break;
+					}
+				}
+				else
+				{
+					// --- Split screen ---
+					if (state->input.shiftPressed)
+					{
+						// RIGHT CAMERA
+						state->rightCamera.cycleMode();
+						auto newMode = state->rightCamera.getMode();
+
+						using enum Camera::Mode;
+						switch (newMode)
+						{
+							case Follow:
+								state->rightCamera.initFollowMode(
+									state->animation.currentPosition,
+									state->animation.velocity);
+								break;
+
+							case Fixed:
+								state->rightCamera.initFixedMode(
+									state->animation.currentPosition);
+								break;
+
+							default:
+								break;
+						}
+					}
+					else
+					{
+						// LEFT CAMERA
+						state->leftCamera.cycleMode();
+						auto newMode = state->leftCamera.getMode();
+
+						using enum Camera::Mode;
+						switch (newMode)
+						{
+							case Follow:
+								state->leftCamera.initFollowMode(
+									state->animation.currentPosition,
+									state->animation.velocity);
+								break;
+
+							case Fixed:
+								state->leftCamera.initFixedMode(
+									state->animation.currentPosition);
+								break;
+
+							default:
+								break;
+						}
+					}
 				}
 			}
 			break;
+
+		case GLFW_KEY_V:
+			if (aAction == GLFW_PRESS)
+			{
+				state->splitScreen = !state->splitScreen;
+
+				if (state->splitScreen)
+				{
+					// Left camera = EXACT current view
+					state->leftCamera = state->camera;
+
+					// Right camera = same start point but DIFFERENT view mode
+					state->rightCamera = state->camera;
+
+					// Automatically switch the right camera into a different mode.
+					// Choose the behavior you want:
+
+					state->rightCamera.setMode(Camera::Mode::Follow);
+					state->rightCamera.initFollowMode(
+						state->animation.currentPosition,
+						state->animation.velocity
+					);
+
+					std::print("Split screen ON (Left = main camera, Right = FOLLOW mode)\n");
+				}
+
+				else
+				{
+					std::print("Split screen OFF\n");
+				}
+			}
+			break;
+
+
+
 
 		case GLFW_KEY_F:
 			if (aAction == GLFW_PRESS)
@@ -601,7 +763,12 @@ namespace
 		// Rotate camera if there's significant movement (avoid micro-jitter)
 		if (std::abs(xOffset) > Config::Camera::kDeadZone || std::abs(yOffset) > Config::Camera::kDeadZone)
 		{
-			state->camera.rotate(xOffset, yOffset);
+			Camera* activeCam = &state->camera;
+
+			if (state->splitScreen)
+				activeCam = &state->leftCamera;
+
+			activeCam->rotate(xOffset, yOffset);
 		}
 	}
 

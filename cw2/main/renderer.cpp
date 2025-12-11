@@ -112,9 +112,9 @@ void setPointLightUniforms(State_ &state)
     glUniform1iv(glGetUniformLocation(progId, "uPointEnabled[0]"), 3, enabled);
 }
 
-void setAllLightingUniforms(
-    State_ &state,
-    const Mat44f &modelVehicle)
+void setAllLightingUniforms(State_ &state,
+                            const Mat44f &modelVehicle,
+                            const Camera &cam)
 {
     // Directional light uniforms
     setDirectionalLightUniforms(
@@ -133,7 +133,7 @@ void setAllLightingUniforms(
     glUniform1i(glGetUniformLocation(progId, "uGlobalDirLightEnabled"), state.globalDirLightEnabled ? 1 : 0);
 
     // Camera position
-    Vec3f camPos = state.camera.getPosition();
+    Vec3f camPos = cam.getPosition();
     glUniform3fv(glGetUniformLocation(progId, "uCameraPos"), 1, &camPos.x);
 }
 

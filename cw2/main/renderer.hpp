@@ -21,7 +21,9 @@ void setDirectionalLightUniforms(
     const Vec3f &sceneAmbient);
 void computeVehicleLights(State_ &state, const Mat44f &modelVehicle);
 void setPointLightUniforms(State_ &state);
-void setAllLightingUniforms(State_ &state, const Mat44f &modelVehicle);
+void setAllLightingUniforms(State_ &state,
+                            const Mat44f &modelVehicle,
+                            const Camera &cam);
 
 // Drawing helpers
 void drawMesh(

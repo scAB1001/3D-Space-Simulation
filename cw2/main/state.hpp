@@ -27,6 +27,12 @@ struct State_
     InputState input;
     AnimationState animation;
 
+    // === Split Screen ===
+    bool splitScreen = false;      // Press V to toggle
+
+    Camera leftCamera;
+    Camera rightCamera;
+
     bool globalDirLightEnabled = true;
     PointLight pointLights[3] = {
         {Vec3f{0, 0, 0}, Vec3f{1.f, 0.2f, 0.2f}, true},
