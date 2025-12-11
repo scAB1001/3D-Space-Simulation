@@ -17,7 +17,7 @@ SimpleMeshData make_space_vehicle()
     base.materialType    = 0;
 
     // ------ BASE CUBE: top at y = 0, bottom below pad ------
-    Mat44f S_base = make_scaling(bodyRadius * 1.3f, baseHalfH, bodyRadius * 1.3f);
+    Mat44f S_base = make_scaling(0.6, (0.4 * 3.9), 0.6);
     Mat44f T_base = make_translation(Vec3f{0.f, -baseHalfH, 0.f});
     Mat44f M_base = T_base * S_base;
     apply_transform_to_mesh(base, M_base);

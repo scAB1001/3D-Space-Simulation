@@ -12,6 +12,25 @@
 #include "space_vehicle.hpp"
 #include "config.hpp"
 #include "state.hpp"
+#include "space_vehicle.hpp"
+#include "config.hpp"
+#include "state.hpp"
+
+namespace RendererInternal {
+    inline GLuint currentShaderProgram = 0;
+
+    inline void bindShader(GLuint program)
+    {
+        if (program != currentShaderProgram)
+        {
+            glUseProgram(program);
+            currentShaderProgram = program;
+        }
+    }
+}
+
+using RendererInternal::bindShader;
+
 
 // Scene setup and frame management
 void globalGLSetup();
@@ -27,7 +46,47 @@ void setDirectionalLightUniforms(
     const Vec3f &sceneAmbient);
 void computeVehicleLights(State_ &state, const Mat44f &modelVehicle);
 void setPointLightUniforms(State_ &state);
-void setAllLightingUniforms(State_ &state, const Mat44f &modelVehicle);
+void setAllLightingUniforms(State_ &state,
+                            const Mat44f &modelVehicle,
+                            const Camera &cam);
+
+struct RenderContext
+{
+    GLuint parlahtiVao;
+    std::size_t parlahtiVertexCount;
+    GLuint parlahtiTexture;
+    const std::vector<LandingPad> &landingPads;
+    GLuint vehicleVao;
+    std::size_t vehicleVertexCount;
+    std::size_t vehicleIndexCount;
+    GLuint unifiedProg;
+};
+
+void renderView(
+    Camera &cam,
+    float vpWidth,
+    float vpHeight,
+    const Mat44f &model2world_vehicle,
+    ParticleSystem &particles,
+    const RenderContext &ctx);
+
+void renderScreen(
+    State_ &state,
+    Camera &cam,
+    GLint xViewport,
+    GLsizei vpWidth,
+    GLsizei vpHeight,
+    const Mat44f &model2world_vehicle,
+    ParticleSystem &particles,
+    const RenderContext &ctx);
+
+void renderSingleOrSplitScreen(
+    State_ &state,
+    const Mat44f &model2world_vehicle,
+    GLsizei fbwidth,
+    GLsizei fbheight,
+    ParticleSystem &particles,
+    const RenderContext &ctx);
 
 // Drawing helpers
 void drawMesh(

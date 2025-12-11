@@ -31,7 +31,6 @@ void endFrame()
 {
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glEnable(GL_CULL_FACE);
-
     resetBindings();
 }
 
@@ -56,13 +55,13 @@ void setDirectionalLightUniforms(
 {
     Vec3f L = normalize(lightDir);
 
-    // Query the current program
-    GLint prog;
-    glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
+    // // Query the current program
+    // GLint prog;
+    // glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
 
-    glUniform3fv(glGetUniformLocation(prog, "uLightDir"), 1, &L.x);
-    glUniform3fv(glGetUniformLocation(prog, "uLightDiffuse"), 1, &lightDiffuse.x);
-    glUniform3fv(glGetUniformLocation(prog, "uSceneAmbient"), 1, &sceneAmbient.x);
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uLightDir"), 1, &L.x);
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uLightDiffuse"), 1, &lightDiffuse.x);
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uSceneAmbient"), 1, &sceneAmbient.x);
 }
 
 void computeVehicleLights(State_ &state, const Mat44f &modelVehicle)
@@ -91,17 +90,17 @@ void computeVehicleLights(State_ &state, const Mat44f &modelVehicle)
 
 void setPointLightUniforms(State_ &state)
 {
-    GLuint progId = state.prog->programId();
+    // GLuint progId = state.prog->programId();
 
     // Point light colors
-    glUniform3fv(glGetUniformLocation(progId, "uPointPos[0]"), 1, &state.pointLights[0].position.x);
-    glUniform3fv(glGetUniformLocation(progId, "uPointPos[1]"), 1, &state.pointLights[1].position.x);
-    glUniform3fv(glGetUniformLocation(progId, "uPointPos[2]"), 1, &state.pointLights[2].position.x);
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uPointPos[0]"), 1, &state.pointLights[0].position.x);
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uPointPos[1]"), 1, &state.pointLights[1].position.x);
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uPointPos[2]"), 1, &state.pointLights[2].position.x);
 
     // Point light colors
-    glUniform3fv(glGetUniformLocation(progId, "uPointColor[0]"), 1, &state.pointLights[0].color.x);
-    glUniform3fv(glGetUniformLocation(progId, "uPointColor[1]"), 1, &state.pointLights[1].color.x);
-    glUniform3fv(glGetUniformLocation(progId, "uPointColor[2]"), 1, &state.pointLights[2].color.x);
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uPointColor[0]"), 1, &state.pointLights[0].color.x);
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uPointColor[1]"), 1, &state.pointLights[1].color.x);
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uPointColor[2]"), 1, &state.pointLights[2].color.x);
 
     // Point light enabled flags
     GLint enabled[3] = {
@@ -109,12 +108,12 @@ void setPointLightUniforms(State_ &state)
         state.pointLights[1].enabled ? 1 : 0,
         state.pointLights[2].enabled ? 1 : 0
     };
-    glUniform1iv(glGetUniformLocation(progId, "uPointEnabled[0]"), 3, enabled);
+    glUniform1iv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uPointEnabled[0]"), 3, enabled);
 }
 
-void setAllLightingUniforms(
-    State_ &state,
-    const Mat44f &modelVehicle)
+void setAllLightingUniforms(State_ &state,
+                            const Mat44f &modelVehicle,
+                            const Camera &cam)
 {
     // Directional light uniforms
     setDirectionalLightUniforms(
@@ -129,14 +128,138 @@ void setAllLightingUniforms(
     setPointLightUniforms(state);
 
     // Directional light enabled flag
-    GLuint progId = state.prog->programId();
-    glUniform1i(glGetUniformLocation(progId, "uGlobalDirLightEnabled"), state.globalDirLightEnabled ? 1 : 0);
+    // GLuint progId = state.prog->programId();
+    glUniform1i(glGetUniformLocation(RendererInternal::currentShaderProgram, "uGlobalDirLightEnabled"), state.globalDirLightEnabled ? 1 : 0);
 
     // Camera position
-    Vec3f camPos = state.camera.getPosition();
-    glUniform3fv(glGetUniformLocation(progId, "uCameraPos"), 1, &camPos.x);
+    Vec3f camPos = cam.getPosition();
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uCameraPos"), 1, &camPos.x);
 }
 
+void renderView(
+    Camera &cam,
+    float vpWidth,
+    float vpHeight,
+    const Mat44f &model2world_vehicle,
+    ParticleSystem &particles,
+    const RenderContext &ctx)
+{
+    // Bind unified shader (smart binding)
+    bindShader(ctx.unifiedProg);
+
+    // Calculate projection matrix
+    float aspect = vpWidth / vpHeight;
+    Mat44f projection = make_perspective_projection(
+        Config::Rendering::kFOV,
+        aspect,
+        Config::Rendering::kNearPlane,
+        Config::Rendering::kFarPlane);
+
+    cam.updateVectors();
+    Mat44f view = cam.getViewMatrix();
+    Mat44f projViewLocal = projection * view;
+
+    // Bind unified shader
+    glUseProgram(ctx.unifiedProg);
+
+    // Terrain
+    drawTerrain(
+        ctx.parlahtiVao,
+        ctx.parlahtiVertexCount,
+        ctx.parlahtiTexture,
+        projViewLocal,
+        kIdentity33f,
+        kIdentity44f);
+
+    // Landing pads
+    drawLandingPads(ctx.landingPads, projViewLocal);
+
+    // Vehicle
+    Mat44f projCameraWorld_vehicle_local =
+        make_proj_camera_world(projViewLocal, model2world_vehicle);
+
+    Mat33f normalMatrix_vehicle_local =
+        make_uniform_normal(model2world_vehicle);
+
+    drawObject(
+        ctx.vehicleVao,
+        ctx.vehicleVertexCount,
+        ctx.vehicleIndexCount,
+        projCameraWorld_vehicle_local,
+        normalMatrix_vehicle_local,
+        model2world_vehicle);
+
+    // Particles
+    particles.render(projection, view, cam);
+
+    // Restore original shader if different
+    bindShader(ctx.unifiedProg);
+}
+
+void renderScreen(
+    State_ &state,
+    Camera &cam,
+    GLint xViewport,
+    GLsizei vpWidth,
+    GLsizei vpHeight,
+    const Mat44f &model2world_vehicle,
+    ParticleSystem &particles,
+    const RenderContext &ctx)
+{
+    // Set the viewport
+    glViewport(xViewport, 0, vpWidth, vpHeight);
+
+    // Ensure unified shader is bound before setting uniforms
+    bindShader(ctx.unifiedProg);
+
+    // Set lighting uniforms for this camera
+    setAllLightingUniforms(state, model2world_vehicle, cam);
+
+    // Render the scene for this viewport
+    renderView(cam, static_cast<float>(vpWidth), static_cast<float>(vpHeight),
+               model2world_vehicle, particles, ctx);
+}
+
+void renderSingleOrSplitScreen(
+    State_ &state,
+    const Mat44f &model2world_vehicle,
+    GLsizei fbwidth,
+    GLsizei fbheight,
+    ParticleSystem &particles,
+    const RenderContext &ctx)
+{
+    // Smart binding
+    bindShader(ctx.unifiedProg);
+
+    if (!state.splitScreenEnabled)
+    {
+        // Single view mode - full screen
+        renderScreen(state, state.camera,
+                     0, fbwidth, fbheight,
+                     model2world_vehicle, particles, ctx);
+    }
+    else
+    {
+        // Split screen mode
+        float halfW = fbwidth * 0.5f;
+
+        // Left viewport
+        renderScreen(state, state.leftCamera,
+                     0, halfW, fbheight,
+                     model2world_vehicle, particles, ctx);
+
+        // Ensure unified shader for right viewport
+        glUseProgram(ctx.unifiedProg);
+
+        // Right viewport
+        renderScreen(state, state.rightCamera,
+                     halfW, halfW, fbheight,
+                     model2world_vehicle, particles, ctx);
+    }
+
+    // Ensure unified shader is active at the end
+    glUseProgram(ctx.unifiedProg);
+}
 
 // Drawing helpers
 void drawMesh(

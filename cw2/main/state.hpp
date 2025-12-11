@@ -6,6 +6,8 @@
 #include "input_state.hpp"
 #include "animation_state.hpp"
 #include "../support/program.hpp"
+#include "particle_system.hpp"
+
 
 struct PointLight
 {
@@ -19,13 +21,26 @@ struct PointLight
     }
 };
 
+
+
 struct State_
 {
     ShaderProgram *prog = nullptr;
+    ParticleSystem particles { 1000000 };
 
     Camera camera;
     InputState input;
     AnimationState animation;
+
+    bool splitScreenEnabled = false;
+
+    void toggleSplitScreen() noexcept
+    {
+        splitScreenEnabled = !splitScreenEnabled;
+    }
+
+    Camera leftCamera;
+    Camera rightCamera;
 
     bool globalDirLightEnabled = true;
     PointLight pointLights[3] = {
