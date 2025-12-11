@@ -11,7 +11,7 @@ layout(binding = 0) uniform sampler2D uTexture;
 uniform vec3 uCameraPos;
 
 // global directional light
-uniform int  uDirEnabled;
+uniform int  uGlobalDirLightEnabled;
 uniform vec3 uLightDir;       // must be normalized in C++
 uniform vec3 uLightDiffuse;
 uniform vec3 uSceneAmbient;
@@ -48,7 +48,7 @@ void main()
     // ----------------------------------------------------------------
     // GLOBAL DIRECTIONAL LIGHT: ambient + diffuse ONLY (CW2 requirement)
     // ----------------------------------------------------------------
-    if (uDirEnabled == 1)
+    if (uGlobalDirLightEnabled == 1)
     {
         vec3 L = normalize(uLightDir);   // IMPORTANT: use positive L, not -L
 

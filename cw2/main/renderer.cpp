@@ -99,7 +99,7 @@ void setCW2LightingUniforms(
     // So all glUniform calls apply to unifiedProg
 
     // Directional light toggle
-    glUniform1i(glGetUniformLocation(state.prog->programId(), "uDirEnabled"),
+    glUniform1i(glGetUniformLocation(state.prog->programId(), "uGlobalDirLightEnabled"),
             state.dirLightEnabled);
 
 

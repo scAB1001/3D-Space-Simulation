@@ -371,7 +371,7 @@ try
 
 
 
-		glUniform1i(glGetUniformLocation(unifiedProg.programId(), "uDirEnabled"), state.dirLightEnabled);
+		glUniform1i(glGetUniformLocation(unifiedProg.programId(), "uGlobalDirLightEnabled"), state.dirLightEnabled);
 		Vec3f camPos = state.camera.getPosition();
 		glUniform3fv(glGetUniformLocation(unifiedProg.programId(), "uCameraPos"),
 					1, &camPos.x);
