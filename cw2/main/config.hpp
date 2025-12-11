@@ -54,7 +54,7 @@ namespace Config
     {
         // Projection
         constexpr float kNearPlane = 0.1f;
-        constexpr float kFarPlane = 100.f;
+        constexpr float kFarPlane = 512.f;
         constexpr float kFOV = kFloatPi / 4.f; // 45 degrees
 
         // Lighting

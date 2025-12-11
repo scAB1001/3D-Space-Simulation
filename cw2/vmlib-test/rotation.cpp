@@ -1,5 +1,3 @@
-// You will need to define your own tests. Refer to CW1 or Exercise G.3 for
-// examples.
 #include <catch2/catch_amalgamated.hpp>
 
 #include <numbers>
@@ -10,13 +8,14 @@
 TEST_CASE("Rotation matrices", "[mat44]")
 {
     static constexpr float kEps_ = 1e-6f;
+    static constexpr float kFloatPi = std::numbers::pi_v<float>;
 
     using namespace Catch::Matchers;
 
     SECTION("X-axis rotation - 90 degrees")
     {
         // Tests 90deg X rotation: (0,1,0) -> (0,0,1)
-        float angle = std::numbers::pi_v<float> / 2.0f;
+        float angle = kFloatPi / 2.0f;
         Mat44f rotX = make_rotation_x(angle);
 
         // Test rotating a point on Y-axis to Z-axis
@@ -32,7 +31,7 @@ TEST_CASE("Rotation matrices", "[mat44]")
 
     SECTION("X-axis rotation - 180 degrees")
     {
-        float angle = std::numbers::pi_v<float>;
+        float angle = kFloatPi;
         Mat44f rotX = make_rotation_x(angle);
 
         Vec4f point{0.0f, 1.0f, 0.0f, 1.0f};
@@ -46,7 +45,7 @@ TEST_CASE("Rotation matrices", "[mat44]")
 
     SECTION("Y-axis rotation - 90 degrees")
     {
-        float angle = std::numbers::pi_v<float> / 2.0f;
+        float angle = kFloatPi / 2.0f;
         Mat44f rotY = make_rotation_y(angle);
 
         // Test rotating a point on Z-axis to X-axis
@@ -61,7 +60,7 @@ TEST_CASE("Rotation matrices", "[mat44]")
 
     SECTION("Y-axis rotation - 180 degrees")
     {
-        float angle = std::numbers::pi_v<float>;
+        float angle = kFloatPi;
         Mat44f rotY = make_rotation_y(angle);
 
         Vec4f point{1.0f, 0.0f, 0.0f, 1.0f};
@@ -75,7 +74,7 @@ TEST_CASE("Rotation matrices", "[mat44]")
 
     SECTION("Z-axis rotation - 90 degrees")
     {
-        float angle = std::numbers::pi_v<float> / 2.0f;
+        float angle = kFloatPi / 2.0f;
         Mat44f rotZ = make_rotation_z(angle);
 
         // Test rotating a point on X-axis to Y-axis
@@ -90,7 +89,7 @@ TEST_CASE("Rotation matrices", "[mat44]")
 
     SECTION("Z-axis rotation - 180 degrees")
     {
-        float angle = std::numbers::pi_v<float>;
+        float angle = kFloatPi;
         Mat44f rotZ = make_rotation_z(angle);
 
         Vec4f point{1.0f, 1.0f, 0.0f, 1.0f};
@@ -105,7 +104,7 @@ TEST_CASE("Rotation matrices", "[mat44]")
     SECTION("Rotation preserves vector length")
     {
         // Tests rotation preserves vector length (orthogonal matrices)
-        float angle = std::numbers::pi_v<float> / 3.0f; // 60 degrees
+        float angle = kFloatPi / 3.0f; // 60 degrees
         Mat44f rotX = make_rotation_x(angle);
         Mat44f rotY = make_rotation_y(angle);
         Mat44f rotZ = make_rotation_z(angle);

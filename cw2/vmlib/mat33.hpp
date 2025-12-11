@@ -6,6 +6,7 @@
 #include <cstdlib>
 
 #include "vec3.hpp"
+#include "mat44.hpp"
 
 /** Mat33f: 3x3 matrix with floats
  *
@@ -68,11 +69,22 @@ Vec3f operator*( Mat33f const& aLeft, Vec3f const& aRight ) noexcept
 	return ret;
 }
 
-// Forward declaration to avoid circular dependency
-struct Mat44f;
+inline
+Mat33f mat44_to_mat33(Mat44f const &aM) noexcept
+{
+	Mat33f ret;
+	for (std::size_t i = 0; i < 3; ++i)
+	{
+		for (std::size_t j = 0; j < 3; ++j)
+			ret[i, j] = aM[i, j];
+	}
+	return ret;
+}
 
-// Functions:
-Mat33f mat44_to_mat33(Mat44f const &aM) noexcept;
-Mat33f make_uniform_normal(Mat44f const &aM) noexcept;
+inline
+Mat33f make_uniform_normal(Mat44f const &aM) noexcept
+{
+	return mat44_to_mat33(transpose(invert(aM)));
+}
 
 #endif // MAT33_HPP_61F3107B_CBE4_48DE_9F39_EA959B4BF694

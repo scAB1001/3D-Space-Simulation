@@ -12,7 +12,7 @@ void globalGLSetup()
     glDepthFunc(GL_LESS);
 
     glClearDepthf(1.f);
-    glClearColor(0.2f, 0.2f, 0.2f, 0.f);
+    glClearColor(0.1f, 0.05f, 0.15f, 0.8f);
 }
 
 void beginFrame()

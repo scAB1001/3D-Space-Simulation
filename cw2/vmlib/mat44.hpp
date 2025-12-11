@@ -56,18 +56,6 @@ constexpr Mat44f kIdentity44f = { {
 	0.f, 0.f, 0.f, 1.f
 } };
 
-// Moved above operator* method to be used there
-inline
-Mat44f transpose( Mat44f const& aM ) noexcept
-{
-	Mat44f ret;
-	for( std::size_t i = 0; i < 4; ++i )
-	{
-		for( std::size_t j = 0; j < 4; ++j )
-			ret[j,i] = aM[i,j];
-	}
-	return ret;
-}
 // Common operators for Mat44f.
 // Note that you will need to implement these yourself.
 
@@ -98,10 +86,6 @@ Mat44f operator*(Mat44f const& aLeft, Mat44f const& aRight) noexcept
 constexpr
 Vec4f operator*( Mat44f const& aLeft, Vec4f const& aRight ) noexcept
 {
-	// (void)aLeft;   // Avoid warnings about unused arguments until the function
-	// (void)aRight;  // is properly implemented.
-	// return { 0.f, 0.f, 0.f, 0.f };
-
 	// result[i] = sum(j=0 to 3) M[i,j] * v[j]
 	return Vec4f{
 		// x' = m_row0 dot vector
@@ -116,7 +100,19 @@ Vec4f operator*( Mat44f const& aLeft, Vec4f const& aRight ) noexcept
 }
 
 // Functions:
-Mat44f invert( Mat44f const& aM ) noexcept;
+Mat44f invert(Mat44f const &aM) noexcept;
+
+inline
+Mat44f transpose(Mat44f const &aM) noexcept
+{
+	Mat44f ret;
+	for (std::size_t i = 0; i < 4; ++i)
+	{
+		for (std::size_t j = 0; j < 4; ++j)
+			ret[j, i] = aM[i, j];
+	}
+	return ret;
+}
 
 inline
 Mat44f make_rotation_x( float aAngle ) noexcept
@@ -146,7 +142,6 @@ inline
 Mat44f make_rotation_y( float aAngle ) noexcept
 {
 	/* Rotation matrix around Y-axis using precomputed sin,cos
-
 	Pr_y =
 		[  ca   0   sa   0 ]
 		[   0   1    0   0 ]
@@ -170,7 +165,6 @@ inline
 Mat44f make_rotation_z( float aAngle ) noexcept
 {
 	/* Rotation matrix around Z-axis using precomputed sin,cos
-
 	Pr_z =
 		[ ca  -sa   0    0 ]
 		[ sa   ca   0    0 ]

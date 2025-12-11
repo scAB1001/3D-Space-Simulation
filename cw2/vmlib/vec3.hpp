@@ -174,7 +174,8 @@ Vec3f calculate_bezier_position(float t,
 }
 
 // Helper function implementation
-inline Vec3f calculate_optimal_side_position(const Vec3f &vehiclePos,
+inline
+Vec3f calculate_optimal_side_position(const Vec3f &vehiclePos,
                                              const Vec3f &flightDir,
                                              float sideDistance,
                                              float height,
@@ -205,7 +206,7 @@ inline Vec3f calculate_optimal_side_position(const Vec3f &vehiclePos,
 inline
 Vec3f mix(const Vec3f &a, const Vec3f &b, float t) noexcept
 {
-	// DEBUG
+	// Validate inputs
 	if (!std::isfinite(a.x) || !std::isfinite(a.y) || !std::isfinite(a.z))
 	{
 		return b;
@@ -219,6 +220,7 @@ Vec3f mix(const Vec3f &a, const Vec3f &b, float t) noexcept
 		return b;
 	}
 
+	// Linear interpolation
 	Vec3f result = a * (1.0f - t) + b * t;
 
 	if (!std::isfinite(result.x) || !std::isfinite(result.y) || !std::isfinite(result.z))

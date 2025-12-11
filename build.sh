@@ -79,9 +79,12 @@ get_target_config() {
         "mk"|"make")
             EXECUTABLE_NAME="make"
             ;;
+        "val")
+            EXECUTABLE_NAME="valgrind"
+            ;;
         *)
-            print_error "Invalid target '$target'. Use 'main', 'vmlibtest', or 'make'"
-            echo "Usage: $0 [main|vmlibtest|make] [debug|release]"
+            print_error "Invalid target '$target'. Use 'main', 'vmlibtest', 'make', or 'valgrind'"
+            echo "Usage: $0 [main|vmlibtest|make|valgrind] [debug|release]"
             exit 1
             ;;
     esac
@@ -142,6 +145,18 @@ run() {
     # For "make" target, just exit after successful build
     if [[ "$EXECUTABLE_NAME" == "make" ]]; then
         print_success "Build-only mode completed."
+        exit 0
+    fi
+
+    if [[ "$EXECUTABLE_NAME" == "valgrind" ]]; then
+        EXECUTABLE_PATH="./bin/main-${FILE_CONFIG}-gcc.exe"
+        print_header "Running Valgrind on Main Executable"
+        if [ ! -f "$EXECUTABLE_PATH" ]; then
+            print_error "Main executable not found for Valgrind: $EXECUTABLE_PATH"
+            exit 1
+        fi
+        print_info "Running Valgrind: valgrind --leak-check=full $EXECUTABLE_PATH"
+        valgrind --leak-check=full --show-leak-kinds=all "$EXECUTABLE_PATH"
         exit 0
     fi
 
@@ -209,3 +224,12 @@ main() {
 
 # Run main function with all arguments
 main "$@"
+
+# LEAK SUMMARY from first Valgrind run:
+# ==130206==    definitely lost: 616 bytes in 2 blocks
+# ==130206==    indirectly lost: 1,769 bytes in 2 blocks
+# ==130206==      possibly lost: 0 bytes in 0 blocks
+# ==130206==    still reachable: 80,439 bytes in 920 blocks
+# ==130206==         suppressed: 0 bytes in 0 blocks
+# ==130206== Reachable blocks (those to which a pointer was found) are not shown.
+# ==130206== To see them, rerun with: --leak-check=full --show-leak-kinds=all

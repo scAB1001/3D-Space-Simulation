@@ -7,8 +7,9 @@
 TEST_CASE( "Perspective projection", "[mat44]" )
 {
 	static constexpr float kEps_ = 1e-6f;
+    static constexpr float kFloatPi = std::numbers::pi_v<float>;
 
-	using namespace Catch::Matchers;
+    using namespace Catch::Matchers;
 
 	// "Standard" projection matrix presented in the exercises. Assumes
 	// standard window size (e.g., 1280x720).
@@ -19,7 +20,7 @@ TEST_CASE( "Perspective projection", "[mat44]" )
 	SECTION( "Standard" )
 	{
 		auto const proj = make_perspective_projection(
-			60.f * std::numbers::pi_v<float> / 180.f,
+			60.f * kFloatPi / 180.f,
 			1280/float(720),
 			0.1f, 100.f
 		);
@@ -48,7 +49,7 @@ TEST_CASE( "Perspective projection", "[mat44]" )
 	SECTION("Square aspect ratio")
     {
         auto const proj = make_perspective_projection(
-            std::numbers::pi_v<float> / 2.0f, // 90 degrees
+            kFloatPi / 2.0f, // 90 degrees
             1.0f, // Square aspect
             0.1f, 100.f
         );
@@ -61,7 +62,7 @@ TEST_CASE( "Perspective projection", "[mat44]" )
     SECTION("Wide aspect ratio")
     {
         auto const proj = make_perspective_projection(
-            60.f * std::numbers::pi_v<float> / 180.f,
+            60.f * kFloatPi / 180.f,
             2.0f, // Wide aspect (2:1)
             0.1f, 100.f
         );
@@ -73,7 +74,7 @@ TEST_CASE( "Perspective projection", "[mat44]" )
     SECTION("Near and far plane effects")
     {
         auto const proj = make_perspective_projection(
-            std::numbers::pi_v<float> / 3.0f, // 60 degrees
+            kFloatPi / 3.0f, // 60 degrees
             1.0f,
             1.0f, 10.f // Different near/far
         );
@@ -87,7 +88,7 @@ TEST_CASE( "Perspective projection", "[mat44]" )
     SECTION("Extreme field of view")
     {
         auto const proj = make_perspective_projection(
-            120.f * std::numbers::pi_v<float> / 180.f, // Very wide FOV
+            120.f * kFloatPi / 180.f, // Very wide FOV
             1.0f,
             0.1f, 100.f
         );
