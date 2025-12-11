@@ -11,7 +11,7 @@ namespace Config
     constexpr float kFloatPi = std::numbers::pi_v<float>;
     constexpr Vec3f kZeroVec3 = {0.f, 0.f, 0.f};
     constexpr Vec3f kWorldUp = {0.f, 1.f, 0.f};
-    constexpr Vec3f kWorldForward = {0.f, 0.f, -1.f}; // OpenGL default
+    constexpr Vec3f kWorldForward = {0.f, 0.f, -1.f};
     constexpr Vec3f kWorldRight = {1.f, 0.f, 0.f};
 
     namespace Camera
@@ -61,8 +61,6 @@ namespace Config
         constexpr Vec3f kLightDir = {0.f, 1.f, -1.f};
         constexpr Vec3f kLightDiffuse = {0.9f, 0.9f, 0.6f};
         constexpr Vec3f kSceneAmbient = {0.05f, 0.05f, 0.05f};
-
-        // Clear color (dark gray)
         constexpr Vec3f kClearColor = {0.2f, 0.2f, 0.2f};
     }
 }

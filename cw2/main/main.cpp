@@ -30,6 +30,7 @@
 #include "simple_mesh.hpp"
 #include "cone.hpp"
 #include "cylinder.hpp"
+#include "cube.hpp"
 
 // Utilities
 #include "landing_pad.hpp"
@@ -195,7 +196,6 @@ try
 			if (0 == nwidth || 0 == nheight)
 			{
 				// Window minimized? Pause until it is unminimized.
-				// This is a bit of a hack.
 				do
 				{
 					glfwWaitEvents();
@@ -222,18 +222,12 @@ try
 		// Handle camera movement in free mode only
 		if (state.input.mouseLookActive && state.camera.isMode(Camera::Mode::Free))
 		{
-			if (state.input.moveForward)
-				state.camera.moveForward(dt);
-			if (state.input.moveBackward)
-				state.camera.moveBackward(dt);
-			if (state.input.moveLeft)
-				state.camera.moveLeft(dt);
-			if (state.input.moveRight)
-				state.camera.moveRight(dt);
-			if (state.input.moveUp)
-				state.camera.moveUp(dt);
-			if (state.input.moveDown)
-				state.camera.moveDown(dt);
+			if (state.input.moveForward) state.camera.moveForward(dt);
+			if (state.input.moveBackward) state.camera.moveBackward(dt);
+			if (state.input.moveLeft) state.camera.moveLeft(dt);
+			if (state.input.moveRight) state.camera.moveRight(dt);
+			if (state.input.moveUp) state.camera.moveUp(dt);
+			if (state.input.moveDown) state.camera.moveDown(dt);
 
 			// Clamp position
 			state.camera.clampVertical(Config::World::kMinCameraHeight, Config::World::kMaxCameraHeight);
@@ -244,24 +238,7 @@ try
 		if (state.animation.isAnimating && !state.animation.isPaused)
 		{
 			state.animation.update(dt);
-
-			state.camera.updateForAnimation(state.animation.currentPosition,
-											state.animation.velocity, dt);
-
-			// Periodic debug output
-			static float lastDebugTime = 0.0f;
-			state.animation.printDebugOutput(lastDebugTime);
-
-			// Check if animation is complete
-			if (state.animation.animationTime >= state.animation.kTotalAnimationTime)
-			{
-				state.animation.isAnimating = false;
-				state.animation.currentPosition = state.animation.endPosition;
-				state.animation.velocity = Config::kZeroVec3;
-				state.animation.currentSpeed = 0.0f;
-
-				std::print("Animation COMPLETE\n");
-			}
+			state.camera.updateForAnimation(state.animation.currentPosition, state.animation.velocity, dt);
 		}
 
 		// Update camera state
@@ -298,12 +275,10 @@ try
 		Mat33f normalMatrix_vehicle = make_uniform_normal(model2world_vehicle);
 
 		OGL_CHECKPOINT_DEBUG();
-
 		beginFrame();
 		glUseProgram(unifiedProg.programId());
 		setAllLightingUniforms(state, model2world_vehicle);
 
-		// ----- Render Terrain -----
 		drawTerrain(
 			parlahtiVao,
 			parlahtiVertexCount,
@@ -312,10 +287,8 @@ try
 			kIdentity33f,
 			kIdentity44f);
 
-		// ----- Render Landing Pads (Instanced) -----
 		drawLandingPads(landingPads, projView);
 
-		// ----- Render Space Vehicle -----
 		drawObject(
 			vehicleVao,
 			vehicleVertexCount,
@@ -324,26 +297,13 @@ try
 			normalMatrix_vehicle,
 			model2world_vehicle);
 
-		// Cleanup the modified global state: Reset VAO and program.
 		endFrame();
-
 		OGL_CHECKPOINT_DEBUG();
 
-		// Display results
 		glfwSwapBuffers(window);
 	}
 
-	// Cleanup.
-	state.prog = nullptr;
-
-	glDeleteVertexArrays(1, &parlahtiVao);
-	glDeleteVertexArrays(1, &vehicleVao);
-
-	if (parlahtiTexture != 0)
-		glDeleteTextures(1, &parlahtiTexture);
-
-	LandingPad::cleanup();
-
+	cleanup(state, parlahtiVao, vehicleVao, parlahtiTexture);
 	return 0;
 }
 catch (std::exception const &eErr)
@@ -367,178 +327,127 @@ namespace
 		if (!state)
 			return;
 
-		// Handle key events
 		bool isPressed = (aAction == GLFW_PRESS || aAction == GLFW_REPEAT);
-
 		switch (aKey)
 		{
-		case GLFW_KEY_ESCAPE:
-			if (aAction == GLFW_PRESS)
-			{
-				// TODO: Remove later. For debugging.
-				std::println("Exiting...");
-				glfwSetWindowShouldClose(aWindow, GLFW_TRUE);
-			}
-			break;
-
-		case GLFW_KEY_R:
-			if (aAction == GLFW_PRESS && state->prog)
-			{
-				try
+			case GLFW_KEY_ESCAPE:
+				if (aAction == GLFW_PRESS)
 				{
-					state->prog->reload();
-					std::print(stderr, "Shaders reloaded and recompiled.\n");
+					glfwSetWindowShouldClose(aWindow, GLFW_TRUE);
 				}
-				catch (std::exception const &eErr)
+				break;
+
+			case GLFW_KEY_R:
+				if (aAction == GLFW_PRESS && state->prog)
 				{
-					std::print(stderr, "Error when reloading shader:\n");
-					std::print(stderr, "{}\n", eErr.what());
-					std::print(stderr, "Keeping old shader.\n");
+					try
+					{
+						state->prog->reload();
+						std::print(stderr, "Shaders reloaded and recompiled.\n");
+					}
+					catch (std::exception const &eErr)
+					{
+						std::print(stderr, "Error when reloading shader:\n");
+						std::print(stderr, "{}\n", eErr.what());
+						std::print(stderr, "Keeping old shader.\n");
+					}
+
+					// Reset animation
+					state->animation.reset();
+
+					// Reset camera to Free mode but do not change it's initial position
+					state->camera.setMode(Camera::Mode::Free);
+					state->camera.updateVectors();
 				}
+				break;
 
-				// Reset animation
-				state->animation.reset();
+			case GLFW_KEY_1:
+				if (aAction == GLFW_PRESS) state->pointLights[0].toggle();
+				break;
+			case GLFW_KEY_2:
+				if (aAction == GLFW_PRESS) state->pointLights[1].toggle();
+				break;
+			case GLFW_KEY_3:
+				if (aAction == GLFW_PRESS) state->pointLights[2].toggle();
+				break;
+			case GLFW_KEY_4:
+				if (aAction == GLFW_PRESS) state->toggleGlobalDirLight();
+				break;
 
-				// Reset camera to Free mode but do not change it's initial position
-				state->camera.setMode(Camera::Mode::Free);
-				state->camera.updateVectors();
+			case GLFW_KEY_W:
+				state->input.moveForward = isPressed;
+				break;
+			case GLFW_KEY_S:
+				state->input.moveBackward = isPressed;
+				break;
+			case GLFW_KEY_A:
+				state->input.moveLeft = isPressed;
+				break;
+			case GLFW_KEY_D:
+				state->input.moveRight = isPressed;
+				break;
+			case GLFW_KEY_E:
+				state->input.moveUp = isPressed;
+				break;
+			case GLFW_KEY_Q:
+				state->input.moveDown = isPressed;
+				break;
 
-				std::print("Animation RESET - Vehicle returned to launch pad\n");
-				std::print("Camera mode RESET to FREE\n");
-			}
-			break;
-		case GLFW_KEY_1:
-			if (aAction == GLFW_PRESS)
-				state->pointLights[0].toggle();
-			break;
+			case GLFW_KEY_LEFT_SHIFT:
+			case GLFW_KEY_RIGHT_SHIFT:
+				state->input.shiftPressed = isPressed;
+				state->camera.setSpeed(isPressed ? Config::Camera::kBaseSpeed * Config::Camera::kSpeedFastMultiplier : Config::Camera::kBaseSpeed);
+				break;
 
-		case GLFW_KEY_2:
-			if (aAction == GLFW_PRESS)
-				state->pointLights[1].toggle();
-			break;
+			case GLFW_KEY_LEFT_CONTROL:
+			case GLFW_KEY_RIGHT_CONTROL:
+				state->input.controlPressed = isPressed;
+				state->camera.setSpeed(isPressed ? Config::Camera::kBaseSpeed * Config::Camera::kSpeedSlowMultiplier : Config::Camera::kBaseSpeed);
+				break;
 
-		case GLFW_KEY_3:
-			if (aAction == GLFW_PRESS)
-				state->pointLights[2].toggle();
-			break;
-
-		case GLFW_KEY_4:
-			if (aAction == GLFW_PRESS)
-				state->toggleGlobalDirLight();
-			break;
-
-		case GLFW_KEY_W:
-			state->input.moveForward = isPressed;
-			break;
-		case GLFW_KEY_S:
-			state->input.moveBackward = isPressed;
-			break;
-		case GLFW_KEY_A:
-			state->input.moveLeft = isPressed;
-			break;
-		case GLFW_KEY_D:
-			state->input.moveRight = isPressed;
-			break;
-		case GLFW_KEY_E:
-			state->input.moveUp = isPressed;
-			break;
-		case GLFW_KEY_Q:
-			state->input.moveDown = isPressed;
-			break;
-
-		case GLFW_KEY_LEFT_SHIFT:
-		case GLFW_KEY_RIGHT_SHIFT:
-			state->input.shiftPressed = isPressed;
-			state->camera.setSpeed(isPressed ? Config::Camera::kBaseSpeed * Config::Camera::kSpeedFastMultiplier : Config::Camera::kBaseSpeed);
-			break;
-
-		case GLFW_KEY_LEFT_CONTROL:
-		case GLFW_KEY_RIGHT_CONTROL:
-			state->input.controlPressed = isPressed;
-			state->camera.setSpeed(isPressed ? Config::Camera::kBaseSpeed * Config::Camera::kSpeedSlowMultiplier : Config::Camera::kBaseSpeed);
-			break;
-
-		// TODO: Remove later. For debugging.
-		case GLFW_KEY_P:
-			if (aAction == GLFW_PRESS)
-			{
-				// Position
-				Vec3f pos = state->camera.getPosition();
-				state->animation.printCoordinates(pos);
-
-				// Orientation
-				float yaw = state->camera.getYaw();
-				float pitch = state->camera.getPitch();
-				std::print("Camera yaw: {:2f} radians, pitch: {:2f} radians\n", yaw, pitch);
-			}
-			break;
-
-		case GLFW_KEY_C:
-			if (aAction == GLFW_PRESS)
-			{
-				state->camera.cycleMode();
-				auto newMode = state->camera.getMode();
-
-				switch (newMode)
+			case GLFW_KEY_C:
+				if (aAction == GLFW_PRESS)
 				{
-					using enum Camera::Mode;
-				case Follow:
-					state->camera.initFollowMode(
-						state->animation.currentPosition,
-						state->animation.velocity);
-					break;
+					state->camera.cycleMode();
+					auto newMode = state->camera.getMode();
 
-				case Fixed:
-					state->camera.initFixedMode(
-						state->animation.currentPosition);
-					break;
+					switch (newMode)
+					{
+						using enum Camera::Mode;
+						case Follow:
+							state->camera.initFollowMode(
+								state->animation.currentPosition,
+								state->animation.velocity);
+							break;
 
-				case Free:
-				default:
-					break;
+						case Fixed:
+							state->camera.initFixedMode(
+								state->animation.currentPosition);
+							break;
+
+						case Free:
+						default:
+							break;
+					}
 				}
-			}
-			break;
+				break;
 
-		case GLFW_KEY_F:
-			if (aAction == GLFW_PRESS)
-			{
-				if (!state->animation.isAnimating)
+			case GLFW_KEY_F:
+				if (aAction == GLFW_PRESS)
 				{
-					state->animation.start();
+					if (!state->animation.isAnimating)
+					{
+						state->animation.start();
+					}
+					else
+					{
+						state->animation.togglePause();
+					}
 				}
-				else
-				{
-					state->animation.togglePause();
-				}
+				break;
+			default:
+				break;
 			}
-			break;
-
-		case GLFW_KEY_J: // TODO: Remove later. For debugging.
-			if (aAction == GLFW_PRESS)
-			{
-				// Jump between the two landing pads
-				static size_t currentPadIndex = 1;
-				Vec2f orientation{-2.43f, -0.088f};
-				Vec3f landingPadPos = (currentPadIndex == 1) ? Config::World::kLandingPad1Pos : Config::World::kLandingPad2Pos;
-
-				state->camera.setPosition(landingPadPos + Vec3f{0.f, 0.5f, 0.f});
-				state->camera.setYaw(orientation.x);
-				state->camera.setPitch(orientation.y);
-
-				std::print("Jumped to Landing Pad {} at position: ({}, {}, {})\n",
-						   currentPadIndex,
-						   landingPadPos.x,
-						   landingPadPos.y,
-						   landingPadPos.z);
-
-				currentPadIndex = (currentPadIndex + 1) % 2; // Only 2 pads
-			}
-			break;
-
-		default:
-			break;
-		}
 	}
 
 	void glfw_callback_mouse_button_(GLFWwindow *aWindow, int aButton, int aAction, int)
@@ -560,14 +469,12 @@ namespace
 
 				// Hide cursor and capture it
 				glfwSetInputMode(aWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-				std::print("Mouse look ENABLED\n");
 			}
 			else
 			{
 				// Deactivating mouse look and showing cursor
 				state->input.deactivateMouseLook();
 				glfwSetInputMode(aWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-				std::print("Mouse look DISABLED\n");
 			}
 		}
 	}
@@ -598,7 +505,7 @@ namespace
 		xOffset *= Config::Camera::kSensitivity;
 		yOffset *= Config::Camera::kSensitivity;
 
-		// Rotate camera if there's significant movement (avoid micro-jitter)
+		// Rotate camera if there's significant movement (avoidW micro-jitter)
 		if (std::abs(xOffset) > Config::Camera::kDeadZone || std::abs(yOffset) > Config::Camera::kDeadZone)
 		{
 			state->camera.rotate(xOffset, yOffset);

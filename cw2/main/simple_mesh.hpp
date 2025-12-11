@@ -1,5 +1,5 @@
-#ifndef SIMPLE_MESH_HPP_C6B749D6_C83B_434C_9E58_F05FC27FEFC9
-#define SIMPLE_MESH_HPP_C6B749D6_C83B_434C_9E58_F05FC27FEFC9
+#ifndef SIMPLE_MESH_HPP
+#define SIMPLE_MESH_HPP
 
 #include <glad/glad.h>
 
@@ -7,6 +7,8 @@
 
 #include "../vmlib/vec2.hpp"
 #include "../vmlib/vec3.hpp"
+#include "../vmlib/vec4.hpp"
+#include "../vmlib/mat44.hpp"
 
 struct SimpleMeshData
 {
@@ -15,7 +17,6 @@ struct SimpleMeshData
 	std::vector<Vec2f> texcoords;	   // For textured objects (materialType=1)
 	std::vector<Vec3f> normals;		   // For lighting calculations
 	std::vector<unsigned int> indices; // For indexed rendering (optional)
-	
 
 	int materialType = 0; // 0 = colored, 1 = textured
 
@@ -80,11 +81,7 @@ struct SimpleMeshData
 	}
 };
 
-// Mesh creation functions
-SimpleMeshData make_colored_cube(Vec3f color = {0.5f, 0.5f, 0.5f});
-SimpleMeshData make_indexed_cube(Vec3f color = {0.5f, 0.5f, 0.5f});
-
-// Concatenation functions
+void apply_transform_to_mesh(SimpleMeshData &mesh, Mat44f const &M);
 SimpleMeshData concatenate(SimpleMeshData aM, SimpleMeshData const &aN);
 SimpleMeshData concatenate_many(std::initializer_list<std::reference_wrapper<const SimpleMeshData>> meshes);
 
@@ -96,4 +93,4 @@ GLuint create_vao(SimpleMeshData const &mesh);
 
 GLuint create_vao_from_meshes(std::initializer_list<std::reference_wrapper<const SimpleMeshData>> meshes);
 
-#endif // SIMPLE_MESH_HPP_C6B749D6_C83B_434C_9E58_F05FC27FEFC9
+#endif // SIMPLE_MESH_HPP

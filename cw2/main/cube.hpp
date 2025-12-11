@@ -1,98 +1,11 @@
-#ifndef CUBE_HPP_6874B39C_112D_4D34_BD85_AB81A730955B
-#define CUBE_HPP_6874B39C_112D_4D34_BD85_AB81A730955B
+#ifndef CUBE_HPP
+#define CUBE_HPP
 
-// This defines the vertex data for a colored unit cube.
-// TODO: Remove if not using cube data.
-constexpr float const kCubePositions[] = {
-	+1.f, +1.f, -1.f,
-	-1.f, +1.f, -1.f,
-	-1.f, +1.f, +1.f,
-	+1.f, +1.f, -1.f,
-	-1.f, +1.f, +1.f,
-	+1.f, +1.f, +1.f,
+#include "simple_mesh.hpp"
+#include "../vmlib/vec3.hpp"
 
-	+1.f, -1.f, +1.f,
-	+1.f, +1.f, +1.f,
-	-1.f, +1.f, +1.f,
-	+1.f, -1.f, +1.f,
-	-1.f, +1.f, +1.f,
-	-1.f, -1.f, +1.f,
+#include <vector>
 
-	-1.f, -1.f, +1.f,
-	-1.f, +1.f, +1.f,
-	-1.f, +1.f, -1.f,
-	-1.f, -1.f, +1.f,
-	-1.f, +1.f, -1.f,
-	-1.f, -1.f, -1.f,
+SimpleMeshData make_indexed_cube(Vec3f color);
 
-	-1.f, -1.f, -1.f,
-	+1.f, -1.f, -1.f,
-	+1.f, -1.f, +1.f,
-	-1.f, -1.f, -1.f,
-	+1.f, -1.f, +1.f,
-	-1.f, -1.f, +1.f,
-
-	+1.f, -1.f, -1.f,
-	+1.f, +1.f, -1.f,
-	+1.f, +1.f, +1.f,
-	+1.f, -1.f, -1.f,
-	+1.f, +1.f, +1.f,
-	+1.f, -1.f, +1.f,
-
-	-1.f, -1.f, -1.f,
-	-1.f, +1.f, -1.f,
-	+1.f, +1.f, -1.f,
-	-1.f, -1.f, -1.f,
-	+1.f, +1.f, -1.f,
-	+1.f, -1.f, -1.f,
-};
-
-constexpr float const kCubeColors[] = {
-	+1.f, +0.f, +0.f,
-	+1.f, +0.f, +0.f,
-	+1.f, +0.f, +0.f,
-	+1.f, +0.f, +0.f,
-	+1.f, +0.f, +0.f,
-	+1.f, +0.f, +0.f,
-
-	+0.f, +1.f, +0.f,
-	+0.f, +1.f, +0.f,
-	+0.f, +1.f, +0.f,
-	+0.f, +1.f, +0.f,
-	+0.f, +1.f, +0.f,
-	+0.f, +1.f, +0.f,
-
-	+0.f, +0.f, +1.f,
-	+0.f, +0.f, +1.f,
-	+0.f, +0.f, +1.f,
-	+0.f, +0.f, +1.f,
-	+0.f, +0.f, +1.f,
-	+0.f, +0.f, +1.f,
-
-	+1.f, +0.f, +1.f,
-	+1.f, +0.f, +1.f,
-	+1.f, +0.f, +1.f,
-	+1.f, +0.f, +1.f,
-	+1.f, +0.f, +1.f,
-	+1.f, +0.f, +1.f,
-
-	+1.f, +1.f, +0.f,
-	+1.f, +1.f, +0.f,
-	+1.f, +1.f, +0.f,
-	+1.f, +1.f, +0.f,
-	+1.f, +1.f, +0.f,
-	+1.f, +1.f, +0.f,
-
-	+0.f, +1.f, +1.f,
-	+0.f, +1.f, +1.f,
-	+0.f, +1.f, +1.f,
-	+0.f, +1.f, +1.f,
-	+0.f, +1.f, +1.f,
-	+0.f, +1.f, +1.f
-};
-
-static_assert( sizeof(kCubeColors) == sizeof(kCubePositions),
-	"Size of cube colors and cube positions do not match. Both are 3D vectors."
-);
-
-#endif // CUBE_HPP_6874B39C_112D_4D34_BD85_AB81A730955B
+#endif // CUBE_HPP

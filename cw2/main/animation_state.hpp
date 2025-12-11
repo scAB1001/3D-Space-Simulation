@@ -5,10 +5,8 @@
 #include "../vmlib/mat44.hpp"
 
 #include "config.hpp"
-#include <print>
 #include <numbers>
 
-// /* Has a weird cruise and acceleration
 struct AnimationState
 {
     // Precomputed constants
@@ -17,8 +15,8 @@ struct AnimationState
     static constexpr float kLaunchTiltEnd = 0.4f;                // 40% total for launch (20% vertical + 20% tilt)
     static constexpr float kCruisePhaseEnd = 0.7f;               // 70% for cruise (30% landing)
     static constexpr float kMaxAllowedHeight = 35.0f;            // Maximum height limit
-    static constexpr float kMaxVelocity = 15.0f;                    // units per second
-    static constexpr float kAccelerationRate = 1.2f;             // acceleration (units/sec²)
+    static constexpr float kMaxVelocity = 15.0f;                 // units per second
+    static constexpr float kAccelerationRate = 1.2f;             // acceleration (units/sec^2)
     static constexpr Vec3f kLandingPadOffset = {0.f, 1.0f, 0.f}; // On the pad
 
     // Flight profile constants
@@ -125,14 +123,6 @@ struct AnimationState
         bezierP2 = endPosition + Vec3f{0.f, adjustedCruiseHeight, 0.f} -
                    targetDirection * kBezierControlOffset * 0.7f;
         bezierP3 = endPosition + Vec3f{0.f, adjustedHoverHeight, 0.f};
-
-        std::print("Precomputed trajectory:\n");
-        std::print("  Horizontal distance: {:.2f}\n", horizontalDistance);
-        std::print("  Vertical ascent height: {:.2f}\n", adjustedVerticalHeight);
-        std::print("  Vertical ascent end: ({:.2f}, {:.2f}, {:.2f})\n",
-                   verticalAscentEndPos.x, verticalAscentEndPos.y, verticalAscentEndPos.z);
-        std::print("  Launch end position: ({:.2f}, {:.2f}, {:.2f})\n",
-                   launchEndPosition.x, launchEndPosition.y, launchEndPosition.z);
     }
 
     // Helper methods
@@ -153,56 +143,22 @@ struct AnimationState
             return Phase::Landing;
     }
 
-    const char *getPhaseName() const noexcept
-    {
-        switch (phase)
-        {
-        case Phase::VerticalAscent:
-            return "VERTICAL ASCENT";
-        case Phase::LaunchTilt:
-            return "LAUNCH TILT";
-        case Phase::Cruise:
-            return "CRUISE";
-        case Phase::Landing:
-            return "LANDING";
-        default:
-            return "UNKNOWN";
-        }
-    }
-
-    const char *getPhaseNameSpecific(Phase phase) const noexcept
-    {
-        switch (phase)
-        {
-            using enum Phase;
-        case VerticalAscent:
-            return "VERTICAL ASCENT";
-        case LaunchTilt:
-            return "LAUNCH TILT";
-        case Cruise:
-            return "CRUISE";
-        case Landing:
-            return "LANDING";
-        default:
-            return "UNKNOWN";
-        }
-    }
-
     float getPhaseProgress() const noexcept
     {
         float normalizedT = getNormalizedTime();
         switch (phase)
         {
-        case Phase::VerticalAscent:
-            return normalizedT / kVerticalAscentEnd;
-        case Phase::LaunchTilt:
-            return (normalizedT - kVerticalAscentEnd) / (kLaunchTiltEnd - kVerticalAscentEnd);
-        case Phase::Cruise:
-            return (normalizedT - kLaunchTiltEnd) / (kCruisePhaseEnd - kLaunchTiltEnd);
-        case Phase::Landing:
-            return (normalizedT - kCruisePhaseEnd) / (1.0f - kCruisePhaseEnd);
-        default:
-            return 0.0f;
+            using enum Phase;
+            case VerticalAscent:
+                return normalizedT / kVerticalAscentEnd;
+            case LaunchTilt:
+                return (normalizedT - kVerticalAscentEnd) / (kLaunchTiltEnd - kVerticalAscentEnd);
+            case Cruise:
+                return (normalizedT - kLaunchTiltEnd) / (kCruisePhaseEnd - kLaunchTiltEnd);
+            case Landing:
+                return (normalizedT - kCruisePhaseEnd) / (1.0f - kCruisePhaseEnd);
+            default:
+                return 0.0f;
         }
     }
 
@@ -295,7 +251,6 @@ struct AnimationState
     float calculateSpeed(float t) const noexcept
     {
         float normalizedT = t / kTotalAnimationTime;
-
         if (normalizedT < kVerticalAscentEnd)
         {
             // Very slow acceleration during vertical ascent
@@ -311,7 +266,6 @@ struct AnimationState
         else if (normalizedT < kCruisePhaseEnd)
         {
             float phaseT = (normalizedT - kLaunchTiltEnd) / (kCruisePhaseEnd - kLaunchTiltEnd);
-
             if (phaseT < 0.3f)
             {
                 // Accelerate to full speed in first 30% of cruise
@@ -333,7 +287,6 @@ struct AnimationState
         else
         {
             float phaseT = (normalizedT - kCruisePhaseEnd) / (1.0f - kCruisePhaseEnd);
-
             if (phaseT < kLandingHoverFraction)
             {
                 // Slow hover descent
@@ -388,30 +341,6 @@ struct AnimationState
         }
     }
 
-    // TODO: Remove later. For debugging.
-    void printCoordinates(Vec3f position) const
-    {
-        std::print("Position: ({:.2f}, {:.2f}, {:.2f})\n",
-                   position.x,
-                   position.y,
-                   position.z);
-    }
-
-    void printDebugOutput(float &lastDebugTime) const
-    {
-        if (animationTime - lastDebugTime > 2.0f)
-        {
-            std::print("[Flight] {} | Time: {:.2f}s | Altitude: {:.2f} | Speed: {:.2f} \n",
-                    getPhaseName(),
-                    animationTime,
-                    currentPosition.y - startPosition.y,
-                    currentSpeed
-            );
-            printCoordinates(currentPosition);
-            lastDebugTime = animationTime;
-        }
-    }
-
     // Reset all animation state
     void reset()
     {
@@ -437,39 +366,12 @@ struct AnimationState
         previousPosition = startPosition;
         phase = Phase::VerticalAscent;
         maxHeightReached = 0.0f;
-
-        std::print("\nAnimation STARTED\n");
-        std::print("-----------------------------\n");
-        std::print("  Phase: {}\n", getPhaseName());
-        std::print("  Start position: ({:.2f}, {:.2f}, {:.2f})\n",
-                   startPosition.x, startPosition.y, startPosition.z);
-        std::print("  End position: ({:.2f}, {:.2f}, {:.2f})\n",
-                   endPosition.x, endPosition.y, endPosition.z);
-        std::print("  Duration: {:.2f} seconds\n", kTotalAnimationTime);
-        std::print("  Max speed: {:.2f} units/s\n", kMaxVelocity);
-        std::print("  Max height allowed: {:.2f} units\n", kMaxAllowedHeight);
     }
 
     // Toggle pause
     void togglePause()
     {
         isPaused = !isPaused;
-        if (isPaused)
-        {
-            std::print("\nAnimation PAUSED\n");
-            std::print("-----------------------------\n");
-            std::print("  Phase: {}\n", getPhaseName());
-            std::print("  Current position: ({:.2f}, {:.2f}, {:.2f})\n",
-                       currentPosition.x, currentPosition.y, currentPosition.z);
-            std::print("  Speed: {:.2f} units/sec\n", currentSpeed);
-            std::print("  Max height so far: {:.2f} units\n", maxHeightReached);
-        }
-        else
-        {
-            std::print("\nAnimation UNPAUSED\n");
-            std::print("-----------------------------\n");
-            std::print("  Phase: {}\n", getPhaseName());
-        }
     }
 };
 
@@ -480,16 +382,16 @@ inline Mat44f calculate_rocket_rotation(const AnimationState &state) noexcept
 
     switch (state.phase)
     {
-        case AnimationState::Phase::VerticalAscent:
+        using enum AnimationState::Phase;
+        case VerticalAscent:
         {
-            // Perfectly vertical during ascent
-            // Small idle rotation for visual interest
+            // Perfectly vertical during ascent + some idle rotation
             float idleRotation = state.animationTime * 0.5f; // Slow rotation
             rotation = make_rotation_y(idleRotation);
             break;
         }
 
-        case AnimationState::Phase::LaunchTilt:
+        case LaunchTilt:
         {
             // Gradually tilt toward target direction
             float phaseProgress = state.getPhaseProgress();
@@ -503,11 +405,11 @@ inline Mat44f calculate_rocket_rotation(const AnimationState &state) noexcept
             // Tilt angle increases with phase progress
             float tiltAngle = AnimationState::kMaxTiltAngle * phaseProgress;
 
-            rotation = make_rotation_y(currentYaw) * make_rotation_x(-tiltAngle);
+            rotation = make_rotation_y(currentYaw) * make_rotation_x(tiltAngle);
             break;
         }
 
-        case AnimationState::Phase::Cruise:
+        case Cruise:
         {
             if (length(state.velocity) > 0.001f)
             {
@@ -525,7 +427,7 @@ inline Mat44f calculate_rocket_rotation(const AnimationState &state) noexcept
             break;
         }
 
-        case AnimationState::Phase::Landing:
+        case Landing:
         {
             // Gradually level out for landing
             float phaseProgress = state.getPhaseProgress();
@@ -553,7 +455,5 @@ inline Mat44f calculate_rocket_rotation(const AnimationState &state) noexcept
 
     return rotation;
 }
-// */
-
 
 #endif // ANIMATION_STATE_HPP

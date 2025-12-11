@@ -1,106 +1,16 @@
 #include "simple_mesh.hpp"
 #include <print>
 
-// Mesh creation functions
-SimpleMeshData make_colored_cube(Vec3f color)
+void apply_transform_to_mesh(SimpleMeshData &mesh, Mat44f const &M)
 {
-    SimpleMeshData cube;
-
-    // Positions
-    const Vec3f positions[] = {
-        // Front face
-        {-1.0f, -1.0f,  1.0f}, { 1.0f, -1.0f,  1.0f}, { 1.0f,  1.0f,  1.0f},
-        { 1.0f,  1.0f,  1.0f}, {-1.0f,  1.0f,  1.0f}, {-1.0f, -1.0f,  1.0f},
-        // Back face
-        {-1.0f, -1.0f, -1.0f}, {-1.0f,  1.0f, -1.0f}, { 1.0f,  1.0f, -1.0f},
-        { 1.0f,  1.0f, -1.0f}, { 1.0f, -1.0f, -1.0f}, {-1.0f, -1.0f, -1.0f},
-        // Left face
-        {-1.0f,  1.0f,  1.0f}, {-1.0f,  1.0f, -1.0f}, {-1.0f, -1.0f, -1.0f},
-        {-1.0f, -1.0f, -1.0f}, {-1.0f, -1.0f,  1.0f}, {-1.0f,  1.0f,  1.0f},
-        // Right face
-        { 1.0f,  1.0f,  1.0f}, { 1.0f, -1.0f,  1.0f}, { 1.0f, -1.0f, -1.0f},
-        { 1.0f, -1.0f, -1.0f}, { 1.0f,  1.0f, -1.0f}, { 1.0f,  1.0f,  1.0f},
-        // Top face
-        {-1.0f,  1.0f, -1.0f}, {-1.0f,  1.0f,  1.0f}, { 1.0f,  1.0f,  1.0f},
-        { 1.0f,  1.0f,  1.0f}, { 1.0f,  1.0f, -1.0f}, {-1.0f,  1.0f, -1.0f},
-        // Bottom face
-        {-1.0f, -1.0f, -1.0f}, { 1.0f, -1.0f, -1.0f}, { 1.0f, -1.0f,  1.0f},
-        { 1.0f, -1.0f,  1.0f}, {-1.0f, -1.0f,  1.0f}, {-1.0f, -1.0f, -1.0f}
-    };
-
-    // Normals
-    const Vec3f normals[] = {
-        // Front face
-        {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f},
-        {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f},
-        // Back face
-        {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f, -1.0f},
-        {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f, -1.0f},
-        // Left face
-        {-1.0f, 0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f},
-        {-1.0f, 0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f},
-        // Right face
-        {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f},
-        {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f},
-        // Top face
-        {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
-        {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
-        // Bottom face
-        {0.0f, -1.0f, 0.0f}, {0.0f, -1.0f, 0.0f}, {0.0f, -1.0f, 0.0f},
-        {0.0f, -1.0f, 0.0f}, {0.0f, -1.0f, 0.0f}, {0.0f, -1.0f, 0.0f}
-    };
-
-    for (int i = 0; i < 36; ++i)
+    for (std::size_t i = 0; i < mesh.positions.size(); ++i)
     {
-        cube.positions.push_back(positions[i]);
-        cube.normals.push_back(normals[i]);
-        cube.colors.push_back(color);
+        Vec3f p = mesh.positions[i];
+        Vec4f p4 = M * Vec4f{p.x, p.y, p.z, 1.f};
+        mesh.positions[i] = Vec3f{p4.x, p4.y, p4.z};
     }
-
-    return cube;
 }
 
-SimpleMeshData make_indexed_cube(Vec3f color)
-{
-    SimpleMeshData cube;
-
-    // 8 unique vertices
-    cube.positions = {
-        // Front face
-        {-1.0f, -1.0f, 1.0f}, // 0
-        {1.0f, -1.0f, 1.0f},  // 1
-        {1.0f, 1.0f, 1.0f},   // 2
-        {-1.0f, 1.0f, 1.0f},  // 3
-        // Back face
-        {-1.0f, -1.0f, -1.0f}, // 4
-        {1.0f, -1.0f, -1.0f},  // 5
-        {1.0f, 1.0f, -1.0f},   // 6
-        {-1.0f, 1.0f, -1.0f}   // 7
-    };
-
-    // 6 faces * 2 triangles * 3 indices = 36 indices
-    cube.indices = {
-        // Front
-        0, 1, 2, 2, 3, 0,
-        // Back
-        5, 4, 7, 7, 6, 5,
-        // Left
-        4, 0, 3, 3, 7, 4,
-        // Right
-        1, 5, 6, 6, 2, 1,
-        // Top
-        3, 2, 6, 6, 7, 3,
-        // Bottom
-        4, 5, 1, 1, 0, 4};
-
-    // Colors and normals
-    cube.colors.resize(8, color);
-    cube.calculate_normals();
-
-    return cube;
-}
-
-// Concatenation functions
 SimpleMeshData concatenate(SimpleMeshData aM, SimpleMeshData const &aN)
 {
     // ---------- Check material type compatibility ----------
@@ -169,9 +79,6 @@ SimpleMeshData concatenate(SimpleMeshData aM, SimpleMeshData const &aN)
     }
     else
     {
-        // Non-indexed concatenation
-        // std::size_t offset = aM.positions.size();
-
         // Concatenate positions and normals
         aM.positions.insert(aM.positions.end(), aN.positions.begin(), aN.positions.end());
         aM.normals.insert(aM.normals.end(), aN.normals.begin(), aN.normals.end());
@@ -465,27 +372,6 @@ GLuint create_vao(SimpleMeshData const &mesh)
         return 0;
     }
 
-    // ------- DEBUG -------
-    // std::print("Creating VAO for mesh:\n");
-    // std::print("  materialType: {}\n", mesh.materialType);
-    // std::print("  Positions: {} vertices\n", mesh.positions.size());
-    // std::print("  Normals: {} entries\n", mesh.normals.size());
-    // std::print("  Has texcoords: {} ({} entries)\n",
-    //            mesh.hasTexcoords(), mesh.texcoords.size());
-    // std::print("  Has colors: {} ({} entries)\n",
-    //            mesh.hasColors(), mesh.colors.size());
-
-    // if (!mesh.colors.empty())
-    // {
-    //     std::print("  First color: ({:.3f}, {:.3f}, {:.3f})\n",
-    //                mesh.colors[0].x, mesh.colors[0].y, mesh.colors[0].z);
-    // }
-
-    // if (mesh.hasIndices())
-    // {
-    //     std::print("  Indices: {} entries\n", mesh.indices.size());
-    // }
-
     // ------- Array Size validation -------
     // Validate array sizes match
     if (mesh.hasColors() && mesh.colors.size() != mesh.positions.size())
@@ -606,7 +492,7 @@ GLuint create_vao(SimpleMeshData const &mesh)
                 }
             }
 
-            // CRITICAL FIX: Check index count is multiple of 3 (triangles)
+            // Check index count is multiple of 3 (triangles)
             if (mesh.indices.size() % 3 != 0)
             {
                 std::print(stderr, "ERROR: Index count {} is not multiple of 3\n",
@@ -626,18 +512,6 @@ GLuint create_vao(SimpleMeshData const &mesh)
 
         // Unbind VAO (saves all state including bound EBO)
         glBindVertexArray(0);
-
-        // TODO: Remove later. Debug output
-        // std::print("Created VAO {} with {} vertices", vao, mesh.vertexCount());
-        // if (mesh.hasIndices())
-        // {
-        //     std::print(", {} indices\n", mesh.indexCount());
-        // }
-        // else
-        // {
-        //     std::print("\n");
-        // }
-
         return vao;
     }
     catch (const std::exception &e)
@@ -663,9 +537,6 @@ GLuint create_vao(SimpleMeshData const &mesh)
 
 GLuint create_vao_from_meshes(std::initializer_list<std::reference_wrapper<const SimpleMeshData>> meshes)
 {
-    // TODO: Remove later. Debug output
-    // std::print("create_vao_from_meshes: combining {} meshes\n", meshes.size());
-
     // Use concatenate_many to merge meshes
     SimpleMeshData combinedMesh = concatenate_many(meshes);
 
@@ -674,9 +545,5 @@ GLuint create_vao_from_meshes(std::initializer_list<std::reference_wrapper<const
         std::print(stderr, "ERROR: concatenate_many returned empty mesh\n");
         return 0;
     }
-
-    // TODO: Remove later. Debug output
-    // std::print("Combined mesh: {} vertices, materialType={}\n", combinedMesh.vertexCount(), combinedMesh.materialType);
-
     return create_vao(combinedMesh);
 }

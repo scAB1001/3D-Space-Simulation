@@ -76,6 +76,7 @@ OBJECTS :=
 
 GENERATED += $(OBJDIR)/camera.o
 GENERATED += $(OBJDIR)/cone.o
+GENERATED += $(OBJDIR)/cube.o
 GENERATED += $(OBJDIR)/cylinder.o
 GENERATED += $(OBJDIR)/landing_pad.o
 GENERATED += $(OBJDIR)/loadobj.o
@@ -87,6 +88,7 @@ GENERATED += $(OBJDIR)/space_vehicle.o
 GENERATED += $(OBJDIR)/texture.o
 OBJECTS += $(OBJDIR)/camera.o
 OBJECTS += $(OBJDIR)/cone.o
+OBJECTS += $(OBJDIR)/cube.o
 OBJECTS += $(OBJDIR)/cylinder.o
 OBJECTS += $(OBJDIR)/landing_pad.o
 OBJECTS += $(OBJDIR)/loadobj.o
@@ -163,6 +165,9 @@ $(OBJDIR)/camera.o: camera.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/cone.o: cone.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/cube.o: cube.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/cylinder.o: cylinder.cpp

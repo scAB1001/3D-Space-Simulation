@@ -13,6 +13,7 @@ void globalGLSetup();
 void beginFrame();
 void resetBindings();
 void endFrame();
+void cleanup(State_ &state, GLuint terrainVao, GLuint vehicleVao, GLuint terrainTexture);
 
 // Setting light uniforms
 void setDirectionalLightUniforms(
@@ -34,7 +35,7 @@ void drawMesh(
     const Mat44f &projCameraWorld,
     const Mat33f &normalMatrix,
     const Mat44f &modelMatrix);
-    
+
 void drawTerrain(
     GLuint vao,
     GLsizei vertexCount,

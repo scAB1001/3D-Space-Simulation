@@ -4,6 +4,7 @@
 #include "../vmlib/vec3.hpp"
 #include "../support/error.hpp"
 
+#include "landing_pad.hpp"
 #include "space_vehicle.hpp"
 #include "config.hpp"
 #include "state.hpp"
@@ -47,6 +48,18 @@ void endFrame()
     resetBindings();
 }
 
+void cleanup(State_ &state, GLuint terrainVao, GLuint vehicleVao, GLuint terrainTexture)
+{
+    state.prog = nullptr;
+
+	glDeleteVertexArrays(1, &terrainVao);
+	glDeleteVertexArrays(1, &vehicleVao);
+
+	if (terrainTexture != 0)
+		glDeleteTextures(1, &terrainTexture);
+
+    LandingPad::cleanup();
+}
 
 // Setting light uniforms
 void setDirectionalLightUniforms(
@@ -150,14 +163,11 @@ void drawMesh(
     const Mat33f &normalMatrix,
     const Mat44f &modelMatrix)
 {
-    // ----- MATERIAL TYPE -----
     glUniform1i(10, materialType);
+    glUniformMatrix4fv(0, 1, GL_TRUE, projCameraWorld.v);
+    glUniformMatrix3fv(1, 1, GL_TRUE, normalMatrix.v);
 
-    // ----- TRANSFORM MATRICES -----
-    glUniformMatrix4fv(0, 1, GL_TRUE, projCameraWorld.v); // uProjCameraWorld
-    glUniformMatrix3fv(1, 1, GL_TRUE, normalMatrix.v);    // uNormalMatrix
-
-    // ----- uModel (required for point lights) -----
+    // ----- uModel (for point lights) -----
     GLint currentProg = 0;
     glGetIntegerv(GL_CURRENT_PROGRAM, &currentProg);
 
@@ -167,11 +177,7 @@ void drawMesh(
         glUniformMatrix4fv(locModel, 1, GL_TRUE, modelMatrix.v);
     }
 
-    // ===========================================================
-    // INSERT NEW BLINN–PHONG MATERIAL UNIFORMS HERE
-    // ===========================================================
-
-    // Default values unless overridden (landing pads will override later)
+    // ----- BLINN–PHONG MATERIAL UNIFORMS -----
     Vec3f defaultKd = {1.0f, 1.0f, 1.0f};
     float defaultNs = 32.0f;
 
@@ -184,8 +190,6 @@ void drawMesh(
     if (locNs >= 0)
         glUniform1f(locNs, defaultNs);
 
-    // ===========================================================
-
     // ----- TEXTURE BINDING -----
     if (materialType == 1 && texture != 0)
     {
@@ -197,9 +201,7 @@ void drawMesh(
         glBindTexture(GL_TEXTURE_2D, 0);
     }
 
-    // ----- DRAW CALL -----
     glBindVertexArray(vao);
-
     if (hasIndices && indexCount > 0)
     {
         glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
@@ -243,6 +245,7 @@ void drawLandingPads(
     GLint currentProg = 0;
     glGetIntegerv(GL_CURRENT_PROGRAM, &currentProg);
 
+    // Uniform locations
     const GLint locProjCameraWorld = 0;
     const GLint locNormalMatrix    = 1;
 
@@ -250,6 +253,7 @@ void drawLandingPads(
     const GLint locKd              = glGetUniformLocation(currentProg, "uMaterialKd");
     const GLint locNs              = glGetUniformLocation(currentProg, "uMaterialShininess");
 
+    // Draw each landing pad
     for (const auto &pad : pads)
     {
         Mat44f modelMatrix      = pad.transform;

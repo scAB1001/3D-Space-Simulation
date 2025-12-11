@@ -1,96 +1,4 @@
 #include "cone.hpp"
-#include "../vmlib/mat44.hpp" // Include here
-#include <numbers>
-
-SimpleMeshData make_cone(bool aCapped, std::size_t aSubdivs, Vec3f aColor, Mat44f aPreTransform)
-{
-    // Calculate expected vertex count
-    std::size_t shellVertices = aSubdivs * 3;
-    std::size_t capVertices = aCapped ? (aSubdivs * 3) : 0;
-    std::size_t expectedVertices = shellVertices + capVertices;
-
-    // Pre-allocate vectors
-    std::vector<Vec3f> pos(expectedVertices);
-    std::vector<Vec3f> norms(expectedVertices);
-    std::vector<Vec3f> colors(expectedVertices, aColor);
-
-    // Pre-compute circle points
-    std::vector<Vec3f> basePoints(aSubdivs);
-    std::vector<Vec3f> baseNormals(aSubdivs);
-    for (std::size_t i = 0; i < aSubdivs; ++i)
-    {
-        float angle = i / float(aSubdivs) * 2.f * std::numbers::pi_v<float>;
-        basePoints[i] = {0.f, std::cos(angle), std::sin(angle)};
-        baseNormals[i] = normalize(Vec3f{0.f, std::cos(angle), std::sin(angle)});
-    }
-
-    // Tip position
-    Vec3f tip{1.f, 0.f, 0.f};
-
-    // Generate cone shell
-    for (std::size_t i = 0, idx = 0; i < aSubdivs; ++i, idx += 3)
-    {
-        std::size_t next = (i + 1) % aSubdivs;
-
-        // Transform positions
-        Vec4f p0 = aPreTransform * Vec4f{basePoints[i].x, basePoints[i].y, basePoints[i].z, 1.f};
-        Vec4f p1 = aPreTransform * Vec4f{basePoints[next].x, basePoints[next].y, basePoints[next].z, 1.f};
-        Vec4f pTip = aPreTransform * Vec4f{tip.x, tip.y, tip.z, 1.f};
-
-        p0 /= p0.w;
-        p1 /= p1.w;
-        pTip /= pTip.w;
-
-        // Store positions
-        pos[idx] = {p0.x, p0.y, p0.z};
-        pos[idx + 1] = {p1.x, p1.y, p1.z};
-        pos[idx + 2] = {pTip.x, pTip.y, pTip.z};
-
-        // Compute face normal
-        Vec3f edge1 = Vec3f{p1.x - p0.x, p1.y - p0.y, p1.z - p0.z};
-        Vec3f edge2 = Vec3f{pTip.x - p0.x, pTip.y - p0.y, pTip.z - p0.z};
-        Vec3f faceNormal = normalize(cross(edge1, edge2));
-
-        // Store normals
-        norms[idx] = normalize(baseNormals[i] + faceNormal * 0.5f);
-        norms[idx + 1] = normalize(baseNormals[next] + faceNormal * 0.5f);
-        norms[idx + 2] = faceNormal;
-    }
-
-    // Base cap
-    if (aCapped)
-    {
-        std::size_t baseIdx = shellVertices;
-        Vec3f baseNormal{0.f, 0.f, -1.f};
-
-        for (std::size_t i = 0; i < aSubdivs; ++i, baseIdx += 3)
-        {
-            std::size_t next = (i + 1) % aSubdivs;
-
-            // Transform positions
-            Vec4f center = aPreTransform * Vec4f{0.f, 0.f, 0.f, 1.f};
-            Vec4f p0 = aPreTransform * Vec4f{basePoints[i].x, basePoints[i].y, basePoints[i].z, 1.f};
-            Vec4f p1 = aPreTransform * Vec4f{basePoints[next].x, basePoints[next].y, basePoints[next].z, 1.f};
-
-            center /= center.w;
-            p0 /= p0.w;
-            p1 /= p1.w;
-
-            // Store positions
-            pos[baseIdx] = {center.x, center.y, center.z};
-            pos[baseIdx + 1] = {p0.x, p0.y, p0.z};
-            pos[baseIdx + 2] = {p1.x, p1.y, p1.z};
-
-            // Store normals
-            norms[baseIdx] = baseNormal;
-            norms[baseIdx + 1] = baseNormal;
-            norms[baseIdx + 2] = baseNormal;
-        }
-    }
-
-    // FIXED: Actually return the data
-    return SimpleMeshData{std::move(pos), std::move(colors), {}, std::move(norms)};
-}
 
 SimpleMeshData make_batched_indexed_cone(bool aCapped, std::size_t aSubdivs, Vec3f aColor, Mat44f aPreTransform)
 {
@@ -141,14 +49,14 @@ SimpleMeshData make_batched_indexed_cone(bool aCapped, std::size_t aSubdivs, Vec
     {
         cone.positions.push_back(transformedBaseCircle[i]);
         cone.colors.push_back(aColor);
-        cone.normals.push_back(baseNormals[i]); // Will be adjusted for smooth shading
+        cone.normals.push_back(baseNormals[i]);
     }
 
     // Add tip vertex
     std::size_t tipIdx = cone.positions.size();
     cone.positions.push_back(tip);
     cone.colors.push_back(aColor);
-    cone.normals.push_back(Vec3f{0.f, 0.f, 0.f}); // Will be computed
+    cone.normals.push_back(Vec3f{0.f, 0.f, 0.f});
 
     // Generate shell indices and compute smooth normals
     for (std::size_t i = 0; i < aSubdivs; ++i)
