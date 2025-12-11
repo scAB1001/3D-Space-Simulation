@@ -142,12 +142,17 @@ void setLightingUniforms(
     const Vec3f &lightDiffuse,
     const Vec3f &sceneAmbient)
 {
-    Vec3f normalizedLightDir = normalize(lightDir);
+    Vec3f L = normalize(lightDir);
 
-    glUniform3fv(2, 1, &normalizedLightDir.x); // uLightDir
-    glUniform3fv(3, 1, &lightDiffuse.x);       // uLightDiffuse
-    glUniform3fv(4, 1, &sceneAmbient.x);       // uSceneAmbient
+    // Query the current program
+    GLint prog;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
+
+    glUniform3fv(glGetUniformLocation(prog, "uLightDir"), 1, &L.x);
+    glUniform3fv(glGetUniformLocation(prog, "uLightDiffuse"), 1, &lightDiffuse.x);
+    glUniform3fv(glGetUniformLocation(prog, "uSceneAmbient"), 1, &sceneAmbient.x);
 }
+
 
 
 // ------------------------------------------------------------
