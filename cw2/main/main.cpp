@@ -143,6 +143,13 @@ try
 		{ GL_FRAGMENT_SHADER, "assets/cw2/shaders/unified.frag" }
 	} );
 	state.prog = &unifiedProg;
+	ShaderProgram particleProg({
+		{ GL_VERTEX_SHADER,   "assets/cw2/shaders/particle.vert" },
+		{ GL_FRAGMENT_SHADER, "assets/cw2/shaders/particle.frag" }
+	});
+	state.particles.setShader(particleProg.programId());
+	state.particles.init();
+
 
 	// Animation state
 	auto last = Clock::now();
@@ -171,6 +178,7 @@ try
 	vehicleMesh.materialType = 0; // coloured, no texture
 
 	GLuint vehicleVao = create_vao(vehicleMesh);
+
 	std::size_t vehicleVertexCount = vehicleMesh.vertexCount();
 	std::size_t vehicleIndexCount = vehicleMesh.indexCount();
 
@@ -270,6 +278,11 @@ try
 		// Update animation state
 		if (state.animation.isAnimating && !state.animation.isPaused)
 		{
+			Vec3f enginePos = state.animation.currentPosition - Vec3f{0.f, 0.3f, 0.f};
+			Vec3f exhaustDir = Vec3f{0.f, -1.f, 0.f};
+
+			for (int i = 0; i < 6; i++)
+				state.particles.emit(enginePos, exhaustDir);
 			state.animation.update(dt);
 
 			// Update animation cameras
@@ -306,15 +319,10 @@ try
 				std::print("Animation COMPLETE\n");
 			}
 		}
+		state.particles.update(dt);
 
 		// Update camera state
 		state.camera.updateVectors();
-
-		// ------------- Setup camera pipeline -------------
-		// TODO: Modularize this later
-		Mat44f projection = make_perspective_projection(Config::Rendering::kFOV, aspectRatio, Config::Rendering::kNearPlane, Config::Rendering::kFarPlane);
-		Mat44f view = state.camera.getViewMatrix();
-		Mat44f projView = projection * view;
 
 		// Model matrices
 		Mat44f model2world_vehicle;
@@ -336,9 +344,6 @@ try
 				make_scaling(0.5f, 0.5f, 0.5f) *
 				make_rotation_y(angle * 0.3f);
 		}
-
-		Mat44f projCameraWorld_vehicle = make_proj_camera_world(projView, model2world_vehicle);
-		Mat33f normalMatrix_vehicle = make_uniform_normal(model2world_vehicle);
 
 		OGL_CHECKPOINT_DEBUG();
 		// ----------- RENDER VIEW FUNCTION (inside main loop) -----------
@@ -370,20 +375,27 @@ try
 			drawLandingPads(landingPads, projViewLocal);
 
 			// Vehicle
-			Mat44f projCameraWorld_vehicle =
+			Mat44f projCameraWorld_vehicle_local =
 				make_proj_camera_world(projViewLocal, model2world_vehicle);
 
-			Mat33f normalMatrix_vehicle =
+			Mat33f normalMatrix_vehicle_local =
 				make_uniform_normal(model2world_vehicle);
 
 			drawObject(
 				vehicleVao,
 				vehicleVertexCount,
 				vehicleIndexCount,
-				projCameraWorld_vehicle,
-				normalMatrix_vehicle,
+				projCameraWorld_vehicle_local,
+				normalMatrix_vehicle_local,
 				model2world_vehicle);
-		};
+
+
+			// -------- PARTICLES --------
+			state.particles.render(projection, view, cam);
+			glUseProgram(unifiedProg.programId());
+
+			};
+
 
 
 		// ====================== BEGIN FRAME ======================

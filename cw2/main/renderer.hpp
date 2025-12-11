@@ -57,4 +57,5 @@ void drawObject(
     const Mat33f &normalMatrix,
     const Mat44f &modelMatrix);
 
+
 #endif // RENDERER_HPP

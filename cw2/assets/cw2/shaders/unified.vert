@@ -1,7 +1,7 @@
 #version 430
 
 layout(location = 0) in vec3 iPosition;
-layout(location = 1) in vec3 iColor;      // rgb or texcoord.xy
+layout(location = 1) in vec3 iColor;      // rgb OR texcoord
 layout(location = 3) in vec3 iNormal;
 
 layout(location = 0) uniform mat4 uProjCameraWorld;
@@ -10,7 +10,7 @@ layout(location = 10) uniform int uMaterialType;
 
 uniform mat4 uModel;
 
-// Pass-through only
+// Outputs
 out vec3 v2fColor;
 out vec2 v2fTexCoord;
 out vec3 v2fNormal;
@@ -25,15 +25,13 @@ void main()
     gl_Position = uProjCameraWorld * vec4(iPosition, 1.0);
 
     v2fNormal = normalize(uNormalMatrix * iNormal);
-
     v2fMaterialType = uMaterialType;
 
     if (uMaterialType == 0) {
-        v2fColor = iColor;
+        v2fColor = iColor;        // solid colour mode
         v2fTexCoord = vec2(0.0);
-    }
-    else {
-        v2fTexCoord = iColor.xy;
+    } else {
+        v2fTexCoord = iColor.xy;  // texture coords
         v2fColor = vec3(1.0);
     }
 }

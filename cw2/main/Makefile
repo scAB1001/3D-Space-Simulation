@@ -80,6 +80,7 @@ GENERATED += $(OBJDIR)/cylinder.o
 GENERATED += $(OBJDIR)/landing_pad.o
 GENERATED += $(OBJDIR)/loadobj.o
 GENERATED += $(OBJDIR)/main.o
+GENERATED += $(OBJDIR)/particle_system.o
 GENERATED += $(OBJDIR)/performance.o
 GENERATED += $(OBJDIR)/renderer.o
 GENERATED += $(OBJDIR)/simple_mesh.o
@@ -91,6 +92,7 @@ OBJECTS += $(OBJDIR)/cylinder.o
 OBJECTS += $(OBJDIR)/landing_pad.o
 OBJECTS += $(OBJDIR)/loadobj.o
 OBJECTS += $(OBJDIR)/main.o
+OBJECTS += $(OBJDIR)/particle_system.o
 OBJECTS += $(OBJDIR)/performance.o
 OBJECTS += $(OBJDIR)/renderer.o
 OBJECTS += $(OBJDIR)/simple_mesh.o
@@ -175,6 +177,9 @@ $(OBJDIR)/loadobj.o: loadobj.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/main.o: main.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/particle_system.o: particle_system.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/performance.o: performance.cpp
