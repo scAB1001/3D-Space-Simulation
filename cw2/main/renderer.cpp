@@ -99,8 +99,9 @@ void setCW2LightingUniforms(
     // So all glUniform calls apply to unifiedProg
 
     // Directional light toggle
-    glUniform1i(glGetUniformLocation(state.prog->programId(), "uDirLightEnabled"),
-                state.dirLightEnabled);
+    glUniform1i(glGetUniformLocation(state.prog->programId(), "uDirEnabled"),
+            state.dirLightEnabled);
+
 
     // Directional light values (from Config)
     Vec3f L = Config::Rendering::kLightDir;
@@ -180,6 +181,25 @@ void drawMesh(
         glUniformMatrix4fv(locModel, 1, GL_TRUE, modelMatrix.v);
     }
 
+    // ===========================================================
+    // INSERT NEW BLINN–PHONG MATERIAL UNIFORMS HERE
+    // ===========================================================
+
+    // Default values unless overridden (landing pads will override later)
+    Vec3f defaultKd = {1.0f, 1.0f, 1.0f};
+    float defaultNs = 32.0f;
+
+    GLint locKd = glGetUniformLocation(currentProg, "uMaterialKd");
+    GLint locNs = glGetUniformLocation(currentProg, "uMaterialShininess");
+
+    if (locKd >= 0)
+        glUniform3fv(locKd, 1, &defaultKd.x);
+
+    if (locNs >= 0)
+        glUniform1f(locNs, defaultNs);
+
+    // ===========================================================
+
     // ----- TEXTURE BINDING -----
     if (materialType == 1 && texture != 0)
     {
@@ -211,23 +231,20 @@ void drawLandingPads(
     const std::vector<LandingPad> &pads,
     const Mat44f &projView)
 {
-    // Material type = coloured (0)
-    glUniform1i(10, 0);
-
-    // No texture
+    glUniform1i(10, 0); // coloured mode
     glBindTexture(GL_TEXTURE_2D, 0);
 
     glBindVertexArray(pads[0].vao);
 
-    // Query active program for uniform locations
     GLint currentProg = 0;
     glGetIntegerv(GL_CURRENT_PROGRAM, &currentProg);
 
-    const GLint locProjCameraWorld = 0;  // explicit in u.vert
-    const GLint locNormalMatrix    = 1;  // explicit in u.vert
+    const GLint locProjCameraWorld = 0;
+    const GLint locNormalMatrix    = 1;
 
-    // uModel: NOT explicit — must be looked up dynamically
-    const GLint locModel = glGetUniformLocation(currentProg, "uModel");
+    const GLint locModel           = glGetUniformLocation(currentProg, "uModel");
+    const GLint locKd              = glGetUniformLocation(currentProg, "uMaterialKd");
+    const GLint locNs              = glGetUniformLocation(currentProg, "uMaterialShininess");
 
     for (const auto &pad : pads)
     {
@@ -235,14 +252,19 @@ void drawLandingPads(
         Mat44f projCameraWorld  = projView * modelMatrix;
         Mat33f normalMatrix     = make_uniform_normal(modelMatrix);
 
-        // Upload matrices using correct locations
         glUniformMatrix4fv(locProjCameraWorld, 1, GL_TRUE, projCameraWorld.v);
         glUniformMatrix3fv(locNormalMatrix,    1, GL_TRUE, normalMatrix.v);
 
         if (locModel >= 0)
             glUniformMatrix4fv(locModel, 1, GL_TRUE, modelMatrix.v);
 
-        // Draw the landing pad mesh
+        // Upload MTL material Kd + Ns
+        if (locKd >= 0)
+            glUniform3fv(locKd, 1, &pad.kd.x);
+
+        if (locNs >= 0)
+            glUniform1f(locNs, pad.shininess);
+
         glDrawArrays(GL_TRIANGLES, 0, pad.vertexCount);
     }
 }

@@ -44,4 +44,18 @@ LandingPad::LandingPad(Vec3f position, float scale) : position(position)
     this->vao = sharedVao;
     this->vertexCount = meshData.vertexCount();
     this->transform = make_translation(position) * make_scaling(scale, scale, scale);
+
+    // -----------------------------------------------------
+    // Assign material (choose first material from MTL file)
+    // -----------------------------------------------------
+    if (!materials.empty())
+    {
+        kd = materials[0].diffuse;      // Kd
+        shininess = materials[0].shininess; // Ns
+    }
+    else
+    {
+        kd = Vec3f{1.0f, 1.0f, 1.0f};
+        shininess = 32.0f;
+    }
 }
