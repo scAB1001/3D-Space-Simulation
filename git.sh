@@ -1,12 +1,6 @@
 #!/bin/bash
 
-# Run chmod +x git.sh once to make this executable
-# Create symbolic link `ln -s git.sh git` to run as just ./git
 
-git pull origin andreas; git st
-# cd ~/github-projects/uni/graphics/
-git add .; git ci; git push origin andreas
+git pull origin archie1.5; git status
+git add .; git ci; git push origin archie1.5
 cd ./cw2/
-
-# Set vim.basic as default with:
-# sudo update-alternatives --config editor

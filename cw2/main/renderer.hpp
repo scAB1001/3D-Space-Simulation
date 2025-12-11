@@ -6,13 +6,8 @@
 #include "../vmlib/mat33.hpp"
 #include "../vmlib/vec3.hpp"
 #include "landing_pad.hpp"
-#include "state.hpp"   // <-- MUST BE HERE
+#include "state.hpp"
 
-void computeVehicleLights(State_& state, const Mat44f& modelVehicle);
-
-void setCW2LightingUniforms(State_& state,
-                            const Mat44f& modelVehicle,
-                            const Vec3f& cameraPos);
 
 // Scene setup and frame management
 void globalGLSetup();
@@ -20,12 +15,16 @@ void beginFrame();
 void resetBindings();
 void endFrame();
 
-// Lighting setup (call once per frame)
-void setLightingUniforms(
+// Setting light uniforms
+void setDirectionalLightUniforms(
     const Vec3f &lightDir,
     const Vec3f &lightDiffuse,
     const Vec3f &sceneAmbient);
+void computeVehicleLights(State_ &state, const Mat44f &modelVehicle);
+void setPointLightUniforms(State_ &state);
+void setAllLightingUniforms(State_ &state, const Mat44f &modelVehicle);
 
+// Drawing helpers
 void drawMesh(
     GLuint vao,
     GLsizei vertexCount,
@@ -35,11 +34,7 @@ void drawMesh(
     GLuint texture,
     const Mat44f &projCameraWorld,
     const Mat33f &normalMatrix,
-    const Mat44f &modelMatrix);   // NEW
-
-void drawLandingPads(
-    const std::vector<LandingPad> &pads,
-    const Mat44f &projView);
+    const Mat44f &modelMatrix);
 
 void drawTerrain(
     GLuint vao,
@@ -47,14 +42,18 @@ void drawTerrain(
     GLuint texture,
     const Mat44f &projCameraWorld,
     const Mat33f &normalMatrix,
-    const Mat44f &modelMatrix);   // NEW
+    const Mat44f &modelMatrix);
 
-void drawColoredObject(
+void drawLandingPads(
+    const std::vector<LandingPad> &pads,
+    const Mat44f &projView);
+
+void drawObject(
     GLuint vao,
     GLsizei vertexCount,
     GLsizei indexCount,
     const Mat44f &projCameraWorld,
     const Mat33f &normalMatrix,
-    const Mat44f &modelMatrix);   // NEW
+    const Mat44f &modelMatrix);
 
 #endif // RENDERER_HPP

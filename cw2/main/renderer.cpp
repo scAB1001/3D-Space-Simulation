@@ -12,15 +12,7 @@
 #include <glad/glad.h>
 #include <print>
 
-
-
-void setCW2LightingUniforms(State_& state,
-                            const Mat44f& modelVehicle,
-                            const Vec3f& cameraPos);
-
-void computeVehicleLights(State_& state,
-                          const Mat44f& modelVehicle);
-
+// Scene setup and frame management
 void globalGLSetup()
 {
     glEnable(GL_FRAMEBUFFER_SRGB);
@@ -55,89 +47,9 @@ void endFrame()
     resetBindings();
 }
 
-// ------------------------------------------------------------
-// TASK 1.6 — Compute point light positions attached to vehicle
-// ------------------------------------------------------------
-void computeVehicleLights(State_& state, const Mat44f& modelVehicle)
-{
-    float bodyHeight = 5.0f;
-    float finY = 0.3f * bodyHeight;   // = 1.5
-    float finDist = 3.2f;             // Position lights far outside fins
 
-    float angles[3] = { 0.f, 2.0944f, 4.1888f }; // 0°, 120°, 240°
-
-    for (int i = 0; i < 3; i++)
-    {
-        float a = angles[i];
-
-        Vec3f localPos {
-            finDist * std::cos(a),
-            finY,
-            finDist * std::sin(a)
-        };
-
-        // Convert Vec3f -> Vec4f manually (your math lib requires this)
-        Vec4f p4 { localPos.x, localPos.y, localPos.z, 1.f };
-
-        Vec4f wp = modelVehicle * p4;
-        state.pointLights[i].position = Vec3f{ wp.x, wp.y, wp.z };
-    }
-}
-
-
-// ------------------------------------------------------------
-// TASK 1.6 — Upload ALL lighting uniforms used in u.frag
-// ------------------------------------------------------------
-void setCW2LightingUniforms(
-    State_& state,
-    const Mat44f& modelVehicle,
-    const Vec3f& cameraPos)
-{
-    computeVehicleLights(state, modelVehicle);
-
-    // Shader is already bound in main.cpp
-    // So all glUniform calls apply to unifiedProg
-
-    // Directional light toggle
-    glUniform1i(glGetUniformLocation(state.prog->programId(), "uGlobalDirLightEnabled"),
-            state.dirLightEnabled);
-
-
-    // Directional light values (from Config)
-    Vec3f L = Config::Rendering::kLightDir;
-    Vec3f C = Config::Rendering::kLightDiffuse;
-
-    glUniform3fv(glGetUniformLocation(state.prog->programId(), "uDirLightDir"), 1, &L.x);
-    glUniform3fv(glGetUniformLocation(state.prog->programId(), "uDirLightColor"), 1, &C.x);
-
-    // Camera position
-    glUniform3fv(glGetUniformLocation(state.prog->programId(), "uCameraPos"), 1, &cameraPos.x);
-
-    // Point lights
-    for (int i = 0; i < 3; i++)
-    {
-        std::string base = "uPointLight[" + std::to_string(i) + "]";
-
-        glUniform1i(
-            glGetUniformLocation(state.prog->programId(), (base + ".enabled").c_str()),
-            state.pointLights[i].enabled
-        );
-
-        glUniform3fv(
-            glGetUniformLocation(state.prog->programId(), (base + ".position").c_str()),
-            1,
-            &state.pointLights[i].position.x
-        );
-
-        glUniform3fv(
-            glGetUniformLocation(state.prog->programId(), (base + ".color").c_str()),
-            1,
-            &state.pointLights[i].color.x
-        );
-    }
-}
-
-void setLightingUniforms(
+// Setting light uniforms
+void setDirectionalLightUniforms(
     const Vec3f &lightDir,
     const Vec3f &lightDiffuse,
     const Vec3f &sceneAmbient)
@@ -153,11 +65,79 @@ void setLightingUniforms(
     glUniform3fv(glGetUniformLocation(prog, "uSceneAmbient"), 1, &sceneAmbient.x);
 }
 
+void computeVehicleLights(State_ &state, const Mat44f &modelVehicle)
+{
+    float bodyHeight = 5.0f;
+    float finY = 0.3f * bodyHeight; // = 1.5
+    float finDist = 3.2f;           // Position lights far outside fins
+
+    float angles[3] = {0.f, 2.0944f, 4.1888f}; // 0°, 120°, 240°
+
+    for (int i = 0; i < 3; i++)
+    {
+        float a = angles[i];
+
+        Vec3f localPos{
+            finDist * std::cos(a),
+            finY,
+            finDist * std::sin(a)};
+
+        Vec4f p4{localPos.x, localPos.y, localPos.z, 1.f};
+
+        Vec4f wp = modelVehicle * p4;
+        state.pointLights[i].position = Vec3f{wp.x, wp.y, wp.z};
+    }
+}
+
+void setPointLightUniforms(State_ &state)
+{
+    GLuint progId = state.prog->programId();
+
+    // Point light colors
+    glUniform3fv(glGetUniformLocation(progId, "uPointPos[0]"), 1, &state.pointLights[0].position.x);
+    glUniform3fv(glGetUniformLocation(progId, "uPointPos[1]"), 1, &state.pointLights[1].position.x);
+    glUniform3fv(glGetUniformLocation(progId, "uPointPos[2]"), 1, &state.pointLights[2].position.x);
+
+    // Point light colors
+    glUniform3fv(glGetUniformLocation(progId, "uPointColor[0]"), 1, &state.pointLights[0].color.x);
+    glUniform3fv(glGetUniformLocation(progId, "uPointColor[1]"), 1, &state.pointLights[1].color.x);
+    glUniform3fv(glGetUniformLocation(progId, "uPointColor[2]"), 1, &state.pointLights[2].color.x);
+
+    // Point light enabled flags
+    GLint enabled[3] = {
+        state.pointLights[0].enabled ? 1 : 0,
+        state.pointLights[1].enabled ? 1 : 0,
+        state.pointLights[2].enabled ? 1 : 0};
+    glUniform1iv(glGetUniformLocation(progId, "uPointEnabled[0]"), 3, enabled);
+}
+
+void setAllLightingUniforms(
+    State_ &state,
+    const Mat44f &modelVehicle)
+{
+    // Directional light uniforms
+    setDirectionalLightUniforms(
+        Config::Rendering::kLightDir,
+        Config::Rendering::kLightDiffuse,
+        Config::Rendering::kSceneAmbient);
+
+    // Point light positions based on vehicle model matrix
+    computeVehicleLights(state, modelVehicle);
+
+    // Point light uniforms
+    setPointLightUniforms(state);
+
+    // Directional light enabled flag
+    GLuint progId = state.prog->programId();
+    glUniform1i(glGetUniformLocation(progId, "uGlobalDirLightEnabled"), state.globalDirLightEnabled ? 1 : 0);
+
+    // Camera position
+    Vec3f camPos = state.camera.getPosition();
+    glUniform3fv(glGetUniformLocation(progId, "uCameraPos"), 1, &camPos.x);
+}
 
 
-// ------------------------------------------------------------
-// DRAWING HELPERS (unchanged from Tasks 1.1–1.5)
-// ------------------------------------------------------------
+// Drawing helpers
 void drawMesh(
     GLuint vao,
     GLsizei vertexCount,
@@ -229,8 +209,26 @@ void drawMesh(
     }
 }
 
-
-
+void drawTerrain(
+    GLuint vao,
+    GLsizei vertexCount,
+    GLuint texture,
+    const Mat44f &projCameraWorld,
+    const Mat33f &normalMatrix,
+    const Mat44f &modelMatrix)
+{
+    drawMesh(
+        vao,
+        vertexCount,
+        false,         // no indices
+        0,
+        1,             // materialType = textured
+        texture,
+        projCameraWorld,
+        normalMatrix,
+        modelMatrix
+    );
+}
 
 void drawLandingPads(
     const std::vector<LandingPad> &pads,
@@ -274,37 +272,13 @@ void drawLandingPads(
     }
 }
 
-
-
-void drawTerrain(
-    GLuint vao,
-    GLsizei vertexCount,
-    GLuint texture,
-    const Mat44f &projCameraWorld,
-    const Mat33f &normalMatrix,
-    const Mat44f &modelMatrix)   // NEW
-{
-    drawMesh(
-        vao,
-        vertexCount,
-        false,         // no indices
-        0,
-        1,             // materialType = textured
-        texture,
-        projCameraWorld,
-        normalMatrix,
-        modelMatrix     // NEW
-    );
-}
-
-
-void drawColoredObject(
+void drawObject(
     GLuint vao,
     GLsizei vertexCount,
     GLsizei indexCount,
     const Mat44f &projCameraWorld,
     const Mat33f &normalMatrix,
-    const Mat44f &modelMatrix)   // NEW
+    const Mat44f &modelMatrix)
 {
     drawMesh(
         vao,

@@ -7,28 +7,36 @@
 #include "animation_state.hpp"
 #include "../support/program.hpp"
 
-
-struct PointLight {
+struct PointLight
+{
     Vec3f position;
     Vec3f color;
-    bool enabled;
+    bool enabled = true;
+
+    void toggle() noexcept
+    {
+        enabled = !enabled;
+    }
 };
 
-struct State_ {
-    ShaderProgram* prog = nullptr;    // <-- REQUIRED
+struct State_
+{
+    ShaderProgram *prog = nullptr;
 
     Camera camera;
     InputState input;
     AnimationState animation;
 
-    // Task 1.6 Lighting
-    bool dirLightEnabled = true;
+    bool globalDirLightEnabled = true;
     PointLight pointLights[3] = {
-        { Vec3f{0,0,0}, Vec3f{1.f,0.2f,0.2f}, true },
-        { Vec3f{0,0,0}, Vec3f{0.2f,1.f,0.2f}, true },
-        { Vec3f{0,0,0}, Vec3f{0.2f,0.2f,1.f}, true }
-    };
-};
+        {Vec3f{0, 0, 0}, Vec3f{1.f, 0.2f, 0.2f}, true},
+        {Vec3f{0, 0, 0}, Vec3f{0.2f, 1.f, 0.2f}, true},
+        {Vec3f{0, 0, 0}, Vec3f{0.2f, 0.2f, 1.f}, true}};
 
+    void toggleGlobalDirLight() noexcept
+    {
+        globalDirLightEnabled = !globalDirLightEnabled;
+    }
+};
 
 #endif
