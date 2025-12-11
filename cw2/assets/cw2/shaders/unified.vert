@@ -1,49 +1,58 @@
 #version 430
 
-// All possible vertex attributes (use 0 for unused)
-layout(location = 0) in vec3 iPosition;    // Positions
-layout(location = 1) in vec3 iColor;       // Colors (OR texcoords if materialType=1)
-layout( location = 3 ) in vec3 iNormal;     // For lighting
+// ------------ INPUT ATTRIBUTES ------------
+layout(location = 0) in vec3 iPosition;
+layout(location = 1) in vec3 iColor;      // rgb OR texcoord.xy
+layout(location = 3) in vec3 iNormal;
 
-// Transformation matrices
+// ------------ UNIFORMS ------------
 layout(location = 0) uniform mat4 uProjCameraWorld;
 layout(location = 1) uniform mat3 uNormalMatrix;
-layout(location = 10) uniform int uMaterialType; // 0 = colored, 1 = textured
+layout(location = 10) uniform int uMaterialType;
 
-// Output to fragment shader
+// We add the model matrix explicitly
+uniform mat4 uModel;
+
+// Directional-light uniforms
+layout(location = 2) uniform vec3 uLightDir;
+layout(location = 3) uniform vec3 uLightDiffuse;
+layout(location = 4) uniform vec3 uSceneAmbient;
+
+// ------------ OUTPUT TO FRAGMENT SHADER ------------
 out vec3 v2fColor;
 out vec2 v2fTexCoord;
-out vec3 v2fNormal;
+out vec3 v2fDiffuse;       // directional light term
+out vec3 v2fNormal;        // world normal
+out vec3 v2fWorldPos;      // world-space position
 flat out int v2fMaterialType;
 
 void main()
 {
-    // Transform position
+    // Compute world position for lighting
+    vec4 wp = uModel * vec4(iPosition, 1.0);
+    v2fWorldPos = wp.xyz;
+
+    // Final clip position
     gl_Position = uProjCameraWorld * vec4(iPosition, 1.0);
 
-    // Transform normal for lighting
+    // Normal → world-space
     v2fNormal = normalize(uNormalMatrix * iNormal);
 
-    // Pass attributes based on material type
+    // Directional light diffuse term
+    float nDotL = max(0.0, dot(v2fNormal, normalize(uLightDir)));
+    v2fDiffuse = uSceneAmbient + nDotL * uLightDiffuse;
+
+    // Material switch
     v2fMaterialType = uMaterialType;
 
     if (uMaterialType == 0)
     {
-        // Colored object
-        v2fColor = iColor;
+        v2fColor = iColor;  
         v2fTexCoord = vec2(0.0);
-    }
-    else if (uMaterialType == 1)
-    {
-        // Textured object - iColor contains texcoords
-        // We need to reinterpret the bytes
-        v2fTexCoord = vec2(iColor.x, iColor.y); // Use only first 2 components
-        v2fColor = vec3(1.0); // White base for textures
     }
     else
     {
-        // Fallback
-        v2fColor = vec3(1.0, 0.0, 1.0); // Magenta for debugging
-        v2fTexCoord = vec2(0.0);
+        v2fTexCoord = iColor.xy;
+        v2fColor = vec3(1.0);
     }
 }

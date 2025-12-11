@@ -13,14 +13,6 @@
 #include <print>
 
 
-
-void setCW2LightingUniforms(State_& state,
-                            const Mat44f& modelVehicle,
-                            const Vec3f& cameraPos);
-
-void computeVehicleLights(State_& state,
-                          const Mat44f& modelVehicle);
-
 void globalGLSetup()
 {
     glEnable(GL_FRAMEBUFFER_SRGB);
@@ -86,7 +78,7 @@ void computeVehicleLights(State_& state, const Mat44f& modelVehicle)
 
 
 // ------------------------------------------------------------
-// TASK 1.6 — Upload ALL lighting uniforms used in u.frag
+// TASK 1.6 — Upload ALL lighting uniforms used in unified.frag
 // ------------------------------------------------------------
 void setCW2LightingUniforms(
     State_& state,
@@ -99,8 +91,9 @@ void setCW2LightingUniforms(
     // So all glUniform calls apply to unifiedProg
 
     // Directional light toggle
-    glUniform1i(glGetUniformLocation(state.prog->programId(), "uDirLightEnabled"),
-                state.dirLightEnabled);
+    // glUniform1i(glGetUniformLocation(state.prog->programId(), "uDirLightEnabled"), state.dirLightEnabled);
+    glUniform1i(glGetUniformLocation(state.prog->programId(), "uDirLightEnabled"), state.pointLights[3].enabled);
+    std::print("Directional Light Enabled: {}, actual value {}\n", state.pointLights[3].enabled, state.dirLightEnabled);
 
     // Directional light values (from Config)
     Vec3f L = Config::Rendering::kLightDir;
@@ -223,8 +216,8 @@ void drawLandingPads(
     GLint currentProg = 0;
     glGetIntegerv(GL_CURRENT_PROGRAM, &currentProg);
 
-    const GLint locProjCameraWorld = 0;  // explicit in u.vert
-    const GLint locNormalMatrix    = 1;  // explicit in u.vert
+    const GLint locProjCameraWorld = 0;  // explicit in unified.vert
+    const GLint locNormalMatrix    = 1;  // explicit in unified.vert
 
     // uModel: NOT explicit — must be looked up dynamically
     const GLint locModel = glGetUniformLocation(currentProg, "uModel");
@@ -271,7 +264,7 @@ void drawTerrain(
 }
 
 
-void drawColoredObject(
+void drawObject(
     GLuint vao,
     GLsizei vertexCount,
     GLsizei indexCount,

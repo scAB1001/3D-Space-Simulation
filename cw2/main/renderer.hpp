@@ -49,12 +49,12 @@ void drawTerrain(
     const Mat33f &normalMatrix,
     const Mat44f &modelMatrix);   // NEW
 
-void drawColoredObject(
+void drawObject(
     GLuint vao,
     GLsizei vertexCount,
     GLsizei indexCount,
     const Mat44f &projCameraWorld,
     const Mat33f &normalMatrix,
-    const Mat44f &modelMatrix);   // NEW
+    const Mat44f &modelMatrix); // NEW
 
 #endif // RENDERER_HPP

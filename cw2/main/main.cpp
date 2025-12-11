@@ -38,12 +38,6 @@
 #include "loadobj.hpp"
 #include "space_vehicle.hpp"
 
-// TODO: LIST
-// - 1.4 CALL DRAW_ARRAY TWICE
-// - 1.6 BILL-PHONG GOES IN FRAG ONLY
-// - 1.7 USE AN EQUATION THAT IS A FUNCTION T, AS T INCREASES, SLOW ACCELERATE FROM STANDSTILL
-// - 1.10 DRAW AS MANY AS POSSIBLE WITHOUT LOSING FPS (60 MAX for ~1,000,000), VARIABLE (LIKE T particles)
-
 namespace
 {
 	constexpr char const *kWindowTitle = "COMP3811 - CW2";
@@ -138,31 +132,18 @@ try
 
 	// Global GL state
 	OGL_CHECKPOINT_ALWAYS();
-
-	// TODO: Global GL setup goes here
 	globalGLSetup();
 
 	OGL_CHECKPOINT_ALWAYS();
 
-	// Get actual framebuffer size.
-	// This can be different from the window size, as standard window
-	// decorations (title bar, borders, ...) may be included in the window size
-	// but not be part of the drawable surface area.
 	int iwidth, iheight;
 	glfwGetFramebufferSize(window, &iwidth, &iheight);
 	glViewport(0, 0, iwidth, iheight);
 
-	/* Important Note: There's a trick here.
-	 * When we have texcoords, we're storing them as vec2 in the buffer,
-	 * 	but the shader reads them as vec3 at location 1.
-	 * This works because:
-	 * 	Texcoords: vec2(x, y) in buffer -> read as vec3(x, y, ?) in shader
-	 * 	The z-component is ignored for texcoords
-	 * For colors: vec3(r, g, b) in buffer -> read as vec3(r, g, b) in shader
-	 */
+
 	ShaderProgram unifiedProg( {
-		{ GL_VERTEX_SHADER, "assets/cw2/shaders/u.vert" },
-		{ GL_FRAGMENT_SHADER, "assets/cw2/shaders/u.frag" }
+		{ GL_VERTEX_SHADER, "assets/cw2/shaders/unified.vert" },
+		{ GL_FRAGMENT_SHADER, "assets/cw2/shaders/unified.frag" }
 	} );
 	state.prog = &unifiedProg;
 
@@ -189,12 +170,6 @@ try
 		LandingPad(Config::World::kLandingPad2Pos, Config::World::kLandingPadScale)
 	};
 
-	/* CUBE */
-	// auto cubeMesh = make_cube_with_normals({0.8f, 0.2f, 0.2f});
-	// auto cubeMesh = make_indexed_cube({0.8f, 0.2f, 0.2f});
-	// cubeMesh.materialType = 0; // Colored
-	// GLuint cubeVao = create_vao(cubeMesh);
-	// std::size_t cubeVertexCount = cubeMesh.vertexCount();
 	/* SPACE VEHICLE */
 	auto vehicleMesh = make_space_vehicle();
 	vehicleMesh.materialType = 0; // coloured, no texture
@@ -205,12 +180,8 @@ try
 
 
 
-	// -------------- Run tests --------------
-	// test_all_mesh_functions();
-	// test_vao_creation();
 
-	// Reset state. This unbinds any VAO or VBO we may have left bound.
-	// Unbind ebo too (to be safe), do this by calling
+	// Reset state.
 	resetBindings();
 
 	// Main loop
@@ -299,16 +270,11 @@ try
 
 		// ------------- Setup camera pipeline -------------
 		// TODO: Modularize this later
-		// Projection matrix
 		Mat44f projection = make_perspective_projection(Config::Rendering::kFOV, aspectRatio, Config::Rendering::kNearPlane, Config::Rendering::kFarPlane);
-
-		// View matrix
 		Mat44f view = state.camera.getViewMatrix();
 		Mat44f projView = projection * view;
 
 		// Model matrices
-		/* CUBE */
-		// Calculate cube transform
 		Mat44f model2world_vehicle;
 		if (state.animation.isAnimating ||
 			(state.animation.animationTime >= state.animation.kTotalAnimationTime &&
@@ -332,20 +298,14 @@ try
 		Mat44f projCameraWorld_vehicle = make_proj_camera_world(projView, model2world_vehicle);
 		Mat33f normalMatrix_vehicle    = make_uniform_normal(model2world_vehicle);
 
-		// TODO: Draw scene
 		OGL_CHECKPOINT_DEBUG();
 
-		// Clear every frame.
-		// /*
 		beginFrame();
 		glUseProgram(unifiedProg.programId());
 		computeVehicleLights(state, model2world_vehicle);
 
 
 		// ------ Set lighting uniforms (shared by all objects) ------
-
-		// compute updated light positions
-// upload lights to shader
 		for (int i = 0; i < 3; i++)
 		{
 			std::string name = "uPointPos[" + std::to_string(i) + "]";
@@ -370,13 +330,10 @@ try
 			Config::Rendering::kSceneAmbient
 		);
 
-
-
-
 		glUniform1i(glGetUniformLocation(unifiedProg.programId(), "uDirEnabled"), state.dirLightEnabled);
+		// glUniform1i(glGetUniformLocation(unifiedProg.programId(), "uDirEnabled"), state.pointLights[3].enabled);
 		Vec3f camPos = state.camera.getPosition();
-		glUniform3fv(glGetUniformLocation(unifiedProg.programId(), "uCameraPos"),
-					1, &camPos.x);
+		glUniform3fv(glGetUniformLocation(unifiedProg.programId(), "uCameraPos"), 1, &camPos.x);
 
 
 		// ----- Render Terrain -----
@@ -386,28 +343,25 @@ try
 			parlahtiTexture,
 			projView,
 			kIdentity33f,
-			kIdentity44f      // NEW model matrix
+			kIdentity44f
 		);
 
 
-		// ----- Render Landing Pads (INSTANCED DRAWING) -----
+		// ----- Render Landing Pads (Instanced) -----
 		drawLandingPads(landingPads, projView);
 
 		// ----- Render Space Vehicle -----
-		drawColoredObject(
+		drawObject(
 			vehicleVao,
 			vehicleVertexCount,
 			vehicleIndexCount,
 			projCameraWorld_vehicle,
 			normalMatrix_vehicle,
-			model2world_vehicle   // NEW
+			model2world_vehicle
 		);
-
-
 
 		// Cleanup the modified global state: Reset VAO and program.
 		endFrame();
-		// */
 
 		OGL_CHECKPOINT_DEBUG();
 
@@ -418,7 +372,6 @@ try
 	// Cleanup.
 	state.prog = nullptr;
 
-	// TODO: additional cleanup
 	glDeleteVertexArrays(1, &parlahtiVao);
 	glDeleteVertexArrays(1, &vehicleVao);
 
@@ -450,9 +403,6 @@ namespace
 		if (!state) return;
 
 		// Handle key events
-		// If action is PRESS or REPEAT (E.g., the key is held down), set movement flag to true; else false
-		// The REPEAT action allows for multi-key presses to be recognised.
-		// So, moving forwards and left at the same time is possible
 		bool isPressed = (aAction == GLFW_PRESS || aAction == GLFW_REPEAT);
 
 		switch (aKey)
@@ -493,19 +443,25 @@ namespace
 				}
 				break;
 			case GLFW_KEY_1:
-				if (aAction == GLFW_PRESS) state->pointLights[0].enabled = !state->pointLights[0].enabled;
+				// if (aAction == GLFW_PRESS) state->pointLights[0].enabled = !state->pointLights[0].enabled;
+				if (aAction == GLFW_PRESS) state->pointLights[0].toggle();
 				break;
 
 			case GLFW_KEY_2:
-				if (aAction == GLFW_PRESS) state->pointLights[1].enabled = !state->pointLights[1].enabled;
+				if (aAction == GLFW_PRESS) state->pointLights[1].toggle();
 				break;
 
 			case GLFW_KEY_3:
-				if (aAction == GLFW_PRESS) state->pointLights[2].enabled = !state->pointLights[2].enabled;
+				if (aAction == GLFW_PRESS) state->pointLights[2].toggle();
 				break;
 
 			case GLFW_KEY_4:
-				if (aAction == GLFW_PRESS) state->dirLightEnabled = !state->dirLightEnabled;
+				// if (aAction == GLFW_PRESS) state->dirLightEnabled = !state->dirLightEnabled;
+				if (aAction == GLFW_PRESS)
+				{
+					state->pointLights[3].toggle();
+					state->dirLightEnabled = !state->dirLightEnabled;
+				}
 				break;
 
 
@@ -582,38 +538,6 @@ namespace
 						state->animation.togglePause();
 					}
 				}
-				break;
-
-			// TODO: Remove later. For debugging.
-			case GLFW_KEY_G: // Faces vehicle from current position and orientation
-				if (aAction == GLFW_PRESS)
-				{
-					/* TESTING FOLLOW CAMERA */
-					// Calculate offset position to cube.
-					// update position to be in-line with the cube but at a fixed distance
-					Vec3f toCube = state->animation.currentPosition - state->camera.getPosition();
-
-					// Follow distance should be a fixed distance of vec3f length
-					toCube = normalize(toCube) * length(Vec3f{20.f, 5.f, 0.f});
-					Vec3f newCamPos = state->animation.currentPosition - toCube;
-					state->camera.setPosition(newCamPos);
-
-					/* TESTING FIXED GROUND CAMERA
-					// state->camera.setPosition(Vec3f{-37.45f, 17.90f, -48.04f});
-					// 	// First, debug current state
-					// state->camera.debugOrientation(state->animation.currentPosition);
-
-					// // Then look at target
-					// state->camera.lookAtTarget(state->animation.currentPosition);
-
-					// // Debug after adjustment
-					// std::print("\nAfter lookAtTarget:\n");
-					// state->camera.debugOrientation(state->animation.currentPosition);
-
-					// testCameraOrientation(state->camera, state->animation.currentPosition);
-					*/
-				}
-
 				break;
 
 			case GLFW_KEY_J: // TODO: Remove later. For debugging.

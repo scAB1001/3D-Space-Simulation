@@ -1,55 +1,65 @@
 #version 430
 
-// Inputs from vertex shader
+// ------------ INPUT FROM VERTEX SHADER ------------
 in vec3 v2fColor;
 in vec2 v2fTexCoord;
-in vec3 v2fNormal; // Normalised
+in vec3 v2fDiffuse;
+in vec3 v2fNormal;
+in vec3 v2fWorldPos;
 flat in int v2fMaterialType;
 
-// Lighting uniforms
-layout(location = 2) uniform vec3 uLightDir;        // Directional light (normalised)
-layout(location = 3) uniform vec3 uLightDiffuse;
-layout(location = 4) uniform vec3 uSceneAmbient;
-
-// Texture sampler
+// ------------ UNIFORMS ------------
 layout(binding = 0) uniform sampler2D uTexture;
 
-// Output
+uniform vec3 uCameraPos;
+
+uniform vec3 uPointPos[3];
+uniform vec3 uPointColor[3];
+uniform int  uPointEnabled[3];
+
+uniform int uDirEnabled; // 1 = use directional, 0 = disable
+
+// ------------ OUTPUT ------------
 layout(location = 0) out vec3 oColor;
 
 void main()
 {
-    vec3 finalColor;
+    vec3 baseColor;
 
-    // Determine base color based on material type
+    // Material selection
     if (v2fMaterialType == 0)
-    {   // Colored object - use vertex color
-
-        finalColor = v2fColor;
-    }
+        baseColor = v2fColor;
     else if (v2fMaterialType == 1)
-    {   // Textured object - sample texture
-
-        finalColor = texture(uTexture, v2fTexCoord).rgb;
-
-        // Debug: visualize texture coordinates
-        // finalColor = vec3(v2fTexCoord, 0.0);
-    }
+        baseColor = texture(uTexture, v2fTexCoord).rgb;
     else
-    {   // Debug: magenta for invalid material type
+        baseColor = vec3(1.0, 0.0, 1.0);  // debug magenta
 
-        finalColor = vec3(1.0, 0.0, 1.0);
+    // ------------------------
+    // Directional lighting
+    // ------------------------
+    vec3 lighting = vec3(0.0);
+    if (uDirEnabled == 1)
+        lighting += v2fDiffuse;
+
+    // ------------------------
+    // Point lights
+    // ------------------------
+    vec3 N = normalize(v2fNormal);
+
+    for (int i = 0; i < 3; i++)
+    {
+        if (uPointEnabled[i] == 0)
+            continue;
+
+        vec3 L = normalize(uPointPos[i] - v2fWorldPos);
+        float diff = max(dot(N, L), 0.0);
+
+        float dist = length(uPointPos[i] - v2fWorldPos);
+        float atten = 1.0 / (dist * dist);
+
+        lighting += diff * atten * uPointColor[i];
     }
 
-    // Calculate lighting (simple diffuse + ambient)
-    float nDotL = max(0.0, dot(v2fNormal, uLightDir));
-
-    // Combine ambient and diffuse lighting
-    vec3 lighting = uSceneAmbient + nDotL * uLightDiffuse;
-
-    // Apply lighting to final color
-    oColor = lighting * finalColor;
-
-    // Debug: visualize normals
-    // oColor = normal * 0.5 + 0.5;
+    // final shading
+    oColor = lighting * baseColor;
 }

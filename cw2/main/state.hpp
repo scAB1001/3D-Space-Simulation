@@ -11,7 +11,11 @@
 struct PointLight {
     Vec3f position;
     Vec3f color;
-    bool enabled;
+    bool enabled=true;
+
+    void toggle() noexcept {
+        enabled = !enabled;
+    }
 };
 
 struct State_ {
