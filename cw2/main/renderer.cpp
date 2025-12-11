@@ -211,24 +211,42 @@ void drawLandingPads(
     const std::vector<LandingPad> &pads,
     const Mat44f &projView)
 {
-    glUniform1i(10, 0);  // coloured
+    // Material type = coloured (0)
+    glUniform1i(10, 0);
+
+    // No texture
     glBindTexture(GL_TEXTURE_2D, 0);
 
     glBindVertexArray(pads[0].vao);
 
+    // Query active program for uniform locations
+    GLint currentProg = 0;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &currentProg);
+
+    const GLint locProjCameraWorld = 0;  // explicit in u.vert
+    const GLint locNormalMatrix    = 1;  // explicit in u.vert
+
+    // uModel: NOT explicit — must be looked up dynamically
+    const GLint locModel = glGetUniformLocation(currentProg, "uModel");
+
     for (const auto &pad : pads)
     {
-        Mat44f modelMatrix = pad.transform;
-        Mat44f projCameraWorld = projView * modelMatrix;
-        Mat33f normalMatrix = make_uniform_normal(modelMatrix);
+        Mat44f modelMatrix      = pad.transform;
+        Mat44f projCameraWorld  = projView * modelMatrix;
+        Mat33f normalMatrix     = make_uniform_normal(modelMatrix);
 
-        glUniformMatrix4fv(0, 1, GL_TRUE, projCameraWorld.v);
-        glUniformMatrix3fv(1, 1, GL_TRUE, normalMatrix.v);
-        glUniformMatrix4fv(5, 1, GL_TRUE, modelMatrix.v);     // NEW
+        // Upload matrices using correct locations
+        glUniformMatrix4fv(locProjCameraWorld, 1, GL_TRUE, projCameraWorld.v);
+        glUniformMatrix3fv(locNormalMatrix,    1, GL_TRUE, normalMatrix.v);
 
+        if (locModel >= 0)
+            glUniformMatrix4fv(locModel, 1, GL_TRUE, modelMatrix.v);
+
+        // Draw the landing pad mesh
         glDrawArrays(GL_TRIANGLES, 0, pad.vertexCount);
     }
 }
+
 
 
 void drawTerrain(
