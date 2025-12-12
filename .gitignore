@@ -13,7 +13,6 @@ deps/
 *.a
 
 # Ignore IDE specific files
-*.pdf
 .vscode/
 
 git.sh
