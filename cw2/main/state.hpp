@@ -3,8 +3,8 @@
 
 #include "../vmlib/vec3.hpp"
 #include "camera.hpp"
-#include "input_state.hpp"
-#include "animation_state.hpp"
+#include "input.hpp"
+#include "animation.hpp"
 #include "../support/program.hpp"
 #include "particle_system.hpp"
 
@@ -22,15 +22,14 @@ struct PointLight
 };
 
 
-
 struct State_
 {
     ShaderProgram *prog = nullptr;
     ParticleSystem particles { 1000000 };
 
     Camera camera;
-    InputState input;
-    AnimationState animation;
+    Input input;
+    Animation animation;
 
     bool splitScreenEnabled = false;
 

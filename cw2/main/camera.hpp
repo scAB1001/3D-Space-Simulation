@@ -9,8 +9,7 @@
 #include <algorithm>
 
 #include "config.hpp"
-#include "input_state.hpp"
-// #include "state.hpp"
+#include "input.hpp"
 
 class Camera
 {
@@ -65,7 +64,7 @@ public:
     void moveRight(float dt) noexcept;
     void moveUp(float dt) noexcept;
     void moveDown(float dt) noexcept;
-    void updateSpeed(Camera &cam, const InputState &input) noexcept;
+    void updateSpeed(Camera &cam, const Input &input) noexcept;
 
     // Rotation
     void rotate(float yawOffset, float pitchOffset) noexcept;
@@ -119,7 +118,7 @@ private:
     void normalizeYaw() noexcept;
 };
 
-void processMovement(Camera &cam, const InputState &input, float dt) noexcept;
+void processMovement(Camera &cam, const Input &input, float dt) noexcept;
 
 
 #endif // CAMERA_HPP

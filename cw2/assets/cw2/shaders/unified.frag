@@ -12,7 +12,7 @@ uniform vec3 uCameraPos;
 
 // global directional light
 uniform int  uGlobalDirLightEnabled;
-uniform vec3 uLightDir;       // must be normalized in C++
+uniform vec3 uLightDir;
 uniform vec3 uLightDiffuse;
 uniform vec3 uSceneAmbient;
 
@@ -29,6 +29,13 @@ layout(location = 0) out vec3 oColor;
 
 void main()
 {
+    /* References for code inspiration:
+     * - https://learnopengl.com/Getting-started/Shaders
+     * - https://wikis.khronos.org/opengl/Uniform_(GLSL)
+     * - https://learnopengl.com/Lighting/Basic-Lighting
+     * - https://learnopengl.com/Advanced-Lighting/Advanced-Lighting
+     * - https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_reflection_model
+     */
     vec3 baseColor;
 
     if (v2fMaterialType == 0)
@@ -45,9 +52,7 @@ void main()
 
     vec3 result = vec3(0.0);
 
-    // ----------------------------------------------------------------
-    // GLOBAL DIRECTIONAL LIGHT: ambient + diffuse ONLY (CW2 requirement)
-    // ----------------------------------------------------------------
+    // Global directional light
     if (uGlobalDirLightEnabled == 1)
     {
         vec3 L = normalize(uLightDir);   // IMPORTANT: use positive L, not -L
@@ -60,9 +65,7 @@ void main()
         result += ambient + diffuse;
     }
 
-    // ----------------------------------------------------------------
-    // POINT LIGHTS : full Blinn–Phong
-    // ----------------------------------------------------------------
+    // Point lights : Blinn–Phong
     for (int i = 0; i < 3; i++)
     {
         if (uPointEnabled[i] == 0)

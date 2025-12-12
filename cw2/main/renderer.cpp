@@ -55,10 +55,6 @@ void setDirectionalLightUniforms(
 {
     Vec3f L = normalize(lightDir);
 
-    // // Query the current program
-    // GLint prog;
-    // glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
-
     glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uLightDir"), 1, &L.x);
     glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uLightDiffuse"), 1, &lightDiffuse.x);
     glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uSceneAmbient"), 1, &sceneAmbient.x);
@@ -90,8 +86,6 @@ void computeVehicleLights(State_ &state, const Mat44f &modelVehicle)
 
 void setPointLightUniforms(State_ &state)
 {
-    // GLuint progId = state.prog->programId();
-
     // Point light colors
     glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uPointPos[0]"), 1, &state.pointLights[0].position.x);
     glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uPointPos[1]"), 1, &state.pointLights[1].position.x);
@@ -128,7 +122,6 @@ void setAllLightingUniforms(State_ &state,
     setPointLightUniforms(state);
 
     // Directional light enabled flag
-    // GLuint progId = state.prog->programId();
     glUniform1i(glGetUniformLocation(RendererInternal::currentShaderProgram, "uGlobalDirLightEnabled"), state.globalDirLightEnabled ? 1 : 0);
 
     // Camera position

@@ -1,7 +1,7 @@
-#ifndef INPUT_STATE_HPP
-#define INPUT_STATE_HPP
+#ifndef INPUT_HPP
+#define INPUT_HPP
 
-struct InputState
+struct Input
 {
     // Movement flags
     bool moveForward = false;
@@ -80,4 +80,4 @@ struct InputState
     }
 };
 
-#endif // INPUT_STATE_HPP
+#endif // INPUT_HPP

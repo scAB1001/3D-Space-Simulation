@@ -1,5 +1,5 @@
-#ifndef ANIMATION_STATE_HPP
-#define ANIMATION_STATE_HPP
+#ifndef ANIMATION_HPP
+#define ANIMATION_HPP
 
 #include "../vmlib/vec3.hpp"
 #include "../vmlib/mat44.hpp"
@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <numbers>
 
-struct AnimationState
+struct Animation
 {
     // Precomputed constants
     static constexpr float kTotalAnimationTime = 30.0f;          // Increased to 30s for slower ascent
@@ -73,8 +73,8 @@ struct AnimationState
     Vec3f launchEndPosition;    // Position at end of launch phase
 
     // Constructors (declaration only)
-    AnimationState(const Vec3f &start, const Vec3f &end);
-    AnimationState();
+    Animation(const Vec3f &start, const Vec3f &end);
+    Animation();
 
     // Public methods (declarations only)
     void precomputeTrajectory();
@@ -96,6 +96,6 @@ struct AnimationState
 };
 
 // Declaration only
-Mat44f calculate_rocket_rotation(const AnimationState &state) noexcept;
+Mat44f calculate_rocket_rotation(const Animation &state) noexcept;
 
-#endif // ANIMATION_STATE_HPP
+#endif // ANIMATION_HPP

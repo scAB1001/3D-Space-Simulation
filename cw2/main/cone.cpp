@@ -2,6 +2,13 @@
 
 SimpleMeshData make_batched_indexed_cone(bool aCapped, std::size_t aSubdivs, Vec3f aColor, Mat44f aPreTransform)
 {
+    /* References for code inspiration:
+     * - https://learnopengl.com/Model-Loading/Mesh
+     * - https://www.gamedev.net/articles/programming/graphics/opengl-batch-rendering-r3900/
+     * - https://github.com/robmaier/menderer
+     * - https://www.opengl-tutorial.org/intermediate-tutorials/tutorial-9-vbo-indexing/
+     */
+
     SimpleMeshData cone;
 
     // Pre-calculate base circle
@@ -17,7 +24,7 @@ SimpleMeshData make_batched_indexed_cone(bool aCapped, std::size_t aSubdivs, Vec
     normalTransform[0, 3] = 0.f;
     normalTransform[1, 3] = 0.f;
     normalTransform[2, 3] = 0.f;
-    normalTransform[3, 3] = 1.f;
+    normalTransform[3, 3] = 1.f; 
 
     // Transform base vertices
     std::vector<Vec3f> transformedBaseCircle(aSubdivs);

@@ -21,8 +21,8 @@
 #include "defaults.hpp"
 #include "config.hpp"
 #include "camera.hpp"
-#include "input_state.hpp"
-#include "animation_state.hpp"
+#include "input.hpp"
+#include "animation.hpp"
 #include "renderer.hpp"
 
 // Shapes
@@ -360,19 +360,7 @@ namespace
 
 			case GLFW_KEY_R:
 				if (aAction == GLFW_PRESS && state->prog)
-				{
-					try
-					{
-						state->prog->reload();
-						std::print(stderr, "Shaders reloaded and recompiled.\n");
-					}
-					catch (std::exception const &eErr)
-					{
-						std::print(stderr, "Error when reloading shader:\n");
-						std::print(stderr, "{}\n", eErr.what());
-						std::print(stderr, "Keeping old shader.\n");
-					}
-
+				{ 	
 					// Reset animation
 					state->animation.reset();
 

@@ -2,6 +2,13 @@
 
 SimpleMeshData make_batched_indexed_cylinder(bool aCapped, std::size_t aSubdivs, Vec3f aColor, Mat44f aPreTransform)
 {
+    /* References for code inspiration:
+     * - https://learnopengl.com/Model-Loading/Mesh
+     * - https://www.gamedev.net/articles/programming/graphics/opengl-batch-rendering-r3900/
+     * - https://github.com/robmaier/menderer
+     * - https://www.opengl-tutorial.org/intermediate-tutorials/tutorial-9-vbo-indexing/
+     */
+    
     SimpleMeshData cylinder;
 
     // Pre-calculate circle points
@@ -73,7 +80,7 @@ SimpleMeshData make_batched_indexed_cylinder(bool aCapped, std::size_t aSubdivs,
         cylinder.indices.push_back(top_i);
     }
 
-    // Add caps if requested
+    // Add caps
     if (aCapped)
     {
         // Bottom center

@@ -62,7 +62,11 @@ constexpr Mat44f kIdentity44f = { {
 constexpr
 Mat44f operator*(Mat44f const& aLeft, Mat44f const& aRight) noexcept
 {
-	// Q[i,j] = sum(k=0 to 3) L[i,k] * R[k,j]
+	/* References for code inspiration:
+	 * - https: // learn.microsoft.com/en-us/cpp/parallel/amp/walkthrough-matrix-multiplication?view=msvc-170
+
+	 * Q[i,j] = sum(k=0 to 3) L[i,k] * R[k,j]
+	*/
 	Mat44f result{};
 
 	for (std::size_t i = 0; i < 4; ++i)
@@ -117,7 +121,10 @@ Mat44f transpose(Mat44f const &aM) noexcept
 inline
 Mat44f make_rotation_x( float aAngle ) noexcept
 {
-	/* Rotation matrix around X-axis using precomputed sin,cos
+	/* References for code inspiration:
+	 * - COMP3811 Computer Graphics UoL Lecture 7: Transforms in 3D, slide 57/166
+
+	Rotation matrix around X-axis using precomputed sin,cos
 	Pr_x =
 		[ 1    0    0   0 ]
 		[ 0   ca  -sa   0 ]
@@ -141,7 +148,10 @@ Mat44f make_rotation_x( float aAngle ) noexcept
 inline
 Mat44f make_rotation_y( float aAngle ) noexcept
 {
-	/* Rotation matrix around Y-axis using precomputed sin,cos
+	/* References for code inspiration:
+	 * - COMP3811 Computer Graphics UoL Lecture 7: Transforms in 3D, slide 57/166
+
+	Rotation matrix around Y-axis using precomputed sin,cos
 	Pr_y =
 		[  ca   0   sa   0 ]
 		[   0   1    0   0 ]
@@ -164,7 +174,10 @@ Mat44f make_rotation_y( float aAngle ) noexcept
 inline
 Mat44f make_rotation_z( float aAngle ) noexcept
 {
-	/* Rotation matrix around Z-axis using precomputed sin,cos
+	/* References for code inspiration:
+	 * - COMP3811 Computer Graphics UoL Lecture 7: Transforms in 3D, slide 57/166
+
+	Rotation matrix around Z-axis using precomputed sin,cos
 	Pr_z =
 		[ ca  -sa   0    0 ]
 		[ sa   ca   0    0 ]
@@ -187,7 +200,10 @@ Mat44f make_rotation_z( float aAngle ) noexcept
 inline
 Mat44f make_translation( Vec3f aTranslation ) noexcept
 {
-	/* Translation matrix
+	/* References for code inspiration:
+	 * - COMP3811 Computer Graphics UoL Lecture 7: Transforms in 3D, slide 114/166
+
+    Translation matrix
 	Pt =
 		[ 1  0  0  tx ]
 		[ 0  1  0  ty ]
@@ -205,7 +221,10 @@ Mat44f make_translation( Vec3f aTranslation ) noexcept
 inline
 Mat44f make_scaling( float aSX, float aSY, float aSZ ) noexcept
 {
-	/*  Uniform scaling matrix
+	/* References for code inspiration:
+	 * - COMP3811 Computer Graphics UoL Lecture 7: Transforms in 3D, slide 57/166
+
+	Uniform scaling matrix
 	Ps =
 		[ sx   0    0   0 ]
 		[ 0   sy    0   0 ]
@@ -223,9 +242,11 @@ Mat44f make_scaling( float aSX, float aSY, float aSZ ) noexcept
 inline
 Mat44f make_look_at(Vec3f position, Vec3f target, Vec3f worldUp) noexcept
 {
-	// TODO: CITE LookAt implementation
-	// Reference: https://learnopengl.com/Getting-started/Camera
-	// Reference: https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/lookat-function/framing-lookat-function.html
+	/* References for code inspiration:
+	 * - https://learnopengl.com/Getting-started/Camera
+	 * - https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/lookat-function/framing-lookat-function.html
+	 *
+	*/
 
 	// Forward vector: points from camera to what it's looking at
 	Vec3f f = normalize(target - position);
@@ -250,11 +271,10 @@ Mat44f make_look_at(Vec3f position, Vec3f target, Vec3f worldUp) noexcept
 inline
 Mat44f make_perspective_projection( float aFovInRadians, float aAspect, float aNear, float aFar ) noexcept
 {
-	/* TODO: CITE lecture content for matrix but not implementation
-		aspect: aspect ratio (width/height)
-		fov: field of view (angle in degrees, e.g. 60 degrees)
-		f: far distance (e.g. 100)
-		n: near distance (e.g., 0.1)
+	/* References for code inspiration:
+	 * - https://learnopengl.com/Getting-started/Coordinate-Systems
+	 * - https://www.songho.ca/opengl/gl_transform.html
+	 * - COMP3811 Computer Graphics UoL Lecture 7: Transforms in 3D, slide 163/166
 
 	Pm =
 		[ sx   0    0    0 ]

@@ -1,15 +1,15 @@
-#include "animation_state.hpp"
+#include "animation.hpp"
 #include <print>
 #include <algorithm>
 
 // Constructors
-AnimationState::AnimationState(const Vec3f &start, const Vec3f &end)
+Animation::Animation(const Vec3f &start, const Vec3f &end)
     : startPosition(start), endPosition(end), currentPosition(start), previousPosition(start)
 {
     precomputeTrajectory();
 }
 
-AnimationState::AnimationState()
+Animation::Animation()
     : startPosition(Config::World::kLandingPad1Pos + kLandingPadOffset),
       endPosition(Config::World::kLandingPad2Pos + kLandingPadOffset),
       currentPosition(Config::World::kLandingPad1Pos + kLandingPadOffset),
@@ -19,7 +19,7 @@ AnimationState::AnimationState()
 }
 
 // Implementation methods
-void AnimationState::precomputeTrajectory()
+void Animation::precomputeTrajectory()
 {
     // Calculate horizontal distance and direction
     Vec3f horizontalVec = endPosition - startPosition;
@@ -59,12 +59,12 @@ void AnimationState::precomputeTrajectory()
     bezierP3 = endPosition + Vec3f{0.f, adjustedHoverHeight, 0.f};
 }
 
-float AnimationState::getNormalizedTime() const noexcept
+float Animation::getNormalizedTime() const noexcept
 {
     return animationTime / kTotalAnimationTime;
 }
 
-AnimationState::Phase AnimationState::getCurrentPhase(float normalizedT) const noexcept
+Animation::Phase Animation::getCurrentPhase(float normalizedT) const noexcept
 {
     if (normalizedT < kVerticalAscentEnd)
         return Phase::VerticalAscent;
@@ -76,7 +76,7 @@ AnimationState::Phase AnimationState::getCurrentPhase(float normalizedT) const n
         return Phase::Landing;
 }
 
-float AnimationState::getPhaseProgress() const noexcept
+float Animation::getPhaseProgress() const noexcept
 {
     float normalizedT = getNormalizedTime();
     using enum Phase;
@@ -96,15 +96,15 @@ float AnimationState::getPhaseProgress() const noexcept
 }
 
 // Easing functions
-float AnimationState::easeInQuad(float t) noexcept { return t * t; }
-float AnimationState::easeOutQuad(float t) noexcept { return 1.0f - (1.0f - t) * (1.0f - t); }
-float AnimationState::easeInOutQuad(float t) noexcept
+float Animation::easeInQuad(float t) noexcept { return t * t; }
+float Animation::easeOutQuad(float t) noexcept { return 1.0f - (1.0f - t) * (1.0f - t); }
+float Animation::easeInOutQuad(float t) noexcept
 {
     return t < 0.5f ? 2.0f * t * t : 1.0f - (-2.0f * t + 2.0f) * (-2.0f * t + 2.0f) * 0.5f;
 }
 
 // Position calculation
-Vec3f AnimationState::calculatePosition(float t) const noexcept
+Vec3f Animation::calculatePosition(float t) const noexcept
 {
     float normalizedT = t / kTotalAnimationTime;
 
@@ -160,7 +160,7 @@ Vec3f AnimationState::calculatePosition(float t) const noexcept
 }
 
 // Speed calculation
-float AnimationState::calculateSpeed(float t) const noexcept
+float Animation::calculateSpeed(float t) const noexcept
 {
     float normalizedT = t / kTotalAnimationTime;
     if (normalizedT < kVerticalAscentEnd)
@@ -213,7 +213,7 @@ float AnimationState::calculateSpeed(float t) const noexcept
 }
 
 // Update animation
-void AnimationState::update(float dt) noexcept
+void Animation::update(float dt) noexcept
 {
     if (!isAnimating || isPaused)
         return;
@@ -255,7 +255,7 @@ void AnimationState::update(float dt) noexcept
 }
 
 // State management
-void AnimationState::reset()
+void Animation::reset()
 {
     isAnimating = false;
     isPaused = false;
@@ -268,7 +268,7 @@ void AnimationState::reset()
     maxHeightReached = 0.0f;
 }
 
-void AnimationState::start()
+void Animation::start()
 {
     isAnimating = true;
     isPaused = false;
@@ -280,17 +280,17 @@ void AnimationState::start()
     maxHeightReached = 0.0f;
 }
 
-void AnimationState::togglePause()
+void Animation::togglePause()
 {
     isPaused = !isPaused;
 }
 
 // Rocket rotation function
-Mat44f calculate_rocket_rotation(const AnimationState &state) noexcept
+Mat44f calculate_rocket_rotation(const Animation &state) noexcept
 {
     Mat44f rotation = kIdentity44f;
 
-    using enum AnimationState::Phase;
+    using enum Animation::Phase;
     switch (state.phase)
     {
     case VerticalAscent:
@@ -305,7 +305,7 @@ Mat44f calculate_rocket_rotation(const AnimationState &state) noexcept
         float phaseProgress = state.getPhaseProgress();
         float targetYaw = atan2(state.targetDirection.x, state.targetDirection.z);
         float currentYaw = targetYaw * phaseProgress;
-        float tiltAngle = AnimationState::kMaxTiltAngle * phaseProgress;
+        float tiltAngle = Animation::kMaxTiltAngle * phaseProgress;
         rotation = make_rotation_y(currentYaw) * make_rotation_x(tiltAngle);
         break;
     }
@@ -318,7 +318,7 @@ Mat44f calculate_rocket_rotation(const AnimationState &state) noexcept
             float yaw = atan2(forwardDir.x, forwardDir.z);
             float pitch = -asin(forwardDir.y);
 
-            pitch = std::clamp(pitch, -AnimationState::kMaxPitchAngle, AnimationState::kMaxPitchAngle);
+            pitch = std::clamp(pitch, -Animation::kMaxPitchAngle, Animation::kMaxPitchAngle);
             rotation = make_rotation_y(yaw) * make_rotation_x(pitch);
         }
         break;
@@ -327,7 +327,7 @@ Mat44f calculate_rocket_rotation(const AnimationState &state) noexcept
     case Landing:
     {
         float phaseProgress = state.getPhaseProgress();
-        if (phaseProgress < AnimationState::kLandingHoverFraction)
+        if (phaseProgress < Animation::kLandingHoverFraction)
         {
             if (length(state.velocity) > 0.001f)
             {

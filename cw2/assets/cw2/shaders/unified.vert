@@ -19,6 +19,13 @@ flat out int v2fMaterialType;
 
 void main()
 {
+    /* References for code inspiration:
+     * - https://learnopengl.com/Getting-started/Shaders
+     * - https://wikis.khronos.org/opengl/Uniform_(GLSL)
+     * - https://learnopengl.com/Lighting/Basic-Lighting
+     * - https://learnopengl.com/Advanced-Lighting/Advanced-Lighting
+     * - https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_reflection_model
+     */
     vec4 wp = uModel * vec4(iPosition, 1.0);
     v2fWorldPos = wp.xyz;
 

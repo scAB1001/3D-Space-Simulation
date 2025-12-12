@@ -1,6 +1,13 @@
 #include "simple_mesh.hpp"
 #include <print>
 
+/* References for code inspiration:
+ * - https://learnopengl.com/Model-Loading/Mesh
+ * - https://www.gamedev.net/articles/programming/graphics/opengl-batch-rendering-r3900/
+ * - https://github.com/robmaier/menderer
+ * - https://www.opengl-tutorial.org/intermediate-tutorials/tutorial-9-vbo-indexing/
+ * - https://learnopengl.com/Getting-started/Hello-Triangle
+ */
 void apply_transform_to_mesh(SimpleMeshData &mesh, Mat44f const &M)
 {
     for (std::size_t i = 0; i < mesh.positions.size(); ++i)

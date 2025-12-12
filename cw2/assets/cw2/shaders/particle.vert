@@ -13,6 +13,11 @@ out vec2 vUV;
 
 void main()
 {
+    /* References for code inspiration:
+     * - https://wikis.khronos.org/opengl/Primitive#Point_primitives
+     * - https://www.kenney.nl/assets/particle-pack
+     */
+
     // world-space billboard offset
     vec3 worldPos = uParticlePos +
                     aQuad.x * uCameraRight +
