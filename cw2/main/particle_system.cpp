@@ -79,6 +79,11 @@ void ParticleSystem::update(float dt)
 
 void ParticleSystem::render(const Mat44f &proj, const Mat44f &view, const Camera &cam)
 {
+    /* References for code inspiration:
+     * - https://wikis.khronos.org/opengl/Primitive#Point_primitives
+     * - https://www.kenney.nl/assets/particle-pack
+     */
+    
     glUseProgram(shader);
 
     glEnable(GL_BLEND);
