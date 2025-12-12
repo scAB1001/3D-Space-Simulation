@@ -9,8 +9,8 @@
 GLuint load_texture_2d( char const* aPath )
 {
 	/* References for code inspiration:
-	 * - https: // learnopengl.com/Getting-started/Textures
-	 */
+	* - https: // learnopengl.com/Getting-started/Textures
+	*/
 
 	assert( aPath );
 
