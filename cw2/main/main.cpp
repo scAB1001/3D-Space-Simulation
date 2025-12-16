@@ -33,6 +33,8 @@
 #include "landing_pad.hpp"
 #include "texture.hpp"
 #include "loadobj.hpp"
+#include "ui_text.hpp"
+
 
 namespace
 {
@@ -112,6 +114,10 @@ try
 	// This will load the OpenGL API. We mustn't make any OpenGL calls before this!
 	if (!gladLoadGLLoader((GLADloadproc)&glfwGetProcAddress))
 		throw Error("gladLoadGLLoader() failed - cannot load GL API!");
+	// ---------- UI TEXT RENDERER ----------
+	UITextRenderer uiText;
+	uiText.init();
+
 
 	std::print("RENDERER {}\n", (char const *)glGetString(GL_RENDERER));
 	std::print("VENDOR {}\n", (char const *)glGetString(GL_VENDOR));
@@ -318,12 +324,44 @@ try
         state.particles,
         renderCtx);
 
+				// ---- RESET VIEWPORT FOR UI ----
+		glViewport(0, 0, (GLsizei)fbwidth, (GLsizei)fbheight);
+
 		endFrame();
+
+
+		glDisable(GL_DEPTH_TEST);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		float altitude = state.animation.currentPosition.y;
+		int altitudeMeters = static_cast<int>(altitude);
+
+		std::string altitudeText =
+			"ALTITUDE: " + std::to_string(altitudeMeters) + " M";
+
+
+		std::string txt =
+			"Altitude: " + std::to_string((int)altitude) + " m";
+
+		float scale = 1.0f;
+		float textWidth = txt.size() * 12.f * scale;
+
+		uiText.renderText(
+			altitudeText,
+			0.f, 0.f, 1.f,
+			Vec3f{1.f, 1.f, 1.f},
+			0.f, 0.f
+		);
+
+		glDisable(GL_BLEND);
+		glEnable(GL_DEPTH_TEST);
+
 		OGL_CHECKPOINT_DEBUG();
 
 		glfwSwapBuffers(window);
 	}
-
+	uiText.cleanup();
 	cleanup(state, parlahtiVao, vehicleVao, parlahtiTexture);
 	return 0;
 }

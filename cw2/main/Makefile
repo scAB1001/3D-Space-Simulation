@@ -87,6 +87,9 @@ GENERATED += $(OBJDIR)/renderer.o
 GENERATED += $(OBJDIR)/simple_mesh.o
 GENERATED += $(OBJDIR)/space_vehicle.o
 GENERATED += $(OBJDIR)/texture.o
+GENERATED += $(OBJDIR)/ui.o
+GENERATED += $(OBJDIR)/ui_button.o
+GENERATED += $(OBJDIR)/ui_text.o
 OBJECTS += $(OBJDIR)/animation.o
 OBJECTS += $(OBJDIR)/camera.o
 OBJECTS += $(OBJDIR)/cone.o
@@ -100,6 +103,9 @@ OBJECTS += $(OBJDIR)/renderer.o
 OBJECTS += $(OBJDIR)/simple_mesh.o
 OBJECTS += $(OBJDIR)/space_vehicle.o
 OBJECTS += $(OBJDIR)/texture.o
+OBJECTS += $(OBJDIR)/ui.o
+OBJECTS += $(OBJDIR)/ui_button.o
+OBJECTS += $(OBJDIR)/ui_text.o
 
 # Rules
 # #############################################
@@ -200,6 +206,15 @@ $(OBJDIR)/space_vehicle.o: space_vehicle.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/texture.o: texture.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ui.o: ui.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ui_button.o: ui_button.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ui_text.o: ui_text.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 

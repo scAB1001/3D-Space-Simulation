@@ -47,6 +47,30 @@ void cleanup(State_ &state, GLuint terrainVao, GLuint vehicleVao, GLuint terrain
     LandingPad::cleanup();
 }
 
+Mat44f make_ortho(
+    float l,
+    float r,
+    float b,
+    float t,
+    float n,
+    float f
+)
+{
+    Mat44f M{};
+
+    M.v[0]  =  2.f / (r - l);
+    M.v[5]  =  2.f / (t - b);
+    M.v[10] = -2.f / (f - n);
+
+    M.v[12] = -(r + l) / (r - l);
+    M.v[13] = -(t + b) / (t - b);
+    M.v[14] = -(f + n) / (f - n);
+    M.v[15] = 1.f;
+
+    return M;
+}
+
+
 // Setting light uniforms
 void setDirectionalLightUniforms(
     const Vec3f &lightDir,

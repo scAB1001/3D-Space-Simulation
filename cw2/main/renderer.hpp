@@ -31,6 +31,17 @@ namespace RendererInternal {
 
 using RendererInternal::bindShader;
 
+// Orthographic projection (for UI rendering)
+Mat44f make_ortho(
+    float l,
+    float r,
+    float b,
+    float t,
+    float n,
+    float f
+);
+
+
 
 // Scene setup and frame management
 void globalGLSetup();
