@@ -1,3 +1,10 @@
+#define CW2_ENABLE_GPU_TIMING
+#ifdef CW2_ENABLE_GPU_TIMING
+#include "gpu_timing.hpp"
+#endif
+
+
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -115,6 +122,17 @@ try
 	// This will load the OpenGL API. We mustn't make any OpenGL calls before this!
 	if (!gladLoadGLLoader((GLADloadproc)&glfwGetProcAddress))
 		throw Error("gladLoadGLLoader() failed - cannot load GL API!");
+
+	#ifdef CW2_ENABLE_GPU_TIMING
+	GpuTiming gpuTiming{};
+	initGpuTiming(gpuTiming);
+
+	double gpuSumMs = 0.0;
+	double cpuSumMs = 0.0;
+	int gpuFrameCount = 0;
+	int cpuFrameCount = 0;
+	#endif
+
 	// ---------- UI TEXT RENDERER ----------
 	UITextRenderer uiText;
 	uiText.init();
@@ -129,9 +147,11 @@ try
 
 
 	// Ddebug output
-#if !defined(NDEBUG)
+	#if !defined(NDEBUG) && !defined(CW2_ENABLE_GPU_TIMING)
 	setup_gl_debug_output();
-#endif // ~ !NDEBUG
+	#endif
+
+
 
 	// Global GL state
 	OGL_CHECKPOINT_ALWAYS();
@@ -201,8 +221,38 @@ try
 	// Main loop
 	while (!glfwWindowShouldClose(window))
 	{
+		#ifdef CW2_ENABLE_GPU_TIMING
+		double cpuMs = 0.0;
+		#endif
 		// Let GLFW process events
 		glfwPollEvents();
+		#ifdef CW2_ENABLE_GPU_TIMING
+		if (gpuTiming.frameIndex > GPU_QUERY_BUFFER_SIZE)
+		{
+			int prev = (gpuTiming.frameIndex - GPU_QUERY_BUFFER_SIZE)
+					% GPU_QUERY_BUFFER_SIZE;
+
+			GLint available = 0;
+			glGetQueryObjectiv(
+				gpuTiming.fullEnd[prev],
+				GL_QUERY_RESULT_AVAILABLE,
+				&available
+			);
+
+			if (available)
+			{
+				GLuint64 t0, t1;
+				glGetQueryObjectui64v(
+					gpuTiming.fullStart[prev], GL_QUERY_RESULT, &t0);
+				glGetQueryObjectui64v(
+					gpuTiming.fullEnd[prev], GL_QUERY_RESULT, &t1);
+
+				gpuSumMs += (t1 - t0) * 1e-6;
+				gpuFrameCount++;
+			}
+		}
+		#endif
+
 
 		// Check if window was resized.
 		float fbwidth, fbheight;
@@ -316,6 +366,13 @@ try
 		}
 
 		OGL_CHECKPOINT_DEBUG();
+		#ifdef CW2_ENABLE_GPU_TIMING
+		int q = gpuTiming.frameIndex % GPU_QUERY_BUFFER_SIZE;
+		glQueryCounter(gpuTiming.fullStart[q], GL_TIMESTAMP);
+		#endif
+
+		auto cpuStart = std::chrono::high_resolution_clock::now();
+
 		beginFrame();
 
 		renderSingleOrSplitScreen(
@@ -330,6 +387,19 @@ try
 		glViewport(0, 0, (GLsizei)fbwidth, (GLsizei)fbheight);
 
 		endFrame();
+		auto cpuEnd = std::chrono::high_resolution_clock::now();
+		cpuMs =
+			std::chrono::duration<double, std::milli>(cpuEnd - cpuStart).count();
+		std::print("CPU frame: {:.4f} ms\n", cpuMs);
+		cpuSumMs += cpuMs;
+		cpuFrameCount++;
+
+
+		#ifdef CW2_ENABLE_GPU_TIMING
+		glQueryCounter(gpuTiming.fullEnd[q], GL_TIMESTAMP);
+		gpuTiming.frameIndex++;
+		#endif
+
 
 
 		glDisable(GL_DEPTH_TEST);
@@ -407,6 +477,23 @@ try
 	}
 	uiText.cleanup();
 	cleanup(state, parlahtiVao, vehicleVao, parlahtiTexture);
+	#ifdef CW2_ENABLE_GPU_TIMING
+	if (gpuFrameCount > 0)
+	{
+		std::print("Average GPU frame time: {:.3f} ms\n",
+				gpuSumMs / gpuFrameCount);
+	}
+
+	if (cpuFrameCount > 0)
+	{
+		std::print("Average CPU frame time: {:.3f} ms\n",
+				cpuSumMs / cpuFrameCount);
+	}
+
+	destroyGpuTiming(gpuTiming);
+	#endif
+
+
 	return 0;
 }
 catch (std::exception const &eErr)
