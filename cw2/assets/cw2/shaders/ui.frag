@@ -3,15 +3,19 @@
 in vec2 vUV;
 out vec4 FragColor;
 
-layout (binding = 0) uniform sampler2D uFont;
+uniform sampler2D uTex;
+uniform vec4 uColor;
+uniform int uUseTexture; // 0 = solid, 1 = text
 
 void main()
 {
-    float lum = texture(uFont, vUV).r;
-
-    // optional cutoff for crisp text
-    if (lum < 0.1)
-        discard;
-
-    FragColor = vec4(1.0, 1.0, 1.0, lum);
+    if (uUseTexture == 1)
+    {
+        vec4 tex = texture(uTex, vUV);
+        FragColor = vec4(uColor.rgb, uColor.a * tex.r);
+    }
+    else
+    {
+        FragColor = uColor;
+    }
 }

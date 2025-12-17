@@ -1,41 +1,34 @@
-// #pragma once
+#pragma once
 
-// #include <string>
-// #include "../vmlib/vec2.hpp"
+#include "../vmlib/vec2.hpp"
+#include "../vmlib/vec3.hpp"
+#include <string>
 
-// enum class UIButtonState
-// {
-//     Normal,
-//     Hover,
-//     Pressed
-// };
+struct UITextRenderer;   // forward declaration
 
-// struct UIButton
-// {
-//     Vec2f pos;          // bottom-left in pixels
-//     Vec2f size;         // width / height in pixels
-//     std::string label;
+struct UIButton
+{
+    Vec2f pos;
+    Vec2f size;
+    std::string label;
 
-//     UIButtonState state = UIButtonState::Normal;
+    bool hovered = false;
+    bool pressed = false;
+    bool clicked = false;
+};
 
-//     bool hovered = false;
-//     bool pressed = false;
-//     bool clicked = false;
-// };
+// logic
+void updateButton(
+    UIButton& btn,
+    float mouseX,
+    float mouseY,
+    bool mouseDown
+);
 
-// // Updates hover / pressed / clicked
-// void updateButton(
-//     UIButton& btn,
-//     float mouseX,
-//     float mouseY,
-//     bool mouseDown
-// );
-
-// // Draws button (implemented elsewhere)
-// struct UITextRenderer;
-// void drawButton(
-//     UIButton& btn,
-//     UITextRenderer& text,
-//     float screenW,
-//     float screenH
-// );
+// rendering
+void drawButton(
+    UIButton& btn,
+    UITextRenderer& ui,
+    float screenW,
+    float screenH
+);

@@ -9,6 +9,16 @@
 // 16x16 ASCII atlas
 static constexpr float glyphW = 1.f / 16.f;
 static constexpr float glyphH = 1.f / 16.f;
+static float pxToClipX(float x, float screenW)
+{
+    return (x / screenW) * 2.0f - 1.0f;
+}
+
+static float pxToClipY(float y, float screenH)
+{
+    return (y / screenH) * 2.0f - 1.0f;
+}
+
 
 void UITextRenderer::init()
 {
@@ -69,14 +79,16 @@ static const std::string ATLAS_CHARS =
 
 void UITextRenderer::renderText(
     const std::string& text,
-    float,
-    float,
-    float,
-    const Vec3f&,
-    float,
-    float
+    float x,
+    float y,
+    float scale,
+    const Vec3f& color,
+    float screenW,
+    float screenH
 )
 {
+    glUseProgram(program);
+    glUniform1i(glGetUniformLocation(program, "uUseTexture"), 1);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
     glEnable(GL_BLEND);
@@ -95,11 +107,13 @@ void UITextRenderer::renderText(
     constexpr float GLYPH_W = 1.f / ATLAS_COLS;
     constexpr float GLYPH_H = 1.f / ATLAS_ROWS;
 
-    float cursorX = -0.95f;   // top-left in clip space
-    float cursorY =  0.90f;
+    float cursorX = pxToClipX(x, screenW);
+    float cursorY = pxToClipY(y, screenH);
 
-    float charW = 0.04f;
-    float charH = 0.08f;
+
+    float charW = 0.04f * scale;
+    float charH = 0.08f * scale;
+
     
 
     for (char c : text)
@@ -152,4 +166,98 @@ void UITextRenderer::renderText(
     glEnable(GL_CULL_FACE);
 
     RendererInternal::currentShaderProgram = 0;
+}
+void UITextRenderer::drawRect(
+    float x, float y,
+    float w, float h,
+    const Vec3f& color,
+    float alpha,
+    float screenW,
+    float screenH
+)
+{
+    glUseProgram(program);
+    glUniform1i(glGetUniformLocation(program, "uUseTexture"), 0);
+    float x0 = pxToClipX(x, screenW);
+    float y0 = pxToClipY(y, screenH);
+    float x1 = pxToClipX(x + w, screenW);
+    float y1 = pxToClipY(y + h, screenH);
+
+    float verts[] = {
+        x0, y0, 0.f, 0.f,
+        x1, y0, 0.f, 0.f,
+        x1, y1, 0.f, 0.f,
+
+        x0, y0, 0.f, 0.f,
+        x1, y1, 0.f, 0.f,
+        x0, y1, 0.f, 0.f
+    };
+
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verts), verts);
+
+    GLint loc = glGetUniformLocation(program, "uColor");
+    glUniform4f(loc, color.x, color.y, color.z, alpha);
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+}
+
+void UITextRenderer::drawRectOutline(
+    float x, float y,
+    float w, float h,
+    const Vec3f& color,
+    float screenW,
+    float screenH
+)
+{
+    const float thickness = 20.0f; // pixels
+
+    // Top edge
+    drawRect(
+        x,
+        y + h - thickness,
+        w,
+        thickness,
+        color,
+        1.0f,
+        screenW,
+        screenH
+    );
+
+    // Bottom edge
+    drawRect(
+        x,
+        y,
+        w,
+        thickness,
+        color,
+        1.0f,
+        screenW,
+        screenH
+    );
+
+    // Left edge
+    drawRect(
+        x,
+        y,
+        thickness,
+        h,
+        color,
+        1.0f,
+        screenW,
+        screenH
+    );
+
+    // Right edge
+    drawRect(
+        x + w - thickness,
+        y,
+        thickness,
+        h,
+        color,
+        1.0f,
+        screenW,
+        screenH
+    );
 }

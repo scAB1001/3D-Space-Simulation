@@ -16,6 +16,25 @@ struct UITextRenderer
         float screenH
     );
     void cleanup();
+    void drawRect(
+        float x, float y,
+        float w, float h,
+        const Vec3f& color,
+        float alpha,
+        float screenW,
+        float screenH
+    );
+
+
+    void drawRectOutline(
+        float x, float y,
+        float w, float h,
+        const Vec3f& color,
+        float screenW,
+        float screenH
+    );
+
+
 
     GLuint vao = 0;
     GLuint vbo = 0;

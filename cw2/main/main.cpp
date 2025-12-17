@@ -34,6 +34,7 @@
 #include "texture.hpp"
 #include "loadobj.hpp"
 #include "ui_text.hpp"
+#include "ui_button.hpp"
 
 
 namespace
@@ -117,6 +118,8 @@ try
 	// ---------- UI TEXT RENDERER ----------
 	UITextRenderer uiText;
 	uiText.init();
+	UIButton launchButton;
+	UIButton resetButton;
 
 
 	std::print("RENDERER {}\n", (char const *)glGetString(GL_RENDERER));
@@ -284,7 +287,6 @@ try
 				state.animation.isAnimating = false;
 				state.animation.currentPosition = state.animation.endPosition;
 				state.animation.velocity = Config::kZeroVec3;
-				state.animation.currentSpeed = 0.0f;
 			}
 		}
 		state.particles.update(dt);
@@ -331,31 +333,73 @@ try
 
 
 		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_CULL_FACE);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		float altitude = state.animation.currentPosition.y;
-		int altitudeMeters = static_cast<int>(altitude);
 
-		std::string altitudeText =
-			"ALTITUDE: " + std::to_string(altitudeMeters) + " M";
+		// Screen size
+		int screenW = (int)fbwidth;
+		int screenH = (int)fbheight;
 
+		// Mouse
+		double mx, my;
+		glfwGetCursorPos(window, &mx, &my);
+		float mouseX = (float)mx;
+		float mouseY = screenH - (float)my;
 
-		std::string txt =
-			"Altitude: " + std::to_string((int)altitude) + " m";
+		bool mouseDown =
+			glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
 
-		float scale = 1.0f;
-		float textWidth = txt.size() * 12.f * scale;
-
+		// ALTITUDE (top-left)
+		int altitude = (int)state.animation.currentPosition.y;
 		uiText.renderText(
-			altitudeText,
-			0.f, 0.f, 1.f,
-			Vec3f{1.f, 1.f, 1.f},
-			0.f, 0.f
+			"ALTITUDE: " + std::to_string(altitude) + " M",
+			20.f,
+			screenH - 40.f,
+			1.f,
+			{1,1,1},
+			screenW,
+			screenH
 		);
+
+		float btnW = 180.f;
+		float btnH = 50.f;
+		float spacing = 20.f;
+
+		float totalWidth = btnW * 2.f + spacing;
+		float startX = (screenW - totalWidth) * 0.5f;
+		float y = 40.f;   // bottom margin
+
+		launchButton.pos  = { startX, y };
+		launchButton.size = { btnW, btnH };
+		launchButton.label = "LAUNCH";
+
+		resetButton.pos  = { startX + btnW + spacing, y };
+		resetButton.size = { btnW, btnH };
+		resetButton.label = "RESET";
+
+
+		updateButton(launchButton, mouseX, mouseY, mouseDown);
+		updateButton(resetButton,  mouseX, mouseY, mouseDown);
+
+		drawButton(launchButton, uiText, screenW, screenH);
+		drawButton(resetButton,  uiText, screenW, screenH);
+
+		// Actions
+		if (launchButton.clicked && !state.animation.isAnimating)
+			state.animation.start();
+
+		if (resetButton.clicked)
+		{
+			state.animation.reset();
+			state.camera.setMode(Camera::Mode::Free);
+			state.camera.updateVectors();
+		}
 
 		glDisable(GL_BLEND);
 		glEnable(GL_DEPTH_TEST);
+
 
 		OGL_CHECKPOINT_DEBUG();
 
