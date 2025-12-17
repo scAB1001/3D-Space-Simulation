@@ -80,7 +80,8 @@ void main()
         float diff = max(dot(N, L), 0.0);
 
         vec3 H = normalize(L + V);
-        float spec = pow(max(dot(N, H), 0.0), uMaterialShininess);
+        float shininess = max(uMaterialShininess, 64.0);
+        float spec = pow(max(dot(N, H), 0.0), shininess);
 
         vec3 ambient  = 0.05 * baseColor;
         vec3 diffuse  = diff * baseColor * uPointColor[i];

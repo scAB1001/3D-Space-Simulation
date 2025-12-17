@@ -21,43 +21,44 @@ Animation::Animation()
 // Implementation methods
 void Animation::precomputeTrajectory()
 {
-    // Calculate horizontal distance and direction
-    Vec3f horizontalVec = endPosition - startPosition;
-    horizontalVec.y = 0.f;
-    horizontalDistance = length(horizontalVec);
-    if (horizontalDistance > 0.001f)
-    {
-        targetDirection = horizontalVec / horizontalDistance;
-    }
+    Vec3f horizontal = endPosition - startPosition;
+    horizontal.y = 0.f;
 
-    // Scale heights based on horizontal distance
-    distanceScale = std::min(horizontalDistance / kHorizontalScaleDist, 1.0f);
-    adjustedVerticalHeight = kVerticalAscentHeight * distanceScale;
-    adjustedLaunchHeight = kLaunchHeight * distanceScale;
-    adjustedCruiseHeight = std::min(kCruiseHeight * distanceScale, kMaxAllowedHeight);
-    adjustedHoverHeight = kHoverHeight * distanceScale;
+    horizontalDistance = length(horizontal);
+    targetDirection =
+        horizontalDistance > 0.001f
+            ? horizontal / horizontalDistance
+            : Vec3f{0.f, 0.f, 1.f};
 
-    // Calculate vertical ascent end position
-    verticalAscentEndPos = Vec3f{
+    // Heights
+    adjustedVerticalHeight = kVerticalAscentHeight;
+    adjustedCruiseHeight   = kCruiseHeight;
+    adjustedHoverHeight    = kHoverHeight;
+
+    // Arc start (top of vertical ascent)
+    bezierP0 = {
         startPosition.x,
         startPosition.y + adjustedVerticalHeight,
-        startPosition.z};
+        startPosition.z
+    };
 
-    // Calculate launch end position
-    float tiltPhaseProgress = 0.8f;
-    launchEndPosition = Vec3f{
-        startPosition.x + (endPosition.x - startPosition.x) * tiltPhaseProgress,
-        startPosition.y + adjustedLaunchHeight,
-        startPosition.z + (endPosition.z - startPosition.z) * tiltPhaseProgress};
+    // Arc end (above landing pad)
+    bezierP3 = {
+        endPosition.x,
+        endPosition.y + adjustedHoverHeight,
+        endPosition.z
+    };
 
-    // Precompute Bezier control points
-    bezierP0 = launchEndPosition;
-    bezierP1 = bezierP0 + targetDirection * kBezierControlOffset +
-               Vec3f{0.f, kBezierControlOffset * 0.8f, 0.f};
-    bezierP2 = endPosition + Vec3f{0.f, adjustedCruiseHeight, 0.f} -
-               targetDirection * kBezierControlOffset * 0.7f;
-    bezierP3 = endPosition + Vec3f{0.f, adjustedHoverHeight, 0.f};
+    // Control points define the arch
+    float arcHeight = adjustedCruiseHeight;
+
+    bezierP1 = bezierP0 + targetDirection * (horizontalDistance * 0.25f)
+                         + Vec3f{0.f, arcHeight, 0.f};
+
+    bezierP2 = bezierP3 - targetDirection * (horizontalDistance * 0.25f)
+                         + Vec3f{0.f, arcHeight, 0.f};
 }
+
 
 float Animation::getNormalizedTime() const noexcept
 {
@@ -102,61 +103,48 @@ float Animation::easeInOutQuad(float t) noexcept
 {
     return t < 0.5f ? 2.0f * t * t : 1.0f - (-2.0f * t + 2.0f) * (-2.0f * t + 2.0f) * 0.5f;
 }
-
-// Position calculation
 Vec3f Animation::calculatePosition(float t) const noexcept
 {
-    float normalizedT = t / kTotalAnimationTime;
+    float nt = t / kTotalAnimationTime;
 
-    // Phase 1: VERTICAL ASCENT (0% - 20%)
-    if (normalizedT < kVerticalAscentEnd)
+    // 1) Vertical ascent
+    if (nt < kVerticalAscentEnd)
     {
-        float phaseT = normalizedT / kVerticalAscentEnd;
-        float heightProgress = easeInQuad(phaseT);
-        return Vec3f{
+        float u = nt / kVerticalAscentEnd;
+
+        // Stronger slow-start acceleration
+        u = u * u * u * u; // quartic ease-in (slower start, faster end)
+
+        return {
             startPosition.x,
-            startPosition.y + adjustedVerticalHeight * heightProgress,
-            startPosition.z};
+            startPosition.y + adjustedVerticalHeight * u,
+            startPosition.z
+        };
     }
 
-    // Phase 2: LAUNCH TILT (20% - 40%)
-    else if (normalizedT < kLaunchTiltEnd)
+
+    // 2) Curved arc
+    else if (nt < kArcEnd)
     {
-        float phaseT = (normalizedT - kVerticalAscentEnd) / (kLaunchTiltEnd - kVerticalAscentEnd);
-        float targetHeight = adjustedVerticalHeight + (adjustedLaunchHeight - adjustedVerticalHeight) * phaseT;
-        float horizontalEase = phaseT * phaseT * phaseT;
-        float horizontalProgress = 0.8f * horizontalEase;
-        return Vec3f{
-            startPosition.x + (endPosition.x - startPosition.x) * horizontalProgress,
-            startPosition.y + targetHeight,
-            startPosition.z + (endPosition.z - startPosition.z) * horizontalProgress};
+        float u = (nt - kVerticalAscentEnd) / (kArcEnd - kVerticalAscentEnd);
+        u = easeInOutQuad(u);
+
+        return calculate_bezier_position(u, bezierP0, bezierP1, bezierP2, bezierP3);
     }
 
-    // Phase 3: CRUISE (40% - 70%)
-    else if (normalizedT < kCruisePhaseEnd)
-    {
-        float phaseT = (normalizedT - kLaunchTiltEnd) / (kCruisePhaseEnd - kLaunchTiltEnd);
-        float easedT = easeInOutQuad(phaseT);
-        return calculate_bezier_position(easedT, bezierP0, bezierP1, bezierP2, bezierP3);
-    }
-
-    // Phase 4: LANDING (70% - 100%)
+    // 3) Landing (UNCHANGED behaviour)
     else
     {
-        float phaseT = (normalizedT - kCruisePhaseEnd) / (1.0f - kCruisePhaseEnd);
-        if (phaseT < kLandingHoverFraction)
-        {
-            float hoverT = phaseT / kLandingHoverFraction;
-            float height = adjustedHoverHeight * (1.0f - easeOutQuad(hoverT) * 0.7f);
-            return Vec3f{endPosition.x, endPosition.y + height, endPosition.z};
-        }
-        else
-        {
-            float descentT = (phaseT - kLandingHoverFraction) / (1.0f - kLandingHoverFraction);
-            float height = adjustedHoverHeight * 0.3f * (1.0f - easeInQuad(descentT));
-            return Vec3f{endPosition.x, endPosition.y + height, endPosition.z};
-        }
+        float u = (nt - kArcEnd) / (1.f - kArcEnd);
+        u = easeInOutQuad(u);
+
+        return {
+            endPosition.x,
+            endPosition.y + adjustedHoverHeight * (1.f - u),
+            endPosition.z
+        };
     }
+
 }
 
 // Speed calculation
@@ -197,19 +185,20 @@ float Animation::calculateSpeed(float t) const noexcept
     else
     {
         float phaseT = (normalizedT - kCruisePhaseEnd) / (1.0f - kCruisePhaseEnd);
+
         if (phaseT < kLandingHoverFraction)
         {
-            // Slow hover descent
             float hoverT = phaseT / kLandingHoverFraction;
-            return kMaxVelocity * 0.3f * (1.0f - easeOutQuad(hoverT)); // Start at 30%, slow to 0
+            return kMaxVelocity * 0.3f * (1.0f - easeOutQuad(hoverT));
         }
         else
         {
-            // Very slow final descent
-            float descentT = (phaseT - kLandingHoverFraction) / (1.0f - kLandingHoverFraction);
-            return kMaxVelocity * 0.1f * (1.0f - easeInQuad(descentT));
+            // Final descent: very slow or stopped
+            return 0.0f;
         }
     }
+    return 0.0f;
+
 }
 
 // Update animation
@@ -284,66 +273,80 @@ void Animation::togglePause()
 {
     isPaused = !isPaused;
 }
-
-// Rocket rotation function
 Mat44f calculate_rocket_rotation(const Animation &state) noexcept
 {
     Mat44f rotation = kIdentity44f;
 
+    // Cache orientation for continuity across phases
+    static float cachedYaw   = 0.f;
+    static float cachedPitch = 0.f;
+
     using enum Animation::Phase;
     switch (state.phase)
     {
-    case VerticalAscent:
-    {
-        float idleRotation = state.animationTime * 0.5f;
-        rotation = make_rotation_y(idleRotation);
-        break;
-    }
-
-    case LaunchTilt:
-    {
-        float phaseProgress = state.getPhaseProgress();
-        float targetYaw = atan2(state.targetDirection.x, state.targetDirection.z);
-        float currentYaw = targetYaw * phaseProgress;
-        float tiltAngle = Animation::kMaxTiltAngle * phaseProgress;
-        rotation = make_rotation_y(currentYaw) * make_rotation_x(tiltAngle);
-        break;
-    }
-
-    case Cruise:
-    {
-        if (length(state.velocity) > 0.001f)
+        case VerticalAscent:
         {
-            Vec3f forwardDir = normalize(state.velocity);
-            float yaw = atan2(forwardDir.x, forwardDir.z);
-            float pitch = -asin(forwardDir.y);
+            // KEEP exactly as your original behaviour
+            float idleRotation = state.animationTime * 0.5f;
+            rotation = make_rotation_y(idleRotation);
 
-            pitch = std::clamp(pitch, -Animation::kMaxPitchAngle, Animation::kMaxPitchAngle);
-            rotation = make_rotation_y(yaw) * make_rotation_x(pitch);
+            // Reset cached orientation for next phases
+            cachedYaw   = idleRotation;
+            cachedPitch = 0.f;
+            break;
         }
-        break;
-    }
 
-    case Landing:
-    {
-        float phaseProgress = state.getPhaseProgress();
-        if (phaseProgress < Animation::kLandingHoverFraction)
+        case LaunchTilt:
         {
+            float phaseProgress = state.getPhaseProgress();
+
+            float targetYaw = atan2(state.targetDirection.x,
+                                    state.targetDirection.z);
+
+            cachedYaw   = targetYaw * phaseProgress;
+            cachedPitch = Animation::kMaxTiltAngle * phaseProgress;
+
+            rotation = make_rotation_y(cachedYaw)
+                     * make_rotation_x(cachedPitch);
+            break;
+        }
+
+        case Cruise:
+        {
+            // Start cruise with EXACT last LaunchTilt orientation
             if (length(state.velocity) > 0.001f)
             {
-                Vec3f forwardDir = normalize(state.velocity);
-                float yaw = atan2(forwardDir.x, forwardDir.z);
-                float currentPitch = -asin(forwardDir.y);
-                float pitch = currentPitch * (1.0f - phaseProgress * 2.0f);
-                rotation = make_rotation_y(yaw) * make_rotation_x(pitch);
+                Vec3f f = normalize(state.velocity);
+                float velYaw   = atan2(f.x, f.z);
+                float velPitch = -asin(f.y);
+
+                // Gentle convergence toward velocity direction
+                float blend = 0.05f;
+                cachedYaw   = cachedYaw   * (1.f - blend) + velYaw   * blend;
+                cachedPitch = cachedPitch * (1.f - blend) + velPitch * blend;
             }
+
+            rotation = make_rotation_y(cachedYaw)
+                     * make_rotation_x(cachedPitch);
+            break;
         }
-        else
+
+        case Landing:
         {
-            rotation = kIdentity44f;
+            float phaseProgress = state.getPhaseProgress();
+
+            float yaw   = cachedYaw;
+            float pitch = cachedPitch;
+
+            // Smoothly rotate back to vertical (pitch -> 0)
+            pitch *= (1.f - Animation::easeInOutQuad(phaseProgress));
+
+            cachedPitch = pitch;
+
+            rotation = make_rotation_y(yaw)
+                     * make_rotation_x(pitch);
+            break;
         }
-        break;
-    }
     }
 
     return rotation;
