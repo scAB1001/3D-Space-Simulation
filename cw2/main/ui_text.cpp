@@ -1,9 +1,5 @@
 #include "ui_text.hpp"
 
-#include "../support/program.hpp"
-#include "texture.hpp"
-#include "renderer.hpp"
-
 // format of font atlas
 static const std::string ATLAS_CHARS =
     " !\"#$%&'()"
@@ -117,7 +113,6 @@ void UITextRenderer::renderText(
 
         // Flip Y because PNG origin is top-left
         row = ATLAS_ROWS - 1 - row;
-        constexpr float EPS = 0.002f;
 
         float u0 = col * GLYPH_W + EPS;
         float u1 = (col + 1) * GLYPH_W - EPS;
@@ -158,13 +153,12 @@ void UITextRenderer::renderAltitude(
 {
     renderText(
         "ALTITUDE: " + std::to_string(altitude) + " M",
-        20.f,
-        screenH - 40.f,
-        1.f,
-        {1,1,1},
+        marginLeft,
+        screenH - marginTop,
+        kScaleDefault,
+        kColorBlack,
         screenW,
-        screenH
-    );
+        screenH);
 }
 
 void UITextRenderer::drawRect(

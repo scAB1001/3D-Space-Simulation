@@ -1,10 +1,12 @@
 #ifndef UI_TEXT_HPP
 #define UI_TEXT_HPP
 
-#include <string>
 #include "renderer.hpp"
+#include "texture.hpp"
 #include "../vmlib/vec3.hpp"
 #include "../support/program.hpp"
+
+#include <string>
 
 struct UITextRenderer
 {
@@ -17,12 +19,20 @@ struct UITextRenderer
     static constexpr int ATLAS_ROWS = 10;
     static constexpr float GLYPH_W = 1.f / ATLAS_COLS;
     static constexpr float GLYPH_H = 1.f / ATLAS_ROWS;
+    static constexpr float EPS = 0.002f;
 
     // UI button dimensions
     static constexpr float btnW = 180.f;
     static constexpr float btnH = 50.f;
     static constexpr float spacing = 20.f;
+
+    // Offsets
+    static constexpr float marginLeft = 20.f;
+    static constexpr float marginTop = 20.f;
     static constexpr float marginBtm = 25.f;
+
+    static constexpr Vec3f kColorBlack{1.f, 1.f, 1.f};
+    static constexpr float kScaleDefault = 1.0f;
 
     void init();
     void cleanup();

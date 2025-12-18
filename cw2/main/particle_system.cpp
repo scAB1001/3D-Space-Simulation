@@ -44,6 +44,15 @@ void ParticleSystem::init()
     texture = load_texture_2d("assets/cw2/particle.png");
 }
 
+void ParticleSystem::cleanup()
+{
+    if (vbo) glDeleteBuffers(1, &vbo);
+    if (vao) glDeleteVertexArrays(1, &vao);
+    if (texture) glDeleteTextures(1, &texture);
+
+    vbo = vao = texture = 0;
+}
+
 void ParticleSystem::emit(const Vec3f &origin, const Vec3f &dir)
 {
     for (auto &p : particles)
@@ -83,7 +92,7 @@ void ParticleSystem::render(const Mat44f &proj, const Mat44f &view, const Camera
      * - https://wikis.khronos.org/opengl/Primitive#Point_primitives
      * - https://www.kenney.nl/assets/particle-pack
      */
-    
+
     glUseProgram(shader);
 
     glEnable(GL_BLEND);

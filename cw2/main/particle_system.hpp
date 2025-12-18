@@ -19,12 +19,12 @@ public:
     ParticleSystem(size_t maxCount = 1000000);
 
     void init();
+    void cleanup();
     void setShader(GLuint shaderId);
 
     void emit(const Vec3f &origin, const Vec3f &dir);
     void update(float dt);
 
-    // NEW SIGNATURE
     void render(const Mat44f &proj, const Mat44f &view, const Camera &cam);
 
 private:

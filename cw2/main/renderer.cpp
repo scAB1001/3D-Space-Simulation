@@ -42,7 +42,7 @@ void initUI()
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-void cleanup(State_ &state, GLuint terrainVao, GLuint vehicleVao, GLuint terrainTexture)
+void cleanup(State_ &state, GLuint terrainVao, GLuint vehicleVao, GLuint terrainTexture, GLuint vehicleTexture, UITextRenderer &uiText)
 {
     state.prog = nullptr;
 
@@ -53,6 +53,8 @@ void cleanup(State_ &state, GLuint terrainVao, GLuint vehicleVao, GLuint terrain
 		glDeleteTextures(1, &terrainTexture);
 
     LandingPad::cleanup();
+    state.particles.cleanup();
+    uiText.cleanup();
 }
 
 // Setting light uniforms

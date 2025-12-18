@@ -273,6 +273,7 @@ void Animation::togglePause()
 {
     isPaused = !isPaused;
 }
+
 Mat44f calculate_rocket_rotation(const Animation &state) noexcept
 {
     Mat44f rotation = kIdentity44f;
@@ -286,12 +287,12 @@ Mat44f calculate_rocket_rotation(const Animation &state) noexcept
     {
         case VerticalAscent:
         {
-            // KEEP exactly as your original behaviour
+            // Mimic idle rotation during vertical ascent
             float idleRotation = state.animationTime * 0.5f;
             rotation = make_rotation_y(idleRotation);
 
             // Reset cached orientation for next phases
-            cachedYaw   = idleRotation;
+            cachedYaw = idleRotation;
             cachedPitch = 0.f;
             break;
         }
@@ -326,8 +327,7 @@ Mat44f calculate_rocket_rotation(const Animation &state) noexcept
                 cachedPitch = cachedPitch * (1.f - blend) + velPitch * blend;
             }
 
-            rotation = make_rotation_y(cachedYaw)
-                     * make_rotation_x(cachedPitch);
+            rotation = make_rotation_y(cachedYaw) * make_rotation_x(cachedPitch);
             break;
         }
 
@@ -343,8 +343,7 @@ Mat44f calculate_rocket_rotation(const Animation &state) noexcept
 
             cachedPitch = pitch;
 
-            rotation = make_rotation_y(yaw)
-                     * make_rotation_x(pitch);
+            rotation = make_rotation_y(yaw) * make_rotation_x(pitch);
             break;
         }
     }

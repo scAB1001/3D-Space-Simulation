@@ -185,35 +185,6 @@ Vec3f calculate_bezier_position(float t,
 }
 
 inline
-Vec3f calculate_optimal_side_position(const Vec3f &vehiclePos,
-                                             const Vec3f &flightDir,
-                                             float sideDistance,
-                                             float height,
-                                             float rearDistance,
-                                             bool useRightSide)
-{
-    // Ensure flight direction is valid
-    Vec3f normalizedFlightDir = length(flightDir) > 0.001f ? normalize(flightDir) : Vec3f{1.f, 0.f, 0.f};
-
-    // Calculate perpendicular direction (side view)
-    Vec3f sideDir = normalize(cross(normalizedFlightDir, Vec3f{0.f, 1.f, 0.f}));
-    if (length(sideDir) < 0.001f)
-        sideDir = Vec3f{0.f, 0.f, 1.f}; // Fallback
-
-    // Apply side multiplier
-    float sideMultiplier = useRightSide ? 1.0f : -1.0f;
-
-    // Calculate offset: side + height + slightly behind
-    Vec3f offset =
-        sideDir * (sideDistance * sideMultiplier) +
-        Vec3f{0.f, height, 0.f} +
-        -normalizedFlightDir * rearDistance;
-
-    return vehiclePos + offset;
-}
-
-
-inline
 Vec3f mix(const Vec3f &a, const Vec3f &b, float t) noexcept
 {
 	/* References for code inspiration:

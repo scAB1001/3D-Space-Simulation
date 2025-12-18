@@ -20,21 +20,18 @@
 #include "../vmlib/vec4.hpp"
 #include "../vmlib/mat44.hpp"
 #include "../vmlib/mat33.hpp"
-#include "state.hpp"
 
-// Definitions
 #include "defaults.hpp"
 #include "config.hpp"
-#include "camera.hpp"
 #include "input.hpp"
+#include "camera.hpp"
+#include "state.hpp"
 #include "animation.hpp"
 #include "renderer.hpp"
 
-// Shapes
 #include "simple_mesh.hpp"
 #include "space_vehicle.hpp"
 
-// Utilities
 #include "landing_pad.hpp"
 #include "texture.hpp"
 #include "loadobj.hpp"
@@ -131,7 +128,6 @@ try
 	int cpuFrameCount = 0;
 	#endif
 
-	// Init UI
 	UITextRenderer uiText;
 	uiText.init();
 	UIButton launchButton;
@@ -370,8 +366,9 @@ try
 			state.particles,
 			renderCtx);
 
+		OGL_CHECKPOINT_DEBUG();
 
-		endFrame();
+		// endFrame();
 		auto cpuEnd = std::chrono::high_resolution_clock::now();
 		cpuMs = std::chrono::duration<double, std::milli>(cpuEnd - cpuStart).count();
 		cpuSumMs += cpuMs;
@@ -401,7 +398,7 @@ try
 		Vec2f btnPos = {startBtnX, UITextRenderer::marginBtm};
 		Vec2f btnSize = {UITextRenderer::btnW, UITextRenderer::btnH};
 
-		// Mouse state over button
+		// Mouse and cursor state over button
 		double mx, my;
 		glfwGetCursorPos(window, &mx, &my);
 		bool mouseDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
@@ -424,12 +421,13 @@ try
 		if (resetButton.clicked)
 			glfw_callback_key_(window, GLFW_KEY_R, 0, GLFW_PRESS, 0);
 
+		endFrame();
 		OGL_CHECKPOINT_DEBUG();
 
 		glfwSwapBuffers(window);
 	}
 
-	cleanup(state, parlahtiVao, vehicleVao, parlahtiTexture);
+	cleanup(state, parlahtiVao, vehicleVao, parlahtiTexture, 0, uiText);
 
 	#ifdef CW2_ENABLE_GPU_TIMING
 	if (gpuFrameCount > 0)

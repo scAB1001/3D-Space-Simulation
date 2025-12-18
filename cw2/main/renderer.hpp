@@ -32,13 +32,15 @@ namespace RendererInternal {
 
 using RendererInternal::bindShader;
 
+struct UITextRenderer;
+
 // Scene setup and frame management
 void globalGLSetup();
 void beginFrame();
 void resetBindings();
 void endFrame();
 void initUI();
-void cleanup(State_ &state, GLuint terrainVao, GLuint vehicleVao, GLuint terrainTexture);
+void cleanup(State_ &state, GLuint terrainVao, GLuint vehicleVao, GLuint terrainTexture, GLuint vehicleTexture, UITextRenderer &uiText);
 
 // Setting light uniforms
 void setDirectionalLightUniforms(

@@ -12,25 +12,25 @@
 struct Animation
 {
     // Precomputed constants
-    static constexpr float kTotalAnimationTime = 15.0f;          // Increased to 30s for slower ascent
+    static constexpr float kTotalAnimationTime = 20.0f;          // Increased to 20s for slower ascent
     static constexpr float kVerticalAscentEnd = 0.25f;
     static constexpr float kLaunchTiltEnd     = 0.40f + (.2f);
     static constexpr float kCruisePhaseEnd    = 0.75f;           // 70% for cruise (30% landing)
     static constexpr float kMaxAllowedHeight = 35.0f;            // Maximum height limit
-    static constexpr float kMaxVelocity = 15.0f;                 // units per second
+    static constexpr float kMaxVelocity = 12.0f;                 // units per second
     static constexpr float kAccelerationRate = 1.2f;             // acceleration (units/sec^2)
     static constexpr Vec3f kLandingPadOffset = {0.f, 1.0f, 0.f}; // On the pad
     static constexpr float kArcEnd = 0.75f;                      // End of curved arc, start of landing
 
     // Flight profile constants
-    static constexpr float kVerticalAscentHeight = 10.0f; // Height reached during pure vertical ascent
-    static constexpr float kLaunchHeight = 15.0f;         // Maximum height during launch
-    static constexpr float kCruiseHeight = 30.0f;         // Peak height during cruise
-    static constexpr float kHoverHeight = 10.0f;          // Hover height above landing pad
-    static constexpr float kBezierControlOffset = 25.0f;  // Control point offset
-    static constexpr float kHorizontalScaleDist = 100.0f; // Distance for height scaling
-    static constexpr float kCruiseDecelStart = 0.6f;      // When to start decelerating in cruise
-    static constexpr float kLandingHoverFraction = 0.6f;  // 60% of landing is hover
+    static constexpr float kVerticalAscentHeight = 10.0f;        // Height reached during pure vertical ascent
+    static constexpr float kLaunchHeight = 15.0f;                // Maximum height during launch
+    static constexpr float kCruiseHeight = 30.0f;                // Peak height during cruise
+    static constexpr float kHoverHeight = 10.0f;                 // Hover height above landing pad
+    static constexpr float kBezierControlOffset = 25.0f;         // Control point offset
+    static constexpr float kHorizontalScaleDist = 100.0f;        // Distance for height scaling
+    static constexpr float kCruiseDecelStart = 0.6f;             // When to start decelerating in cruise
+    static constexpr float kLandingHoverFraction = 0.6f;         // 60% of landing is hover
 
     // Precomputed math constants
     static constexpr float kMaxTiltAngle = Config::kFloatPi / 6.0f;  // 30 degrees
