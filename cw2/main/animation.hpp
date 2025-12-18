@@ -13,7 +13,7 @@ struct Animation
 {
     // Precomputed constants
     static constexpr float kTotalAnimationTime = 15.0f;          // Increased to 30s for slower ascent
-    static constexpr float kVerticalAscentEnd = 0.25f; // unchanged
+    static constexpr float kVerticalAscentEnd = 0.25f; 
     static constexpr float kLaunchTiltEnd     = 0.40f + (.2f);
     static constexpr float kCruisePhaseEnd    = 0.75f;   // 70% for cruise (30% landing)
     static constexpr float kMaxAllowedHeight = 35.0f;            // Maximum height limit

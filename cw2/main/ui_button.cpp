@@ -35,7 +35,7 @@ void drawButton(
     float screenH
 )
 {
-    // ---------- VISUAL STATE ----------
+    //Button colours
     Vec3f fill{0.25f, 0.25f, 0.25f};
     float alpha = 0.15f;
 
@@ -45,7 +45,7 @@ void drawButton(
     if (btn.pressed)
         fill = {0.15f, 0.15f, 0.15f};
 
-    // ---------- BUTTON RECT ----------
+    // button size
     ui.drawRect(
         btn.pos.x,
         btn.pos.y,
@@ -57,7 +57,7 @@ void drawButton(
         screenH
     );
 
-    // ---------- OUTLINE ----------
+    // outline
     ui.drawRectOutline(
         btn.pos.x,
         btn.pos.y,
@@ -68,7 +68,7 @@ void drawButton(
         screenH
     );
 
-    // ---------- CENTERED TEXT ----------
+    //  CENTERED TEXT 
     float textScale = 1.0f;
 
     // MUST match UITextRenderer glyph sizing

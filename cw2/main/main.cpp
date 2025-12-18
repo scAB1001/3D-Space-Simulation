@@ -383,14 +383,13 @@ try
         state.particles,
         renderCtx);
 
-				// ---- RESET VIEWPORT FOR UI ----
+				// RESET VIEWPORT FOR UI ----
 		glViewport(0, 0, (GLsizei)fbwidth, (GLsizei)fbheight);
 
 		endFrame();
 		auto cpuEnd = std::chrono::high_resolution_clock::now();
 		cpuMs =
 			std::chrono::duration<double, std::milli>(cpuEnd - cpuStart).count();
-		std::print("CPU frame: {:.4f} ms\n", cpuMs);
 		cpuSumMs += cpuMs;
 		cpuFrameCount++;
 

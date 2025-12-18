@@ -64,7 +64,7 @@ void UITextRenderer::cleanup()
     vao = vbo = fontTexture = program = 0;
 }
 
- 
+// format of font atlas
 static const std::string ATLAS_CHARS =
     " !\"#$%&'()"
     "*+,-./0123"
@@ -110,12 +110,11 @@ void UITextRenderer::renderText(
     float cursorX = pxToClipX(x, screenW);
     float cursorY = pxToClipY(y, screenH);
 
-
+    //text size
     float charW = 0.04f * scale;
     float charH = 0.08f * scale;
 
     
-
     for (char c : text)
     {
         // force uppercase (ASCII-safe)
@@ -211,7 +210,7 @@ void UITextRenderer::drawRectOutline(
     float screenH
 )
 {
-    const float thickness = 20.0f; // pixels
+    const float thickness = 52.0f; // pixels
 
     // Top edge
     drawRect(
