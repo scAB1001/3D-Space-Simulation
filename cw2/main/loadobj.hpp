@@ -16,7 +16,6 @@ struct Material
 
 SimpleMeshData load_wavefront_obj( char const* aPath );
 
-// Enhanced OBJ loading that handles materials
 SimpleMeshData load_wavefront_obj_with_mtl(char const *objPath, std::vector<Material> &materials);
 
 #endif // LOADOBJ_HPP

@@ -9,5 +9,4 @@ SimpleMeshData make_batched_indexed_cylinder(
     Vec3f aColor = {1.f, 1.f, 1.f},
     Mat44f aPreTransform = kIdentity44f);
 
-
 #endif // CYLINDER_HPP

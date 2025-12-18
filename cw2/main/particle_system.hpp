@@ -2,9 +2,12 @@
 #include <vector>
 #include <glad/glad.h>
 
+#include "camera.hpp"
+#include "texture.hpp"
+
 #include "../vmlib/vec3.hpp"
 #include "../vmlib/mat44.hpp"
-#include "camera.hpp"
+#include "../support/checkpoint.hpp"
 
 struct Particle {
     Vec3f position;

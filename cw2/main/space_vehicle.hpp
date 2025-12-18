@@ -23,11 +23,11 @@ namespace
     constexpr Vec3f cockpitColor {0.2f, 0.2f, 0.6f};
 
     // Dimensions
-   constexpr float bodyRadius  = 1.5f;
-   constexpr float bodyHeight  = 5.0f;        // rocket body height
-   constexpr float noseHeight  = 2.0f;        // tip length
-   constexpr float noseRadius  = bodyRadius * 1.0f;
-   constexpr float baseHalfH   = 0.4f;        // base cube half-height
+    constexpr float bodyRadius  = 1.5f;
+    constexpr float bodyHeight  = 5.0f;        // rocket body height
+    constexpr float noseHeight  = 2.0f;        // tip length
+    constexpr float noseRadius  = bodyRadius * 1.0f;
+    constexpr float baseHalfH   = 0.4f;        // base cube half-height
 }
 
 SimpleMeshData make_space_vehicle();

@@ -1,6 +1,4 @@
 #include "particle_system.hpp"
-#include "texture.hpp"
-#include "../support/checkpoint.hpp"
 
 ParticleSystem::ParticleSystem(size_t n)
     : maxCount(n)
