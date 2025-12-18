@@ -9,6 +9,7 @@
 #include "../support/error.hpp"
 
 #include "landing_pad.hpp"
+#include "ui_text.hpp"
 #include "space_vehicle.hpp"
 #include "config.hpp"
 #include "state.hpp"
@@ -31,21 +32,12 @@ namespace RendererInternal {
 
 using RendererInternal::bindShader;
 
-// Orthographic projection (for UI rendering)
-Mat44f make_ortho(
-    float l,
-    float r,
-    float b,
-    float t,
-    float n,
-    float f
-);
-
 // Scene setup and frame management
 void globalGLSetup();
 void beginFrame();
 void resetBindings();
 void endFrame();
+void initUI();
 void cleanup(State_ &state, GLuint terrainVao, GLuint vehicleVao, GLuint terrainTexture);
 
 // Setting light uniforms

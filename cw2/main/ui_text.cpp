@@ -44,12 +44,11 @@ void UITextRenderer::init()
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, nullptr, GL_DYNAMIC_DRAW);
 
-    // vec4: x, y, u, v  → location 0
+    // vec4: x, y, u, v  -> location 0
     glVertexAttribPointer(
         0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0
     );
     glEnableVertexAttribArray(0);
-
     glBindVertexArray(0);
 
     fontTexture = load_texture_2d("assets/cw2/font_atlas.png");
@@ -57,7 +56,6 @@ void UITextRenderer::init()
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
 }
 
 void UITextRenderer::cleanup()
@@ -66,9 +64,7 @@ void UITextRenderer::cleanup()
     if (vao) glDeleteVertexArrays(1, &vao);
     if (fontTexture) glDeleteTextures(1, &fontTexture);
 
-    delete shader;
     shader = nullptr;
-
     vao = vbo = fontTexture = program = 0;
 }
 
@@ -84,10 +80,7 @@ void UITextRenderer::renderText(
 {
     glUseProgram(program);
     glUniform1i(glGetUniformLocation(program, "uUseTexture"), 1);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    initUI();
 
     glUseProgram(program);
 
@@ -96,11 +89,6 @@ void UITextRenderer::renderText(
 
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-    constexpr int ATLAS_COLS = 10;
-    constexpr int ATLAS_ROWS = 10;
-    constexpr float GLYPH_W = 1.f / ATLAS_COLS;
-    constexpr float GLYPH_H = 1.f / ATLAS_ROWS;
 
     float cursorX = pxToClipX(x, screenW);
     float cursorY = pxToClipY(y, screenH);
@@ -162,6 +150,23 @@ void UITextRenderer::renderText(
     RendererInternal::currentShaderProgram = 0;
 }
 
+void UITextRenderer::renderAltitude(
+    int altitude,
+    float screenW,
+    float screenH
+)
+{
+    renderText(
+        "ALTITUDE: " + std::to_string(altitude) + " M",
+        20.f,
+        screenH - 40.f,
+        1.f,
+        {1,1,1},
+        screenW,
+        screenH
+    );
+}
+
 void UITextRenderer::drawRect(
     float x, float y,
     float w, float h,
@@ -194,7 +199,6 @@ void UITextRenderer::drawRect(
 
     GLint loc = glGetUniformLocation(program, "uColor");
     glUniform4f(loc, color.x, color.y, color.z, alpha);
-
     glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 

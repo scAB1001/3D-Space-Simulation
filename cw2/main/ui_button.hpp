@@ -18,8 +18,24 @@ struct UIButton
 };
 
 // logic
+void setButtonState(
+    UIButton &btn,
+    Vec2f position,
+    Vec2f size,
+    const std::string &label
+);
+
+void getNextButtonPos(
+    const UIButton &lastBtn,
+    Vec2f &outPos,
+    float spacing
+);
+
 void updateButton(
     UIButton& btn,
+    Vec2f position,
+    Vec2f size,
+    const std::string &label,
     float mouseX,
     float mouseY,
     bool mouseDown

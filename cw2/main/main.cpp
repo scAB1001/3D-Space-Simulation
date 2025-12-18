@@ -1,9 +1,7 @@
 #define CW2_ENABLE_GPU_TIMING
 #ifdef CW2_ENABLE_GPU_TIMING
-#include "gpu_timing.hpp"
+#include "gpu_timing.hpp"  // Use GPU timing utilities by defining this macro.
 #endif
-
-
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -133,49 +131,45 @@ try
 	int cpuFrameCount = 0;
 	#endif
 
-	// ---------- UI TEXT RENDERER ----------
+	// Init UI
 	UITextRenderer uiText;
 	uiText.init();
 	UIButton launchButton;
 	UIButton resetButton;
-
 
 	std::print("RENDERER {}\n", (char const *)glGetString(GL_RENDERER));
 	std::print("VENDOR {}\n", (char const *)glGetString(GL_VENDOR));
 	std::print("VERSION {}\n", (char const *)glGetString(GL_VERSION));
 	std::print("SHADING_LANGUAGE_VERSION {}\n", (char const *)glGetString(GL_SHADING_LANGUAGE_VERSION));
 
-
 	// Ddebug output
 	#if !defined(NDEBUG) && !defined(CW2_ENABLE_GPU_TIMING)
 	setup_gl_debug_output();
 	#endif
 
-
-
 	// Global GL state
 	OGL_CHECKPOINT_ALWAYS();
 	globalGLSetup();
-
 	OGL_CHECKPOINT_ALWAYS();
 
 	int iwidth, iheight;
 	glfwGetFramebufferSize(window, &iwidth, &iheight);
 	glViewport(0, 0, iwidth, iheight);
 
-
-	ShaderProgram unifiedProg( {
+	// Load global and particle shaders
+	ShaderProgram unifiedProg({
 		{ GL_VERTEX_SHADER, "assets/cw2/shaders/unified.vert" },
 		{ GL_FRAGMENT_SHADER, "assets/cw2/shaders/unified.frag" }
-	} );
+	});
 	state.prog = &unifiedProg;
+
+	// Initialize particle system
 	ShaderProgram particleProg({
 		{ GL_VERTEX_SHADER,   "assets/cw2/shaders/particle.vert" },
 		{ GL_FRAGMENT_SHADER, "assets/cw2/shaders/particle.frag" }
 	});
 	state.particles.setShader(particleProg.programId());
 	state.particles.init();
-
 
 	// Animation state
 	auto last = Clock::now();
@@ -195,18 +189,18 @@ try
 		LandingPad(Config::World::kLandingPad1Pos, Config::World::kLandingPadScale),
 		LandingPad(Config::World::kLandingPad2Pos, Config::World::kLandingPadScale)};
 
-	/* SPACE VEHICLE */
+	// Space vehicle mesh
 	auto vehicleMesh = make_space_vehicle();
 	vehicleMesh.materialType = 0; // coloured, no texture
 
 	GLuint vehicleVao = create_vao(vehicleMesh);
-
 	std::size_t vehicleVertexCount = vehicleMesh.vertexCount();
 	std::size_t vehicleIndexCount = vehicleMesh.indexCount();
 
 	// Reset state.
 	resetBindings();
 
+	// Prepare render context for main loop
 	RenderContext renderCtx = {
 		.parlahtiVao = parlahtiVao,
 		.parlahtiVertexCount = parlahtiVertexCount,
@@ -217,15 +211,16 @@ try
 		.vehicleIndexCount = vehicleIndexCount,
 		.unifiedProg = unifiedProg.programId()};
 
-
 	// Main loop
 	while (!glfwWindowShouldClose(window))
 	{
 		#ifdef CW2_ENABLE_GPU_TIMING
 		double cpuMs = 0.0;
 		#endif
+
 		// Let GLFW process events
 		glfwPollEvents();
+
 		#ifdef CW2_ENABLE_GPU_TIMING
 		if (gpuTiming.frameIndex > GPU_QUERY_BUFFER_SIZE)
 		{
@@ -253,7 +248,6 @@ try
 		}
 		#endif
 
-
 		// Check if window was resized.
 		float fbwidth, fbheight;
 		{
@@ -265,7 +259,6 @@ try
 
 			if (0 == nwidth || 0 == nheight)
 			{
-				// Window minimized? Pause until it is unminimized.
 				do
 				{
 					glfwWaitEvents();
@@ -315,20 +308,17 @@ try
 			// Update animation cameras
 			state.camera.updateForAnimation(
 				state.animation.currentPosition,
-				state.animation.velocity,
-				dt);
+				state.animation.velocity, dt);
 
 			if (state.splitScreenEnabled)
 			{
 				state.leftCamera.updateForAnimation(
 					state.animation.currentPosition,
-					state.animation.velocity,
-					dt);
+					state.animation.velocity, dt);
 
 				state.rightCamera.updateForAnimation(
 					state.animation.currentPosition,
-					state.animation.velocity,
-					dt);
+					state.animation.velocity, dt);
 			}
 
 			// Check if animation is complete
@@ -351,11 +341,9 @@ try
 			 state.animation.animationTime > 0.0f))
 		{
 			Mat44f rotation = calculate_rocket_rotation(state.animation);
-
 			model2world_vehicle =
 				make_translation(state.animation.currentPosition) *
-				make_scaling(0.5f, 0.5f, 0.5f) *
-				rotation;
+				make_scaling(0.5f, 0.5f, 0.5f) * rotation;
 		}
 		else
 		{
@@ -372,86 +360,60 @@ try
 		#endif
 
 		auto cpuStart = std::chrono::high_resolution_clock::now();
-
 		beginFrame();
 
 		renderSingleOrSplitScreen(
-        state,
-        model2world_vehicle,
-        fbwidth,
-        fbheight,
-        state.particles,
-        renderCtx);
+			state,
+			model2world_vehicle,
+			fbwidth,
+			fbheight,
+			state.particles,
+			renderCtx);
 
-				// RESET VIEWPORT FOR UI ----
-		glViewport(0, 0, (GLsizei)fbwidth, (GLsizei)fbheight);
 
 		endFrame();
 		auto cpuEnd = std::chrono::high_resolution_clock::now();
-		cpuMs =
-			std::chrono::duration<double, std::milli>(cpuEnd - cpuStart).count();
+		cpuMs = std::chrono::duration<double, std::milli>(cpuEnd - cpuStart).count();
 		cpuSumMs += cpuMs;
 		cpuFrameCount++;
-
 
 		#ifdef CW2_ENABLE_GPU_TIMING
 		glQueryCounter(gpuTiming.fullEnd[q], GL_TIMESTAMP);
 		gpuTiming.frameIndex++;
 		#endif
 
+		// Reset Viewport for UI
+		glViewport(0, 0, fbwidth, fbheight);
 
+		// Current screen dimensions
+		int screenW = static_cast<int>(fbwidth);
+		int screenH = static_cast<int>(fbheight);
 
-		glDisable(GL_DEPTH_TEST);
-		glDisable(GL_CULL_FACE);
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		// Render Altitude
+		uiText.renderAltitude(
+			static_cast<int>(state.animation.currentPosition.y),
+			screenW,
+			screenH);
 
+		// Launch and Reset button positioning
+		float totalBtnWidth = UITextRenderer::btnW * 2.f + UITextRenderer::spacing;
+		float startBtnX = (screenW - totalBtnWidth) * 0.5f;
+		Vec2f btnPos = {startBtnX, UITextRenderer::marginBtm};
+		Vec2f btnSize = {UITextRenderer::btnW, UITextRenderer::btnH};
 
-		// Screen size
-		int screenW = (int)fbwidth;
-		int screenH = (int)fbheight;
-
-		// Mouse
+		// Mouse state over button
 		double mx, my;
 		glfwGetCursorPos(window, &mx, &my);
-		float mouseX = (float)mx;
-		float mouseY = screenH - (float)my;
+		bool mouseDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
 
-		bool mouseDown =
-			glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+		float mouseX = static_cast<float>(mx);
+		float mouseY = screenH - static_cast<float>(my);
 
-		// ALTITUDE (top-left)
-		int altitude = (int)state.animation.currentPosition.y;
-		uiText.renderText(
-			"ALTITUDE: " + std::to_string(altitude) + " M",
-			20.f,
-			screenH - 40.f,
-			1.f,
-			{1,1,1},
-			screenW,
-			screenH
-		);
+		updateButton(launchButton, btnPos, btnSize, "LAUNCH", mouseX, mouseY, mouseDown);
+		getNextButtonPos(launchButton, btnPos, UITextRenderer::spacing);
+		updateButton(resetButton,  btnPos, btnSize, "RESET", mouseX, mouseY, mouseDown);
 
-		float btnW = 180.f;
-		float btnH = 50.f;
-		float spacing = 20.f;
-
-		float totalWidth = btnW * 2.f + spacing;
-		float startX = (screenW - totalWidth) * 0.5f;
-		float y = 40.f;   // bottom margin
-
-		launchButton.pos  = { startX, y };
-		launchButton.size = { btnW, btnH };
-		launchButton.label = "LAUNCH";
-
-		resetButton.pos  = { startX + btnW + spacing, y };
-		resetButton.size = { btnW, btnH };
-		resetButton.label = "RESET";
-
-
-		updateButton(launchButton, mouseX, mouseY, mouseDown);
-		updateButton(resetButton,  mouseX, mouseY, mouseDown);
-
+		// Draw latest button state on-screen
 		drawButton(launchButton, uiText, screenW, screenH);
 		drawButton(resetButton,  uiText, screenW, screenH);
 
@@ -460,22 +422,15 @@ try
 			state.animation.start();
 
 		if (resetButton.clicked)
-		{
-			state.animation.reset();
-			state.camera.setMode(Camera::Mode::Free);
-			state.camera.updateVectors();
-		}
-
-		glDisable(GL_BLEND);
-		glEnable(GL_DEPTH_TEST);
-
+			glfw_callback_key_(window, GLFW_KEY_R, 0, GLFW_PRESS, 0);
 
 		OGL_CHECKPOINT_DEBUG();
 
 		glfwSwapBuffers(window);
 	}
-	uiText.cleanup();
+
 	cleanup(state, parlahtiVao, vehicleVao, parlahtiTexture);
+
 	#ifdef CW2_ENABLE_GPU_TIMING
 	if (gpuFrameCount > 0)
 	{
@@ -491,7 +446,6 @@ try
 
 	destroyGpuTiming(gpuTiming);
 	#endif
-
 
 	return 0;
 }
@@ -528,7 +482,7 @@ namespace
 
 			case GLFW_KEY_R:
 				if (aAction == GLFW_PRESS && state->prog)
-				{ 	
+				{
 					// Reset animation
 					state->animation.reset();
 

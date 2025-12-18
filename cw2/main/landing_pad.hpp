@@ -11,7 +11,7 @@ struct LandingPad
     GLuint vao;
     std::size_t vertexCount;
 
-    // Each landing pad uses ONE material
+    // Each landing pad uses one material
     Vec3f kd;
     float shininess;
 

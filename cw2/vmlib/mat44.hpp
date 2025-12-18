@@ -307,4 +307,22 @@ Mat44f make_proj_camera_world(const Mat44f &projectView, const Mat44f &model2wor
 	return projectView * model2world;
 }
 
+// For ui matrix
+inline
+Mat44f make_ortho( float l, float r, float b, float t, float n, float f ) noexcept
+{
+	Mat44f M{};
+
+	M.v[0] = 2.f / (r - l);
+	M.v[5] = 2.f / (t - b);
+	M.v[10] = -2.f / (f - n);
+
+	M.v[12] = -(r + l) / (r - l);
+	M.v[13] = -(t + b) / (t - b);
+	M.v[14] = -(f + n) / (f - n);
+	M.v[15] = 1.f;
+
+	return M;
+}
+
 #endif // MAT44_HPP_E7187A26_469E_48AD_A3D2_63150F05A4CA

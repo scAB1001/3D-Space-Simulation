@@ -1,13 +1,38 @@
 #include "ui_button.hpp"
 #include "ui_text.hpp"
 
+void setButtonState(
+    UIButton &btn,
+    Vec2f position,
+    Vec2f size,
+    const std::string &label)
+{
+    btn.pos = position;
+    btn.size = size;
+    btn.label = label;
+}
+
+void getNextButtonPos(
+    const UIButton &lastBtn,
+    Vec2f &outPos,
+    float spacing)
+{
+    outPos.x = lastBtn.pos.x + lastBtn.size.x + spacing;
+    outPos.y = lastBtn.pos.y;
+}
+
+// Update button state based on mouse position and click status
 void updateButton(
-    UIButton& btn,
+    UIButton &btn,
+    Vec2f position,
+    Vec2f size,
+    const std::string &label,
     float mouseX,
     float mouseY,
-    bool mouseDown
-)
+    bool mouseDown)
 {
+    setButtonState(btn, position, size, label);
+
     btn.hovered =
         mouseX >= btn.pos.x &&
         mouseX <= btn.pos.x + btn.size.x &&

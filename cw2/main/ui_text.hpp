@@ -2,6 +2,7 @@
 #define UI_TEXT_HPP
 
 #include <string>
+#include "renderer.hpp"
 #include "../vmlib/vec3.hpp"
 #include "../support/program.hpp"
 
@@ -11,7 +12,20 @@ struct UITextRenderer
     static constexpr float glyphW = 1.f / 16.f;
     static constexpr float glyphH = 1.f / 16.f;
 
+    // Font atlas character mapping
+    static constexpr int ATLAS_COLS = 10;
+    static constexpr int ATLAS_ROWS = 10;
+    static constexpr float GLYPH_W = 1.f / ATLAS_COLS;
+    static constexpr float GLYPH_H = 1.f / ATLAS_ROWS;
+
+    // UI button dimensions
+    static constexpr float btnW = 180.f;
+    static constexpr float btnH = 50.f;
+    static constexpr float spacing = 20.f;
+    static constexpr float marginBtm = 25.f;
+
     void init();
+    void cleanup();
 
     void renderText(
         const std::string& text,
@@ -23,7 +37,10 @@ struct UITextRenderer
         float screenH
     );
 
-    void cleanup();
+    void renderAltitude(
+        int altitude,
+        float screenW,
+        float screenH);
 
     void drawRect(
         float x, float y,
