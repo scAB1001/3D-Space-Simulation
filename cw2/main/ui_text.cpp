@@ -4,11 +4,19 @@
 #include "texture.hpp"
 #include "renderer.hpp"
 
-#include <vector>
+// format of font atlas
+static const std::string ATLAS_CHARS =
+    " !\"#$%&'()"
+    "*+,-./0123"
+    "456789:;<="
+    ">?@ABCDEFG"
+    "HIJKLMNOPQ"
+    "RSTUVWXYZ["
+    "\\]^_`abcde"
+    "fghijklmno"
+    "pqrstuvwxy"
+    "z{|}~     ";
 
-// 16x16 ASCII atlas
-static constexpr float glyphW = 1.f / 16.f;
-static constexpr float glyphH = 1.f / 16.f;
 static float pxToClipX(float x, float screenW)
 {
     return (x / screenW) * 2.0f - 1.0f;
@@ -64,19 +72,6 @@ void UITextRenderer::cleanup()
     vao = vbo = fontTexture = program = 0;
 }
 
-// format of font atlas
-static const std::string ATLAS_CHARS =
-    " !\"#$%&'()"
-    "*+,-./0123"
-    "456789:;<="
-    ">?@ABCDEFG"
-    "HIJKLMNOPQ"
-    "RSTUVWXYZ["
-    "\\]^_`abcde"
-    "fghijklmno"
-    "pqrstuvwxy"
-    "z{|}~     ";
-
 void UITextRenderer::renderText(
     const std::string& text,
     float x,
@@ -114,7 +109,7 @@ void UITextRenderer::renderText(
     float charW = 0.04f * scale;
     float charH = 0.08f * scale;
 
-    
+
     for (char c : text)
     {
         // force uppercase (ASCII-safe)
@@ -166,6 +161,7 @@ void UITextRenderer::renderText(
 
     RendererInternal::currentShaderProgram = 0;
 }
+
 void UITextRenderer::drawRect(
     float x, float y,
     float w, float h,

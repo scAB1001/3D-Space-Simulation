@@ -41,8 +41,6 @@ Mat44f make_ortho(
     float f
 );
 
-
-
 // Scene setup and frame management
 void globalGLSetup();
 void beginFrame();

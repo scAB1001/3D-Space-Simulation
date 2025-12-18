@@ -4,7 +4,7 @@
 #include "../vmlib/vec3.hpp"
 #include <string>
 
-struct UITextRenderer;   // forward declaration
+struct UITextRenderer;
 
 struct UIButton
 {

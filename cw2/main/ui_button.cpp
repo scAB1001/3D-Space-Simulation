@@ -1,5 +1,5 @@
 #include "ui_button.hpp"
-#include "ui_text.hpp"   // needed here for drawing
+#include "ui_text.hpp"
 
 void updateButton(
     UIButton& btn,
@@ -68,10 +68,10 @@ void drawButton(
         screenH
     );
 
-    //  CENTERED TEXT 
+    //  CENTERED TEXT
     float textScale = 1.0f;
 
-    // MUST match UITextRenderer glyph sizing
+    // Ensure UITextRenderer glyph sizing matches
     float glyphW = 12.f * textScale;
     float glyphH = 24.f * textScale;
 

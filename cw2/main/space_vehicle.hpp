@@ -15,13 +15,14 @@
 
 namespace
 {
+    // Colours
     constexpr Vec3f bodyColor    {0.8f, 0.8f, 0.8f};
     constexpr Vec3f noseColor    {0.9f, 0.3f, 0.3f};
     constexpr Vec3f nozzleColor  {0.2f, 0.2f, 0.2f};
     constexpr Vec3f finColor     {0.3f, 0.6f, 0.9f};
     constexpr Vec3f cockpitColor {0.2f, 0.2f, 0.6f};
 
-    // ------ DIMENSIONS ------
+    // Dimensions
    constexpr float bodyRadius  = 1.5f;
    constexpr float bodyHeight  = 5.0f;        // rocket body height
    constexpr float noseHeight  = 2.0f;        // tip length

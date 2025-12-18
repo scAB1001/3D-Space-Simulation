@@ -294,7 +294,7 @@ void drawMesh(
     glUniformMatrix4fv(0, 1, GL_TRUE, projCameraWorld.v);
     glUniformMatrix3fv(1, 1, GL_TRUE, normalMatrix.v);
 
-    // ----- uModel (for point lights) -----
+    // Point Lights
     GLint currentProg = 0;
     glGetIntegerv(GL_CURRENT_PROGRAM, &currentProg);
 
@@ -304,7 +304,7 @@ void drawMesh(
         glUniformMatrix4fv(locModel, 1, GL_TRUE, modelMatrix.v);
     }
 
-    // ----- BLINN–PHONG MATERIAL UNIFORMS -----
+    // Blinn-Phong uMats
     Vec3f defaultKd = {1.0f, 1.0f, 1.0f};
     float defaultNs = 32.0f;
 
@@ -317,7 +317,7 @@ void drawMesh(
     if (locNs >= 0)
         glUniform1f(locNs, defaultNs);
 
-    // ----- TEXTURE BINDING -----
+    // textures
     if (materialType == 1 && texture != 0)
     {
         glActiveTexture(GL_TEXTURE0);

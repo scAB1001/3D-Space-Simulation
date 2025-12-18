@@ -13,14 +13,14 @@ struct Animation
 {
     // Precomputed constants
     static constexpr float kTotalAnimationTime = 15.0f;          // Increased to 30s for slower ascent
-    static constexpr float kVerticalAscentEnd = 0.25f; 
+    static constexpr float kVerticalAscentEnd = 0.25f;
     static constexpr float kLaunchTiltEnd     = 0.40f + (.2f);
-    static constexpr float kCruisePhaseEnd    = 0.75f;   // 70% for cruise (30% landing)
+    static constexpr float kCruisePhaseEnd    = 0.75f;           // 70% for cruise (30% landing)
     static constexpr float kMaxAllowedHeight = 35.0f;            // Maximum height limit
     static constexpr float kMaxVelocity = 15.0f;                 // units per second
     static constexpr float kAccelerationRate = 1.2f;             // acceleration (units/sec^2)
     static constexpr Vec3f kLandingPadOffset = {0.f, 1.0f, 0.f}; // On the pad
-    static constexpr float kArcEnd = 0.75f; // End of curved arc, start of landing
+    static constexpr float kArcEnd = 0.75f;                      // End of curved arc, start of landing
 
     // Flight profile constants
     static constexpr float kVerticalAscentHeight = 10.0f; // Height reached during pure vertical ascent
@@ -73,7 +73,7 @@ struct Animation
     Vec3f verticalAscentEndPos; // Position at end of pure vertical ascent
     Vec3f launchEndPosition;    // Position at end of launch phase
 
-    // Constructors (declaration only)
+    // Constructors
     Animation(const Vec3f &start, const Vec3f &end);
     Animation();
 

@@ -414,7 +414,7 @@ GLuint create_vao(SimpleMeshData const &mesh)
 
     glBindVertexArray(vao);
 
-    // Store buffer IDs for cleanup if needed
+    // Store buffer IDs for cleanup
     std::vector<GLuint> buffers;
 
     try

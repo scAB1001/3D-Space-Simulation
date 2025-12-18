@@ -98,13 +98,13 @@ private:
     // Mode-specific settings
     struct FollowSettings
     {
-        float distance = 8.0f;             // Distance behind vehicle
-        float height = 3.0f;               // Height above vehicle
-        float sideOffset = 2.0f;           // Horizontal offset for side view
-        float smoothness = 5.0f;           // Interpolation speed
-        bool useRightSide = true;          // Which side to view from
-        bool lookAtVehicle = true;         // Should camera look at vehicle
-        Vec3f lookAhead = Config::kZeroVec3; // Look ahead offset
+        float distance = 8.0f;                  // Distance behind vehicle
+        float height = 3.0f;                    // Height above vehicle
+        float sideOffset = 2.0f;                // Horizontal offset for side view
+        float smoothness = 5.0f;                // Interpolation speed
+        bool useRightSide = true;               // Which side to view from
+        bool lookAtVehicle = true;              // Should camera look at vehicle
+        Vec3f lookAhead = Config::kZeroVec3;    // Look ahead offset
 
     } followSettings;
 
@@ -113,12 +113,12 @@ private:
         // yaw and pitch are calculated dynamically
         Vec3f position = {-33.05f, 15.90f, -32.0f};
     } fixedSettings;
+
     // Helper methods
     void applyPitchConstraints() noexcept;
     void normalizeYaw() noexcept;
 };
 
 void processMovement(Camera &cam, const Input &input, float dt) noexcept;
-
 
 #endif // CAMERA_HPP
