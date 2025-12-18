@@ -224,12 +224,3 @@ main() {
 
 # Run main function with all arguments
 main "$@"
-
-# LEAK SUMMARY from first Valgrind run:
-# ==130206==    definitely lost: 616 bytes in 2 blocks
-# ==130206==    indirectly lost: 1,769 bytes in 2 blocks
-# ==130206==      possibly lost: 0 bytes in 0 blocks
-# ==130206==    still reachable: 80,439 bytes in 920 blocks
-# ==130206==         suppressed: 0 bytes in 0 blocks
-# ==130206== Reachable blocks (those to which a pointer was found) are not shown.
-# ==130206== To see them, rerun with: --leak-check=full --show-leak-kinds=all
