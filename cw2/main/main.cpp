@@ -353,9 +353,10 @@ try
 		#ifdef CW2_ENABLE_GPU_TIMING
 		int q = gpuTiming.frameIndex % GPU_QUERY_BUFFER_SIZE;
 		glQueryCounter(gpuTiming.fullStart[q], GL_TIMESTAMP);
+		auto cpuStart = std::chrono::high_resolution_clock::now();
+
 		#endif
 
-		auto cpuStart = std::chrono::high_resolution_clock::now();
 		beginFrame();
 
 		renderSingleOrSplitScreen(
@@ -369,10 +370,12 @@ try
 		OGL_CHECKPOINT_DEBUG();
 
 		// endFrame();
+		#ifdef CW2_ENABLE_GPU_TIMING
 		auto cpuEnd = std::chrono::high_resolution_clock::now();
 		cpuMs = std::chrono::duration<double, std::milli>(cpuEnd - cpuStart).count();
 		cpuSumMs += cpuMs;
 		cpuFrameCount++;
+		#endif
 
 		#ifdef CW2_ENABLE_GPU_TIMING
 		glQueryCounter(gpuTiming.fullEnd[q], GL_TIMESTAMP);
