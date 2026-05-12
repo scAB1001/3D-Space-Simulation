@@ -1,4 +1,21 @@
+# Ignore build artifacts and temporary files
 _build_/
 bin/
 lib/
-*.pdf
+
+deps/
+*.obj
+*.mtl
+*.ttf
+
+*.d
+*.o
+*.a
+
+# Ignore IDE specific files
+.vscode/
+
+git.sh
+git
+
+df

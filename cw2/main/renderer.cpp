@@ -1,0 +1,412 @@
+#include "renderer.hpp"
+
+// Scene setup and frame management
+void globalGLSetup()
+{
+    glEnable(GL_FRAMEBUFFER_SRGB);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+
+    glClearDepthf(1.f);
+    glClearColor(0.1f, 0.05f, 0.15f, 0.8f);
+}
+
+void beginFrame()
+{
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+void resetBindings()
+{
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
+void endFrame()
+{
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glEnable(GL_CULL_FACE);
+    resetBindings();
+}
+
+void initUI()
+{
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+void cleanup(State_ &state, GLuint terrainVao, GLuint vehicleVao, GLuint terrainTexture, GLuint vehicleTexture, UITextRenderer &uiText)
+{
+    state.prog = nullptr;
+
+	glDeleteVertexArrays(1, &terrainVao);
+	glDeleteVertexArrays(1, &vehicleVao);
+
+	if (terrainTexture != 0)
+		glDeleteTextures(1, &terrainTexture);
+
+    LandingPad::cleanup();
+    state.particles.cleanup();
+    uiText.cleanup();
+}
+
+// Setting light uniforms
+void setDirectionalLightUniforms(
+    const Vec3f &lightDir,
+    const Vec3f &lightDiffuse,
+    const Vec3f &sceneAmbient)
+{
+    Vec3f L = normalize(lightDir);
+
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uLightDir"), 1, &L.x);
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uLightDiffuse"), 1, &lightDiffuse.x);
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uSceneAmbient"), 1, &sceneAmbient.x);
+}
+
+void computeVehicleLights(State_ &state, const Mat44f &modelVehicle)
+{
+    float bodyHeight = 5.0f;
+    float finY = 0.3f * bodyHeight; // = 1.5
+    float finDist = 3.2f;           // Position lights far outside fins
+
+    float angles[3] = {0.f, 2.0944f, 4.1888f}; // 0°, 120°, 240°
+
+    for (int i = 0; i < 3; i++)
+    {
+        float a = angles[i];
+
+        Vec3f localPos{
+            finDist * std::cos(a),
+            finY,
+            finDist * std::sin(a)};
+
+        Vec4f p4 { localPos.x, localPos.y, localPos.z, 1.f };
+
+        Vec4f wp = modelVehicle * p4;
+        state.pointLights[i].position = Vec3f{wp.x, wp.y, wp.z};
+    }
+}
+
+void setPointLightUniforms(State_ &state)
+{
+    // Point light colors
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uPointPos[0]"), 1, &state.pointLights[0].position.x);
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uPointPos[1]"), 1, &state.pointLights[1].position.x);
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uPointPos[2]"), 1, &state.pointLights[2].position.x);
+
+    // Point light colors
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uPointColor[0]"), 1, &state.pointLights[0].color.x);
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uPointColor[1]"), 1, &state.pointLights[1].color.x);
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uPointColor[2]"), 1, &state.pointLights[2].color.x);
+
+    // Point light enabled flags
+    GLint enabled[3] = {
+        state.pointLights[0].enabled ? 1 : 0,
+        state.pointLights[1].enabled ? 1 : 0,
+        state.pointLights[2].enabled ? 1 : 0
+    };
+    glUniform1iv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uPointEnabled[0]"), 3, enabled);
+}
+
+void setAllLightingUniforms(State_ &state,
+                            const Mat44f &modelVehicle,
+                            const Camera &cam)
+{
+    // Directional light uniforms
+    setDirectionalLightUniforms(
+        Config::Rendering::kLightDir,
+        Config::Rendering::kLightDiffuse,
+        Config::Rendering::kSceneAmbient);
+
+    // Point light positions based on vehicle model matrix
+    computeVehicleLights(state, modelVehicle);
+
+    // Point light uniforms
+    setPointLightUniforms(state);
+
+    // Directional light enabled flag
+    glUniform1i(glGetUniformLocation(RendererInternal::currentShaderProgram, "uGlobalDirLightEnabled"), state.globalDirLightEnabled ? 1 : 0);
+
+    // Camera position
+    Vec3f camPos = cam.getPosition();
+    glUniform3fv(glGetUniformLocation(RendererInternal::currentShaderProgram, "uCameraPos"), 1, &camPos.x);
+}
+
+void renderView(
+    Camera &cam,
+    float vpWidth,
+    float vpHeight,
+    const Mat44f &model2world_vehicle,
+    ParticleSystem &particles,
+    const RenderContext &ctx)
+{
+    // Bind unified shader (smart binding)
+    bindShader(ctx.unifiedProg);
+
+    // Calculate projection matrix
+    float aspect = vpWidth / vpHeight;
+    Mat44f projection = make_perspective_projection(
+        Config::Rendering::kFOV,
+        aspect,
+        Config::Rendering::kNearPlane,
+        Config::Rendering::kFarPlane);
+
+    cam.updateVectors();
+    Mat44f view = cam.getViewMatrix();
+    Mat44f projViewLocal = projection * view;
+
+    // Bind unified shader
+    glUseProgram(ctx.unifiedProg);
+
+    // Terrain
+    drawTerrain(
+        ctx.parlahtiVao,
+        ctx.parlahtiVertexCount,
+        ctx.parlahtiTexture,
+        projViewLocal,
+        kIdentity33f,
+        kIdentity44f);
+
+    // Landing pads
+    drawLandingPads(ctx.landingPads, projViewLocal);
+
+    // Vehicle
+    Mat44f projCameraWorld_vehicle_local =
+        make_proj_camera_world(projViewLocal, model2world_vehicle);
+
+    Mat33f normalMatrix_vehicle_local =
+        make_uniform_normal(model2world_vehicle);
+
+    drawObject(
+        ctx.vehicleVao,
+        ctx.vehicleVertexCount,
+        ctx.vehicleIndexCount,
+        projCameraWorld_vehicle_local,
+        normalMatrix_vehicle_local,
+        model2world_vehicle);
+
+    // Particles
+    particles.render(projection, view, cam);
+
+    // Restore original shader if different
+    bindShader(ctx.unifiedProg);
+}
+
+void renderScreen(
+    State_ &state,
+    Camera &cam,
+    GLint xViewport,
+    GLsizei vpWidth,
+    GLsizei vpHeight,
+    const Mat44f &model2world_vehicle,
+    ParticleSystem &particles,
+    const RenderContext &ctx)
+{
+    // Set the viewport
+    glViewport(xViewport, 0, vpWidth, vpHeight);
+
+    // Ensure unified shader is bound before setting uniforms
+    bindShader(ctx.unifiedProg);
+
+    // Set lighting uniforms for this camera
+    setAllLightingUniforms(state, model2world_vehicle, cam);
+
+    // Render the scene for this viewport
+    renderView(cam, static_cast<float>(vpWidth), static_cast<float>(vpHeight),
+               model2world_vehicle, particles, ctx);
+}
+
+void renderSingleOrSplitScreen(
+    State_ &state,
+    const Mat44f &model2world_vehicle,
+    GLsizei fbwidth,
+    GLsizei fbheight,
+    ParticleSystem &particles,
+    const RenderContext &ctx)
+{
+    // Smart binding
+    bindShader(ctx.unifiedProg);
+
+    if (!state.splitScreenEnabled)
+    {
+        // Single view mode - full screen
+        renderScreen(state, state.camera,
+                     0, fbwidth, fbheight,
+                     model2world_vehicle, particles, ctx);
+    }
+    else
+    {
+        // Split screen mode
+        float halfW = fbwidth * 0.5f;
+
+        // Left viewport
+        renderScreen(state, state.leftCamera,
+                     0, halfW, fbheight,
+                     model2world_vehicle, particles, ctx);
+
+        // Ensure unified shader for right viewport
+        glUseProgram(ctx.unifiedProg);
+
+        // Right viewport
+        renderScreen(state, state.rightCamera,
+                     halfW, halfW, fbheight,
+                     model2world_vehicle, particles, ctx);
+    }
+
+    // Ensure unified shader is active at the end
+    glUseProgram(ctx.unifiedProg);
+}
+
+// Drawing helpers
+void drawMesh(
+    GLuint vao,
+    GLsizei vertexCount,
+    bool hasIndices,
+    GLsizei indexCount,
+    int materialType,
+    GLuint texture,
+    const Mat44f &projCameraWorld,
+    const Mat33f &normalMatrix,
+    const Mat44f &modelMatrix)
+{
+    glUniform1i(10, materialType);
+    glUniformMatrix4fv(0, 1, GL_TRUE, projCameraWorld.v);
+    glUniformMatrix3fv(1, 1, GL_TRUE, normalMatrix.v);
+
+    // Point Lights
+    GLint currentProg = 0;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &currentProg);
+
+    GLint locModel = glGetUniformLocation(currentProg, "uModel");
+    if (locModel >= 0)
+    {
+        glUniformMatrix4fv(locModel, 1, GL_TRUE, modelMatrix.v);
+    }
+
+    // Blinn-Phong uMats
+    Vec3f defaultKd = {1.0f, 1.0f, 1.0f};
+    float defaultNs = 32.0f;
+
+    GLint locKd = glGetUniformLocation(currentProg, "uMaterialKd");
+    GLint locNs = glGetUniformLocation(currentProg, "uMaterialShininess");
+
+    if (locKd >= 0)
+        glUniform3fv(locKd, 1, &defaultKd.x);
+
+    if (locNs >= 0)
+        glUniform1f(locNs, defaultNs);
+
+    // textures
+    if (materialType == 1 && texture != 0)
+    {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture);
+    }
+    else
+    {
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    glBindVertexArray(vao);
+    if (hasIndices && indexCount > 0)
+    {
+        glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
+    }
+    else
+    {
+        glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+    }
+}
+
+void drawTerrain(
+    GLuint vao,
+    GLsizei vertexCount,
+    GLuint texture,
+    const Mat44f &projCameraWorld,
+    const Mat33f &normalMatrix,
+    const Mat44f &modelMatrix)
+{
+    drawMesh(
+        vao,
+        vertexCount,
+        false,         // no indices
+        0,
+        1,             // materialType = textured
+        texture,
+        projCameraWorld,
+        normalMatrix,
+        modelMatrix
+    );
+}
+
+void drawLandingPads(
+    const std::vector<LandingPad> &pads,
+    const Mat44f &projView)
+{
+    glUniform1i(10, 0); // coloured mode
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glBindVertexArray(pads[0].vao);
+
+    GLint currentProg = 0;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &currentProg);
+
+    // Uniform locations
+    const GLint locProjCameraWorld = 0;
+    const GLint locNormalMatrix    = 1;
+
+    const GLint locModel           = glGetUniformLocation(currentProg, "uModel");
+    const GLint locKd              = glGetUniformLocation(currentProg, "uMaterialKd");
+    const GLint locNs              = glGetUniformLocation(currentProg, "uMaterialShininess");
+
+    // Draw each landing pad
+    for (const auto &pad : pads)
+    {
+        Mat44f modelMatrix      = pad.transform;
+        Mat44f projCameraWorld  = projView * modelMatrix;
+        Mat33f normalMatrix     = make_uniform_normal(modelMatrix);
+
+        glUniformMatrix4fv(locProjCameraWorld, 1, GL_TRUE, projCameraWorld.v);
+        glUniformMatrix3fv(locNormalMatrix,    1, GL_TRUE, normalMatrix.v);
+
+        if (locModel >= 0)
+            glUniformMatrix4fv(locModel, 1, GL_TRUE, modelMatrix.v);
+
+        // Upload MTL material Kd + Ns
+        if (locKd >= 0)
+            glUniform3fv(locKd, 1, &pad.kd.x);
+
+        if (locNs >= 0)
+            glUniform1f(locNs, pad.shininess);
+
+        glDrawArrays(GL_TRIANGLES, 0, pad.vertexCount);
+    }
+}
+
+void drawObject(
+    GLuint vao,
+    GLsizei vertexCount,
+    GLsizei indexCount,
+    const Mat44f &projCameraWorld,
+    const Mat33f &normalMatrix,
+    const Mat44f &modelMatrix)
+{
+    drawMesh(
+        vao,
+        vertexCount,
+        true,   // has indices
+        indexCount,
+        0,      // materialType = coloured
+        0,      // no texture
+        projCameraWorld,
+        normalMatrix,
+        modelMatrix
+    );
+}
